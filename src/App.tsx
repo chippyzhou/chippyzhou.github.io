@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  isPrivateSpaceConfigured,
+  loadPrivateSpace,
+  postGuestbookMessage,
+  unlockPrivateSpace,
+  type PrivateSpaceContent,
+} from "./privateSpaceApi";
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
 
-type PageKey = "home" | "projects" | "publications" | "awards" | "gallery";
+type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "space";
 
 const profile = {
   name: "Yuyun Chen（陈彧赟）",
@@ -121,6 +128,30 @@ const awards = [
         <strong>Grid Search + L-BFGS-B</strong> for PDMS film design.
       </>
     ),
+  },
+];
+
+const technicalNotes = [
+  {
+    date: "2026.07",
+    title: "From a model to a system: notes on applied AI prototypes",
+    summary: "A working checklist for turning model output into a testable product flow, including data boundaries, evaluation cases, and failure states.",
+    tags: ["Applied AI", "Evaluation", "Product thinking"],
+    status: "Working note",
+  },
+  {
+    date: "2026.05",
+    title: "Multi-objective optimization field notes",
+    summary: "Practical observations from combining packing heuristics, genetic search, and cost constraints in mathematical modeling competitions.",
+    tags: ["Optimization", "Block-GA", "HFV-BPP"],
+    status: "Model diary",
+  },
+  {
+    date: "2026.03",
+    title: "Building a reproducible research log",
+    summary: "A compact structure for tracking assumptions, datasets, parameters, experiments, and decisions without losing the narrative behind the result.",
+    tags: ["Research workflow", "Data", "Reproducibility"],
+    status: "Living document",
   },
 ];
 
@@ -262,8 +293,10 @@ const pages: Array<{ key: PageKey; label: string; icon: string }> = [
   { key: "home", label: "Home", icon: "🎤" },
   { key: "projects", label: "Projects", icon: "🎸" },
   { key: "publications", label: "Publications", icon: "🎻" },
+  { key: "notes", label: "Tech Notes", icon: "📓" },
   { key: "awards", label: "Awards", icon: "🥁" },
   { key: "gallery", label: "Gallery", icon: "🎹" },
+  { key: "space", label: "Personal Space", icon: "🔐" },
 ];
 
 function getPageFromHash(): PageKey {
@@ -472,10 +505,41 @@ function PublicationsPage() {
   );
 }
 
-function AwardsPage() {
+function TechnicalNotesPage() {
   return (
     <PageShell
       index="03"
+      kicker="Technical notes / workbench"
+      title="Notes from the build"
+      description="Methods, implementation decisions, model experiments, and the useful fragments that live between a project and a paper."
+    >
+      <div className="notes-index">
+        {technicalNotes.map((note, index) => (
+          <article className="note-sheet" key={note.title}>
+            <div className="note-sheet__rail">
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <time>{note.date}</time>
+            </div>
+            <div className="note-sheet__body">
+              <p className="entry-meta">{note.status}</p>
+              <h2>{note.title}</h2>
+              <p>{note.summary}</p>
+              <div className="tag-list">
+                {note.tags.map((tag) => <span key={tag}>{tag}</span>)}
+              </div>
+            </div>
+            <span className="note-sheet__mark" aria-hidden="true">∿</span>
+          </article>
+        ))}
+      </div>
+    </PageShell>
+  );
+}
+
+function AwardsPage() {
+  return (
+    <PageShell
+      index="04"
       kicker="Awards / live set"
       title="Competition setlist"
       description="The model, the result, and the part of the problem that made each competition worth remembering."
@@ -500,7 +564,7 @@ function AwardsPage() {
 function GalleryPage() {
   return (
     <PageShell
-      index="04"
+      index="05"
       kicker="Gallery / contact sheet"
       title="Visual record"
       description="Project work, presentations, competitions, and the in-between moments that do not fit into a formal abstract."
@@ -528,6 +592,168 @@ function GalleryPage() {
         Image references: AniList / BanG Dream! It&apos;s MyGO!!!!! / Ave Mujica.
       </p>
     </PageShell>
+  );
+}
+
+const visitorSessionKey = "yuyun-private-space-session";
+
+function PersonalSpacePage() {
+  const [inviteCode, setInviteCode] = useState("");
+  const [sessionToken, setSessionToken] = useState(() => localStorage.getItem(visitorSessionKey) || "");
+  const [content, setContent] = useState<PrivateSpaceContent | null>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(Boolean(sessionToken));
+  const [isPosting, setIsPosting] = useState(false);
+
+  useEffect(() => {
+    if (!sessionToken || !isPrivateSpaceConfigured) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    loadPrivateSpace(sessionToken)
+      .then((payload) => {
+        setContent(payload);
+        setError("");
+      })
+      .catch((requestError: Error) => {
+        setContent(null);
+        setError(requestError.message);
+      })
+      .finally(() => setIsLoading(false));
+  }, [sessionToken]);
+
+  const handleUnlock = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!inviteCode.trim()) return;
+    setIsLoading(true);
+    setError("");
+    try {
+      const visitor = await unlockPrivateSpace(inviteCode);
+      localStorage.setItem(visitorSessionKey, visitor.session_token);
+      setSessionToken(visitor.session_token);
+      setInviteCode("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to unlock this space.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleMessage = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!message.trim() || !sessionToken || !content) return;
+    setIsPosting(true);
+    setError("");
+    try {
+      const newMessage = await postGuestbookMessage(sessionToken, message);
+      setContent({ ...content, messages: [newMessage, ...content.messages] });
+      setMessage("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to leave this message.");
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  if (!content) {
+    return (
+      <section className="personal-space personal-space--locked">
+        <div className="space-noise" aria-hidden="true" />
+        <div className="space-lock">
+          <p className="space-eyebrow">Private edition / no. 06</p>
+          <div className="space-lock__symbol" aria-hidden="true">✦</div>
+          <h1>After the<br /><em>last encore.</em></h1>
+          <p className="space-lock__intro">
+            Writing, photographs, film notes, and unfinished fragments shared with invited visitors.
+          </p>
+          <form className="space-unlock" onSubmit={handleUnlock}>
+            <label htmlFor="invite-code">Your personal invitation</label>
+            <div>
+              <input
+                id="invite-code"
+                type="password"
+                value={inviteCode}
+                onChange={(event) => setInviteCode(event.target.value)}
+                placeholder="Enter invitation code"
+                autoComplete="current-password"
+                disabled={!isPrivateSpaceConfigured || isLoading}
+              />
+              <button type="submit" disabled={!isPrivateSpaceConfigured || isLoading}>
+                {isLoading ? "Checking..." : "Enter ↗"}
+              </button>
+            </div>
+          </form>
+          {!isPrivateSpaceConfigured && <p className="space-status">Private archive setup in progress.</p>}
+          {error && <p className="space-error" role="alert">{error}</p>}
+          <p className="space-footnote">Each invitation belongs to one visitor and may be paused without erasing its history.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="personal-space personal-space--open">
+      <div className="space-noise" aria-hidden="true" />
+      <div className="space-open__inner">
+        <header className="space-welcome">
+          <div>
+            <p className="space-eyebrow">Private edition / visitor {String(content.visitor.visitor_number).padStart(3, "0")}</p>
+            <h1>Welcome after hours,<br /><em>{content.visitor.name}.</em></h1>
+          </div>
+          <div className="visitor-pass">
+            <span>VISITOR PASS</span>
+            <strong>#{String(content.visitor.visitor_number).padStart(3, "0")}</strong>
+            <small>{content.visitor.visit_count} recorded visit{content.visitor.visit_count === 1 ? "" : "s"}</small>
+          </div>
+        </header>
+
+        <div className="private-archive">
+          {content.entries.length === 0 && <p className="archive-empty">The first private entry is being prepared.</p>}
+          {content.entries.map((entry) => (
+            <article className={`archive-entry archive-entry--${entry.kind}`} key={entry.id}>
+              {entry.image_url && <img src={entry.image_url} alt="" />}
+              <div>
+                <p>{entry.kind} {entry.event_date ? `· ${entry.event_date}` : ""}</p>
+                <h2>{entry.title}</h2>
+                <strong>{entry.excerpt}</strong>
+                <div className="archive-entry__body">{entry.body}</div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <section className="guestbook">
+          <div className="guestbook__intro">
+            <p className="space-eyebrow">Guestbook / leave a trace</p>
+            <h2>A note before<br />you leave.</h2>
+            <p>Your visitor name will appear beside the message.</p>
+          </div>
+          <div>
+            <form className="guestbook-form" onSubmit={handleMessage}>
+              <textarea
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                placeholder="Write something here..."
+                maxLength={500}
+                rows={4}
+              />
+              <div><span>{message.length}/500</span><button disabled={isPosting || !message.trim()}>{isPosting ? "Posting..." : "Pin this note"}</button></div>
+            </form>
+            {error && <p className="space-error" role="alert">{error}</p>}
+            <div className="guestbook-messages">
+              {content.messages.map((item) => (
+                <article key={item.id}>
+                  <p>{item.body}</p>
+                  <footer><strong>{item.visitor_name}</strong><time>{new Date(item.created_at).toLocaleDateString("en-CA")}</time></footer>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
   );
 }
 
@@ -582,10 +808,14 @@ export default function App() {
         return <ProjectsPage />;
       case "publications":
         return <PublicationsPage />;
+      case "notes":
+        return <TechnicalNotesPage />;
       case "awards":
         return <AwardsPage />;
       case "gallery":
         return <GalleryPage />;
+      case "space":
+        return <PersonalSpacePage />;
       default:
         return <HomePage setPage={setCurrentPage} />;
     }
