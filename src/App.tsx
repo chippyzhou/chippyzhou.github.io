@@ -5,7 +5,7 @@ const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`
 type PageKey = "home" | "about" | "projects" | "publications" | "awards" | "gallery";
 
 const profile = {
-  name: "Your Name",
+  name: "Yuyun Chen（陈彧赟）",
   role: "Research-minded developer · Undergraduate / Graduate candidate",
   location: "City, Country",
   email: "your.email@example.com",
@@ -86,22 +86,42 @@ const awards = [
     title: "2026 MCM/ICM · Problem C",
     year: "2026",
     result: "Meritorious Winner · Top 7%",
-    detail:
-      "Proposed the SAWS scoring framework, using Bradley-Terry inverse inference and dual-channel OLS regression to analyze judge-fan structural bias and improve scoring fairness.",
+    detail: (
+      <>
+        Proposed the <strong>SAWS (Star-Approval Weighted System)</strong>, using
+        the <strong>Bradley-Terry model</strong> and{" "}
+        <strong>dual-channel OLS regression</strong> to analyze judge-fan
+        structural bias and improve scoring fairness.
+      </>
+    ),
   },
   {
     title: "2026 MathorCup · Problem D",
     year: "2026",
     result: "Provincial First Prize",
-    detail:
-      "Developed a multi-objective 3D heterogeneous bin-packing system with Layered-FFD and Block-GA, achieving 93.72% volume utilization and reducing total logistics costs by 26.8%.",
+    detail: (
+      <>
+        Developed the <strong>HFV-BPP</strong> multi-objective 3D heterogeneous
+        bin-packing system with <strong>Layered-FFD</strong> and{" "}
+        <strong>Block-GA</strong>, achieving <strong>93.72%</strong> volume
+        utilization and reducing total logistics costs by{" "}
+        <strong>26.8%</strong>.
+      </>
+    ),
   },
   {
     title: "2025 APMCM · Problem B",
     year: "2025",
     result: "Provincial Second Prize",
-    detail:
-      "Built an optical-thermal model for passive daytime radiative cooling, combining the Drude-Lorentz dielectric function, Transfer Matrix Method, and numerical optimization for PDMS film design.",
+    detail: (
+      <>
+        Built an optical-thermal model for{" "}
+        <strong>passive daytime radiative cooling (PDRC)</strong>, combining the{" "}
+        <strong>Drude-Lorentz dielectric function</strong>,{" "}
+        <strong>Transfer Matrix Method (TMM)</strong>, and{" "}
+        <strong>Grid Search + L-BFGS-B</strong> for PDMS film design.
+      </>
+    ),
   },
 ];
 
@@ -393,9 +413,13 @@ function AwardsPage() {
             <p className="text-lg font-semibold text-[#0e7c75]">{award.year}</p>
             <div>
               <h2 className="font-semibold">{award.title}</h2>
-              <p className="mt-1 text-sm text-[#b2542f]">{award.result}</p>
+              <p className="mt-1 text-sm font-semibold text-[#b2542f]">
+                {award.result}
+              </p>
             </div>
-            <p className="text-sm leading-7 text-black/62">{award.detail}</p>
+            <p className="text-sm leading-7 text-black/62 [&_strong]:font-semibold [&_strong]:text-[#151515]">
+              {award.detail}
+            </p>
           </article>
         ))}
       </div>
@@ -494,7 +518,7 @@ export default function App() {
           <a
             href="#/"
             onClick={() => setCurrentPage("home")}
-            className="text-sm font-semibold tracking-[0.16em]"
+            className="text-sm font-semibold"
           >
             {profile.name}
           </a>
