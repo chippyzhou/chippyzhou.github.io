@@ -591,7 +591,7 @@ export default function App() {
   }, [currentPage]);
 
   return (
-    <main className="site">
+    <main className={`site${isMenuOpen ? " site--menu-open" : ""}`}>
       <header className="site-header">
         <nav>
           <a

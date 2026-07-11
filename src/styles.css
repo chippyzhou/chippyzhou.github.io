@@ -388,7 +388,8 @@ img { display: block; max-width: 100%; }
 }
 
 @media (max-width: 640px) {
-  .site-header { padding: 0 16px; }
+  .site--menu-open { overflow: visible; }
+  .site-header { z-index: 100; padding: 0 16px; }
   .site-header nav {
     min-height: 64px;
     grid-template-columns: 1fr auto;
