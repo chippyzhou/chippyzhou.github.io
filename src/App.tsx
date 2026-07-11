@@ -6,20 +6,20 @@ type PageKey = "home" | "projects" | "publications" | "awards" | "gallery";
 
 const profile = {
   name: "Yuyun Chen（陈彧赟）",
-  role: "Research-minded developer · Undergraduate / Graduate candidate",
+  role: "Software engineering · Applied AI · Research notes",
   location: "Guangzhou, China",
   email: "chensilu_0717@outlook.com",
   github: "https://github.com/chippyzhou",
   intro:
-    "I work at the intersection of software engineering, data-driven systems, and applied research. This site collects my selected projects, academic output, competition results, and field notes for recruiting and academic review.",
-  focus: ["Software Engineering", "AI Applications", "Human-Centered Systems"],
+    "I work at the intersection of software engineering, data-driven systems, and applied research. This is my living log of models, competitions, experiments, and the notes behind each finished result.",
+  focus: ["Software Engineering", "AI Applications", "Research Systems"],
 };
 
 const metrics = [
   { value: "6+", label: "Selected projects" },
-  { value: "3", label: "Competition awards" },
-  { value: "3", label: "Publications / preprints" },
-  { value: "2", label: "Research directions" },
+  { value: "03", label: "Competition awards" },
+  { value: "03", label: "Publications / preprints" },
+  { value: "02", label: "Research directions" },
 ];
 
 const projects = [
@@ -141,6 +141,44 @@ const gallery = [
   },
 ];
 
+const bandCharacters = [
+  {
+    name: "Sakiko Togawa",
+    role: "Keyboard",
+    image:
+      "https://s4.anilist.co/file/anilistcdn/character/large/b312796-VwamX0i26tsP.jpg",
+    source: "https://anilist.co/character/312796",
+  },
+  {
+    name: "Mutsumi Wakaba",
+    role: "Guitar",
+    image:
+      "https://s4.anilist.co/file/anilistcdn/character/large/b312798-DQxF6RGiGAsB.png",
+    source: "https://anilist.co/character/312798",
+  },
+  {
+    name: "Uika Misumi",
+    role: "Guitar / Vocal",
+    image:
+      "https://s4.anilist.co/file/anilistcdn/character/large/b312797-jVfCeiZLz22a.jpg",
+    source: "https://anilist.co/character/312797",
+  },
+  {
+    name: "Umiri Yahata",
+    role: "Bass",
+    image:
+      "https://s4.anilist.co/file/anilistcdn/character/large/b312799-toCvN6GOl2Rt.jpg",
+    source: "https://anilist.co/character/312799",
+  },
+  {
+    name: "Nyamu Yuutenji",
+    role: "Drums",
+    image:
+      "https://s4.anilist.co/file/anilistcdn/character/large/b314493-Yx1jBiTl5rec.jpg",
+    source: "https://anilist.co/character/314493",
+  },
+];
+
 const pages: Array<{ key: PageKey; label: string }> = [
   { key: "home", label: "Home" },
   { key: "projects", label: "Projects" },
@@ -154,48 +192,56 @@ function getPageFromHash(): PageKey {
   return pages.some((page) => page.key === raw) ? (raw as PageKey) : "home";
 }
 
+function GithubIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 .7a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 12 .7Z"
+      />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M3 5.5h18v13H3zM3.5 6l8.5 7 8.5-7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function PageShell({
+  index,
   kicker,
   title,
   description,
   children,
-  dark = false,
 }: {
+  index: string;
   kicker: string;
   title: string;
   description: string;
   children: React.ReactNode;
-  dark?: boolean;
 }) {
   return (
-    <section
-      className={`min-h-[calc(100vh-72px)] px-5 py-12 md:py-16 ${
-        dark ? "bg-[#151515] text-white" : "bg-[#f6f7f4] text-[#151515]"
-      }`}
-    >
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-4 md:grid-cols-[0.8fr_1.2fr] md:items-end">
+    <section className="page-shell">
+      <div className="page-shell__inner">
+        <header className="editorial-heading">
+          <div className="chapter-no">{index}</div>
           <div>
-            <p
-              className={`text-sm font-semibold uppercase tracking-[0.18em] ${
-                dark ? "text-[#83d7ce]" : "text-[#0e7c75]"
-              }`}
-            >
-              {kicker}
-            </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-              {title}
-            </h1>
+            <p className="kicker">{kicker}</p>
+            <h1>{title}</h1>
           </div>
-          <p
-            className={`max-w-2xl text-base leading-7 md:justify-self-end ${
-              dark ? "text-white/68" : "text-black/62"
-            }`}
-          >
-            {description}
-          </p>
-        </div>
-        <div className="mt-8">{children}</div>
+          <p className="editorial-heading__description">{description}</p>
+        </header>
+        {children}
       </div>
     </section>
   );
@@ -204,91 +250,87 @@ function PageShell({
 function HomePage({ setPage }: { setPage: (page: PageKey) => void }) {
   return (
     <>
-      <section className="mx-auto grid min-h-[calc(100vh-72px)] max-w-6xl gap-10 px-5 py-12 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-16">
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0e7c75]">
-              {profile.role}
-            </p>
-            <h1 className="max-w-3xl text-5xl font-semibold leading-[1.02] sm:text-6xl lg:text-7xl">
-              Developer and researcher building useful systems.
-            </h1>
-            <p className="max-w-2xl text-lg leading-8 text-black/68">
-              {profile.intro}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="#/projects"
-              onClick={() => setPage("projects")}
-              className="rounded-[8px] bg-[#0e7c75] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#095f5a]"
-            >
-              View projects
+      <section className="home-hero">
+        <div className="home-copy">
+          <p className="kicker">{profile.role}</p>
+          <h1>
+            Yuyun
+            <br />
+            <em>Chen.</em>
+          </h1>
+          <p className="hero-intro">{profile.intro}</p>
+          <div className="hero-actions">
+            <a href="#/projects" onClick={() => setPage("projects")} className="button button--primary">
+              Open field notes
             </a>
-            <a
-              href="#/publications"
-              onClick={() => setPage("publications")}
-              className="rounded-[8px] border border-black/20 px-5 py-3 text-sm font-semibold transition hover:border-black/50"
-            >
-              Academic output
+            <a href="#/awards" onClick={() => setPage("awards")} className="button">
+              Read the setlist
             </a>
           </div>
-
-          <dl className="grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+          <dl className="metrics">
             {metrics.map((item) => (
-              <div key={item.label} className="border-l border-black/18 py-2 pl-4">
-                <dt className="text-3xl font-semibold">{item.value}</dt>
-                <dd className="mt-1 text-xs uppercase tracking-[0.14em] text-black/52">
-                  {item.label}
-                </dd>
+              <div key={item.label}>
+                <dt>{item.value}</dt>
+                <dd>{item.label}</dd>
               </div>
             ))}
           </dl>
         </div>
 
-        <div className="relative">
-          <img
-            src={assetPath("portfolio-hero.png")}
-            alt="Academic workspace with laptop, notes, and research material"
-            className="aspect-[4/5] w-full rounded-[8px] object-cover shadow-2xl shadow-black/20"
-          />
-          <div className="absolute -bottom-5 left-5 right-5 rounded-[8px] border border-white/70 bg-white/90 p-4 shadow-xl backdrop-blur">
-            <p className="text-sm font-semibold">Current focus</p>
-            <p className="mt-1 text-sm leading-6 text-black/62">
-              {profile.focus.join(" / ")}
-            </p>
+        <aside className="character-board" aria-label="Girl band inspiration board">
+          <div className="tape" aria-hidden="true" />
+          <p className="hand-note">band-side research club / vol. 01</p>
+          <div className="character-board__title">
+            <strong>LIVE LOG</strong>
+            <span>5 character stickers</span>
           </div>
-        </div>
+          <div className="character-grid">
+            {bandCharacters.map((character, index) => (
+              <a
+                key={character.name}
+                className={`character-sticker character-sticker--${index + 1}`}
+                href={character.source}
+                target="_blank"
+                rel="noreferrer"
+                title={character.name}
+              >
+                <img src={character.image} alt={character.name} />
+                <span>
+                  {character.name}
+                  <small>{character.role}</small>
+                </span>
+              </a>
+            ))}
+          </div>
+          <p className="asset-credit">
+            Character references: AniList / BanG Dream! Ave Mujica
+          </p>
+        </aside>
       </section>
 
-      <section className="border-y border-black/10 bg-white px-5 py-12 md:py-16">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.78fr_1.22fr] md:gap-12">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0e7c75]">
-              About
-            </p>
-            <h2 className="mt-3 max-w-md text-3xl font-semibold sm:text-4xl">
-              Engineering practice with research judgment.
-            </h2>
-          </div>
-          <div>
-            <div className="space-y-4">
-              <p className="text-lg leading-8 text-black/70">
-                I am preparing for roles and academic opportunities where
-                engineering practice and research judgment both matter. My work
-                emphasizes clear problem framing, reproducible implementation,
-                and readable communication.
-              </p>
-              <p className="text-base leading-7 text-black/60">
-                My academic interests are grounded in implementation: I care
-                about systems that can be tested, explained, and transferred
-                into real use. I also document process clearly so collaborators
-                can review decisions instead of guessing from final code.
-              </p>
-            </div>
-
-          </div>
+      <section className="about-band">
+        <div className="about-band__label">
+          <p className="kicker">About / margin note</p>
+          <h2>Build it. Test it. Write down what changed.</h2>
+          <p className="hand-note">research should leave traces</p>
+        </div>
+        <div className="about-band__copy">
+          <p>
+            I am preparing for roles and academic opportunities where engineering
+            practice and research judgment both matter. My work emphasizes clear
+            problem framing, reproducible implementation, and readable communication.
+          </p>
+          <p>
+            My academic interests are grounded in implementation: systems that can
+            be tested, explained, and transferred into real use.
+          </p>
+          <figure className="research-polaroid">
+            <img
+              src={assetPath("portfolio-hero.png")}
+              alt="Academic workspace with laptop, notes, and research material"
+            />
+            <figcaption>{profile.focus.join(" / ")}</figcaption>
+          </figure>
         </div>
       </section>
     </>
@@ -298,42 +340,24 @@ function HomePage({ setPage }: { setPage: (page: PageKey) => void }) {
 function ProjectsPage() {
   return (
     <PageShell
-      kicker="Projects"
+      index="01"
+      kicker="Projects / production notes"
       title="Selected technical work"
-      description="Each project highlights a public link, a short technical summary, and the strongest evidence of implementation ability."
+      description="Each project is logged like a track in production: context, tools, implementation notes, and the public link."
     >
-      <div className="grid gap-4 md:grid-cols-3">
-        {projects.map((project) => (
-          <article
-            key={project.title}
-            className="rounded-[8px] border border-black/10 bg-white p-5 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#b2542f]">
-                {project.type}
-              </p>
-              <p className="text-sm text-black/45">{project.period}</p>
+      <div className="project-list">
+        {projects.map((project, index) => (
+          <article key={project.title} className="project-entry">
+            <div className="entry-index">{String(index + 1).padStart(2, "0")}</div>
+            <div>
+              <p className="entry-meta">{project.type} / {project.period}</p>
+              <h2>{project.title}</h2>
+              <p>{project.summary}</p>
+              <div className="tag-list">
+                {project.tags.map((tag) => <span key={tag}>{tag}</span>)}
+              </div>
             </div>
-            <h2 className="mt-4 text-xl font-semibold">{project.title}</h2>
-            <p className="mt-3 text-sm leading-7 text-black/62">
-              {project.summary}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {project.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-[8px] border border-black/10 px-2.5 py-1 text-xs text-black/58"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <a
-              href={project.link}
-              className="mt-6 inline-flex text-sm font-semibold text-[#0e7c75]"
-            >
-              Project link
-            </a>
+            <a href={project.link} className="entry-link">Open note ↗</a>
           </article>
         ))}
       </div>
@@ -344,33 +368,23 @@ function ProjectsPage() {
 function PublicationsPage() {
   return (
     <PageShell
-      kicker="Publications"
+      index="02"
+      kicker="Publications / research tracks"
       title="Academic output"
-      description="Publications, preprints, posters, and technical reports are organized by venue, status, and contribution."
+      description="Papers, preprints, posters, and technical reports arranged as an evolving research discography."
     >
-      <div className="divide-y divide-black/10 rounded-[8px] border border-black/10 bg-white">
-        {publications.map((paper) => (
-          <article
-            key={paper.title}
-            className="grid gap-4 p-5 md:grid-cols-[1fr_0.28fr]"
-          >
+      <div className="publication-list">
+        {publications.map((paper, index) => (
+          <article key={paper.title} className="publication-entry">
+            <div className="entry-index">{String(index + 1).padStart(2, "0")}</div>
             <div>
-              <p className="text-sm font-semibold text-[#b2542f]">
-                {paper.venue}
-              </p>
-              <h2 className="mt-2 text-xl font-semibold">{paper.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-black/62">
-                {paper.summary}
-              </p>
+              <p className="entry-meta">{paper.venue}</p>
+              <h2>{paper.title}</h2>
+              <p>{paper.summary}</p>
             </div>
-            <div className="flex items-start justify-between gap-4 md:block md:text-right">
-              <p className="text-sm text-black/45">{paper.status}</p>
-              <a
-                href={paper.link}
-                className="text-sm font-semibold text-[#0e7c75] md:mt-5 md:inline-flex"
-              >
-                Read
-              </a>
+            <div className="publication-status">
+              <span>{paper.status}</span>
+              <a href={paper.link}>Read ↗</a>
             </div>
           </article>
         ))}
@@ -382,26 +396,21 @@ function PublicationsPage() {
 function AwardsPage() {
   return (
     <PageShell
-      kicker="Awards"
-      title="Competition and honors"
-      description="Competition records emphasize level, ranking, personal role, and the delivered result."
+      index="03"
+      kicker="Awards / live set"
+      title="Competition setlist"
+      description="The model, the result, and the part of the problem that made each competition worth remembering."
     >
-      <div className="grid gap-4">
-        {awards.map((award) => (
-          <article
-            key={award.title}
-            className="grid gap-4 rounded-[8px] border border-black/10 bg-white p-5 md:grid-cols-[0.18fr_0.3fr_1fr]"
-          >
-            <p className="text-lg font-semibold text-[#0e7c75]">{award.year}</p>
+      <div className="award-list">
+        {awards.map((award, index) => (
+          <article key={award.title} className="award-entry">
+            <div className="award-number">{String(index + 1).padStart(2, "0")}</div>
             <div>
-              <h2 className="font-semibold">{award.title}</h2>
-              <p className="mt-1 text-sm font-semibold text-[#b2542f]">
-                {award.result}
-              </p>
+              <p className="entry-meta">{award.year}</p>
+              <h2>{award.title}</h2>
+              <p className="award-result">{award.result}</p>
             </div>
-            <p className="text-sm leading-7 text-black/62 [&_strong]:font-semibold [&_strong]:text-[#151515]">
-              {award.detail}
-            </p>
+            <p className="award-detail">{award.detail}</p>
           </article>
         ))}
       </div>
@@ -412,26 +421,18 @@ function AwardsPage() {
 function GalleryPage() {
   return (
     <PageShell
-      kicker="Gallery"
+      index="04"
+      kicker="Gallery / contact sheet"
       title="Visual record"
-      description="A compact record of project work, research presentations, competition moments, and academic milestones."
+      description="Project work, presentations, competitions, and the in-between moments that do not fit into a formal abstract."
     >
-      <div className="grid gap-4 md:grid-cols-3">
-        {gallery.map((item) => (
-          <figure
-            key={item.title}
-            className="overflow-hidden rounded-[8px] border border-black/10 bg-white"
-          >
-            <img
-              src={item.src}
-              alt={item.title}
-              className="aspect-[4/3] w-full object-cover"
-            />
-            <figcaption className="p-4">
-              <p className="font-semibold">{item.title}</p>
-              <p className="mt-1 text-sm leading-6 text-black/58">
-                {item.caption}
-              </p>
+      <div className="gallery-wall">
+        {gallery.map((item, index) => (
+          <figure key={item.title} className={`gallery-print gallery-print--${index + 1}`}>
+            <img src={item.src} alt={item.title} />
+            <figcaption>
+              <strong>{item.title}</strong>
+              <span>{item.caption}</span>
             </figcaption>
           </figure>
         ))}
@@ -442,36 +443,22 @@ function GalleryPage() {
 
 function Footer() {
   return (
-    <footer className="px-5 py-12">
-      <div className="mx-auto grid max-w-6xl gap-6 rounded-[8px] bg-[#0e7c75] p-6 text-white md:grid-cols-[1fr_auto] md:items-center">
-        <div>
-          <p className="text-sm uppercase tracking-[0.18em] text-white/68">
-            Contact
-          </p>
-          <h2 className="mt-2 text-3xl font-semibold">
-            Let&apos;s connect.
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-white/72">
-            Based in {profile.location}, I am currently looking for internship
-            opportunities in AI product management or algorithm engineering.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
-          <a
-            href={`mailto:${profile.email}`}
-            className="max-w-full break-all rounded-[8px] bg-white px-5 py-3 text-center text-sm font-semibold text-[#0e7c75]"
-          >
-            {profile.email}
-          </a>
-          <a
-            href={profile.github}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-[8px] border border-white/45 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/10"
-          >
-            GitHub
-          </a>
-        </div>
+    <footer className="contact-footer">
+      <div>
+        <p className="kicker">Backstage pass / contact</p>
+        <h2>Let&apos;s connect.</h2>
+        <p>
+          Based in {profile.location}, currently looking for internships in AI
+          product management or algorithm engineering.
+        </p>
+      </div>
+      <div className="contact-links">
+        <a href={profile.github} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub">
+          <GithubIcon />
+        </a>
+        <a href={`mailto:${profile.email}`} aria-label="Outlook email" title={profile.email}>
+          <MailIcon />
+        </a>
       </div>
     </footer>
   );
@@ -481,7 +468,10 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>(() => getPageFromHash());
 
   useEffect(() => {
-    const onHashChange = () => setCurrentPage(getPageFromHash());
+    const onHashChange = () => {
+      setCurrentPage(getPageFromHash());
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -502,36 +492,27 @@ export default function App() {
   }, [currentPage]);
 
   return (
-    <main className="min-h-screen bg-[#f6f7f4] text-[#151515]">
-      <header className="sticky top-0 z-20 border-b border-black/10 bg-[#f6f7f4]/92 backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-          <a
-            href="#/"
-            onClick={() => setCurrentPage("home")}
-            className="text-sm font-semibold"
-          >
+    <main className="site">
+      <header className="site-header">
+        <nav>
+          <a href="#/" onClick={() => setCurrentPage("home")} className="site-name">
             {profile.name}
           </a>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-black/70 md:justify-end">
+          <div className="nav-links">
             {pages.map((page) => (
               <a
                 key={page.key}
                 href={page.key === "home" ? "#/" : `#/${page.key}`}
                 onClick={() => setCurrentPage(page.key)}
                 aria-current={currentPage === page.key ? "page" : undefined}
-                className={`rounded-[8px] px-3 py-2 transition ${
-                  currentPage === page.key
-                    ? "bg-[#151515] text-white"
-                    : "hover:bg-black/6 hover:text-black"
-                }`}
               >
                 {page.label}
               </a>
             ))}
           </div>
+          <span className="volume-mark">VOL. 01</span>
         </nav>
       </header>
-
       {pageContent}
       {currentPage === "home" && <Footer />}
     </main>
