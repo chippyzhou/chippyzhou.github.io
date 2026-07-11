@@ -515,18 +515,12 @@ export default function App() {
                 {page.label}
               </a>
             ))}
-            <a
-              href={`mailto:${profile.email}`}
-              className="rounded-[8px] bg-[#0e7c75] px-3 py-2 font-medium text-white transition hover:bg-[#095f5a]"
-            >
-              Contact
-            </a>
           </div>
         </nav>
       </header>
 
       {pageContent}
-      <Footer />
+      {currentPage === "home" && <Footer />}
     </main>
   );
 }
