@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
 
@@ -590,10 +591,26 @@ export default function App() {
     }
   }, [currentPage]);
 
+  const navigationItems = pages.map((page) => (
+    <a
+      key={page.key}
+      href={page.key === "home" ? "#/" : `#/${page.key}`}
+      onClick={() => {
+        setCurrentPage(page.key);
+        setIsMenuOpen(false);
+      }}
+      aria-current={currentPage === page.key ? "page" : undefined}
+    >
+      <span>{page.label}</span>
+      <span className="nav-instrument" aria-hidden="true">{page.icon}</span>
+    </a>
+  ));
+
   return (
-    <main className={`site${isMenuOpen ? " site--menu-open" : ""}`}>
-      <header className="site-header">
-        <nav>
+    <>
+      <main className="site">
+        <header className="site-header">
+          <nav>
           <a
             href="#/"
             onClick={() => setCurrentPage("home")}
@@ -616,40 +633,31 @@ export default function App() {
             <span />
             <span />
           </button>
+            <div className="nav-links">{navigationItems}</div>
+            <span className="volume-mark">VOL. 01</span>
+          </nav>
+        </header>
+        {pageContent}
+        {currentPage === "home" && <Footer />}
+      </main>
+      {isMenuOpen && createPortal(
+        <div className="mobile-nav-layer">
           <button
-            className={`nav-backdrop${isMenuOpen ? " is-open" : ""}`}
+            className="nav-backdrop is-open"
             type="button"
             aria-label="Close navigation"
             onClick={() => setIsMenuOpen(false)}
           />
-          <div
-            id="primary-navigation"
-            className={`nav-links${isMenuOpen ? " is-open" : ""}`}
-          >
+          <div id="primary-navigation" className="nav-links nav-links--mobile is-open">
             <div className="nav-drawer-heading">
               <span>Contents</span>
               <button type="button" aria-label="Close navigation" onClick={() => setIsMenuOpen(false)}>×</button>
             </div>
-            {pages.map((page) => (
-              <a
-                key={page.key}
-                href={page.key === "home" ? "#/" : `#/${page.key}`}
-                onClick={() => {
-                  setCurrentPage(page.key);
-                  setIsMenuOpen(false);
-                }}
-                aria-current={currentPage === page.key ? "page" : undefined}
-              >
-                <span>{page.label}</span>
-                <span className="nav-instrument" aria-hidden="true">{page.icon}</span>
-              </a>
-            ))}
+            {navigationItems}
           </div>
-          <span className="volume-mark">VOL. 01</span>
-        </nav>
-      </header>
-      {pageContent}
-      {currentPage === "home" && <Footer />}
-    </main>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
