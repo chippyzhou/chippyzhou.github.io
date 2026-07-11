@@ -602,8 +602,8 @@ export default function App() {
                 onClick={() => setCurrentPage(page.key)}
                 aria-current={currentPage === page.key ? "page" : undefined}
               >
-                <span className="nav-instrument" aria-hidden="true">{page.icon}</span>
                 <span>{page.label}</span>
+                <span className="nav-instrument" aria-hidden="true">{page.icon}</span>
               </a>
             ))}
           </div>

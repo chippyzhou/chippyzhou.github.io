@@ -71,26 +71,27 @@ img { display: block; max-width: 100%; }
 }
 .nav-links { display: flex; align-items: center; gap: 4px; }
 .nav-links a {
-  min-width: 70px;
-  min-height: 54px;
-  padding: 5px 8px;
-  display: grid;
-  grid-template-rows: 25px auto;
-  place-items: center;
+  min-width: 88px;
+  min-height: 46px;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   text-decoration: none;
   border-bottom: 2px solid transparent;
 }
 .nav-instrument {
-  width: 25px;
-  height: 25px;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
-  font-size: 18px;
+  font-size: 14px;
   line-height: 1;
-  filter: saturate(0.8);
+  filter: grayscale(0.3) saturate(0.65);
 }
 .nav-links a:hover { color: var(--blue); }
 .nav-links a[aria-current="page"] { color: var(--red); border-color: var(--red); }
