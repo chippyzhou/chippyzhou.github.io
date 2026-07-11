@@ -19,7 +19,7 @@ const profile = {
 
 const metrics = [
   { value: "6+", label: "Selected projects" },
-  { value: "4", label: "Competition awards" },
+  { value: "3", label: "Competition awards" },
   { value: "3", label: "Publications / preprints" },
   { value: "2", label: "Research directions" },
 ];
@@ -83,25 +83,25 @@ const publications = [
 
 const awards = [
   {
-    title: "National / Provincial Competition Award",
+    title: "2026 MCM/ICM · Problem C",
     year: "2026",
-    result: "First Prize / Finalist / Top X%",
+    result: "Meritorious Winner · Top 7%",
     detail:
-      "Led a technical module from problem framing to demo delivery, with emphasis on robust implementation and clear presentation.",
+      "Proposed the SAWS scoring framework, using Bradley-Terry inverse inference and dual-channel OLS regression to analyze judge-fan structural bias and improve scoring fairness.",
   },
   {
-    title: "Innovation and Entrepreneurship Challenge",
-    year: "2025",
-    result: "Team Lead",
+    title: "2026 MathorCup · Problem D",
+    year: "2026",
+    result: "Provincial First Prize",
     detail:
-      "Coordinated product planning, prototype development, and final defense materials for an applied technology project.",
+      "Developed a multi-objective 3D heterogeneous bin-packing system with Layered-FFD and Block-GA, achieving 93.72% volume utilization and reducing total logistics costs by 26.8%.",
   },
   {
-    title: "Academic Scholarship or Honor",
+    title: "2025 APMCM · Problem B",
     year: "2025",
-    result: "Recipient",
+    result: "Provincial Second Prize",
     detail:
-      "Recognized for academic performance, project execution, research participation, or department-level contribution.",
+      "Built an optical-thermal model for passive daytime radiative cooling, combining the Drude-Lorentz dielectric function, Transfer Matrix Method, and numerical optimization for PDMS film design.",
   },
 ];
 
@@ -345,28 +345,27 @@ function PublicationsPage() {
       kicker="Publications"
       title="Academic output"
       description="Publications, preprints, posters, and technical reports are organized by venue, status, and contribution."
-      dark
     >
-      <div className="divide-y divide-white/14 rounded-[8px] border border-white/14">
+      <div className="divide-y divide-black/10 rounded-[8px] border border-black/10 bg-white">
         {publications.map((paper) => (
           <article
             key={paper.title}
             className="grid gap-4 p-5 md:grid-cols-[1fr_0.28fr]"
           >
             <div>
-              <p className="text-sm font-semibold text-[#f0b35a]">
+              <p className="text-sm font-semibold text-[#b2542f]">
                 {paper.venue}
               </p>
               <h2 className="mt-2 text-xl font-semibold">{paper.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-white/66">
+              <p className="mt-3 text-sm leading-7 text-black/62">
                 {paper.summary}
               </p>
             </div>
             <div className="flex items-start justify-between gap-4 md:block md:text-right">
-              <p className="text-sm text-white/54">{paper.status}</p>
+              <p className="text-sm text-black/45">{paper.status}</p>
               <a
                 href={paper.link}
-                className="text-sm font-semibold text-[#83d7ce] md:mt-5 md:inline-flex"
+                className="text-sm font-semibold text-[#0e7c75] md:mt-5 md:inline-flex"
               >
                 Read
               </a>
