@@ -7,11 +7,9 @@ type PageKey = "home" | "projects" | "publications" | "awards" | "gallery";
 const profile = {
   name: "Yuyun Chen（陈彧赟）",
   role: "Research-minded developer · Undergraduate / Graduate candidate",
-  location: "City, Country",
-  email: "your.email@example.com",
-  github: "https://github.com/yourname",
-  scholar: "https://scholar.google.com/",
-  resume: "#",
+  location: "Guangzhou, China",
+  email: "chensilu_0717@outlook.com",
+  github: "https://github.com/chippyzhou",
   intro:
     "I work at the intersection of software engineering, data-driven systems, and applied research. This site collects my selected projects, academic output, competition results, and field notes for recruiting and academic review.",
   focus: ["Software Engineering", "AI Applications", "Human-Centered Systems"],
@@ -290,26 +288,6 @@ function HomePage({ setPage }: { setPage: (page: PageKey) => void }) {
               </p>
             </div>
 
-            <dl className="mt-8 grid gap-5 border-t border-black/10 pt-6 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="font-semibold">Location</dt>
-                <dd className="mt-1 text-black/60">{profile.location}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold">Open to</dt>
-                <dd className="mt-1 leading-6 text-black/60">
-                  Internships, research assistant roles, graduate applications
-                </dd>
-              </div>
-              <div>
-                <dt className="font-semibold">Links</dt>
-                <dd className="mt-2 flex flex-wrap gap-3 text-[#0e7c75]">
-                  <a href={profile.github}>GitHub</a>
-                  <a href={profile.scholar}>Scholar</a>
-                  <a href={profile.resume}>Resume</a>
-                </dd>
-              </div>
-            </dl>
           </div>
         </div>
       </section>
@@ -471,19 +449,29 @@ function Footer() {
             Contact
           </p>
           <h2 className="mt-2 text-3xl font-semibold">
-            Let&apos;s talk about research, projects, and roles.
+            Let&apos;s connect.
           </h2>
           <p className="mt-3 text-sm leading-7 text-white/72">
-            I am open to internships, research collaboration, graduate
-            opportunities, and technical roles aligned with applied systems.
+            Based in {profile.location}, I am currently looking for internship
+            opportunities in AI product management or algorithm engineering.
           </p>
         </div>
-        <a
-          href={`mailto:${profile.email}`}
-          className="max-w-full break-all rounded-[8px] bg-white px-5 py-3 text-center text-sm font-semibold text-[#0e7c75]"
-        >
-          {profile.email}
-        </a>
+        <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
+          <a
+            href={`mailto:${profile.email}`}
+            className="max-w-full break-all rounded-[8px] bg-white px-5 py-3 text-center text-sm font-semibold text-[#0e7c75]"
+          >
+            {profile.email}
+          </a>
+          <a
+            href={profile.github}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-[8px] border border-white/45 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            GitHub
+          </a>
+        </div>
       </div>
     </footer>
   );
