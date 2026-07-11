@@ -555,14 +555,24 @@ function Footer() {
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>(() => getPageFromHash());
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const onHashChange = () => {
       setCurrentPage(getPageFromHash());
+      setIsMenuOpen(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   const pageContent = useMemo(() => {
@@ -594,12 +604,40 @@ export default function App() {
             <span className="site-name__chen">Chen</span>
             <small>陈彧赟 / research log</small>
           </a>
-          <div className="nav-links">
+          <button
+            className="nav-toggle"
+            type="button"
+            aria-label={isMenuOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={isMenuOpen}
+            aria-controls="primary-navigation"
+            onClick={() => setIsMenuOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <button
+            className={`nav-backdrop${isMenuOpen ? " is-open" : ""}`}
+            type="button"
+            aria-label="Close navigation"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          <div
+            id="primary-navigation"
+            className={`nav-links${isMenuOpen ? " is-open" : ""}`}
+          >
+            <div className="nav-drawer-heading">
+              <span>Contents</span>
+              <button type="button" aria-label="Close navigation" onClick={() => setIsMenuOpen(false)}>×</button>
+            </div>
             {pages.map((page) => (
               <a
                 key={page.key}
                 href={page.key === "home" ? "#/" : `#/${page.key}`}
-                onClick={() => setCurrentPage(page.key)}
+                onClick={() => {
+                  setCurrentPage(page.key);
+                  setIsMenuOpen(false);
+                }}
                 aria-current={currentPage === page.key ? "page" : undefined}
               >
                 <span>{page.label}</span>
