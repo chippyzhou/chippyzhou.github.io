@@ -125,19 +125,102 @@ const awards = [
 
 const gallery = [
   {
-    src: assetPath("gallery-projects.png"),
-    title: "Project development",
-    caption: "Workspace, prototypes, code, and product iterations.",
+    src: assetPath("band-wall/mygo-banner.jpg"),
+    title: "MyGO!!!!!",
+    caption: "Series banner",
+    layout: "wide",
+    source: "https://anilist.co/anime/163571",
   },
   {
-    src: assetPath("gallery-publications.png"),
-    title: "Research presentation",
-    caption: "Papers, charts, presentations, and publication milestones.",
+    src: assetPath("band-wall/mygo-cover.png"),
+    title: "It's MyGO!!!!!",
+    caption: "Key visual",
+    layout: "cover",
+    source: "https://anilist.co/anime/163571",
   },
   {
-    src: assetPath("gallery-awards.png"),
-    title: "Competition record",
-    caption: "Awards, demos, team milestones, and event documentation.",
+    src: assetPath("band-wall/mygo-tomori.png"),
+    title: "Tomori Takamatsu",
+    caption: "Vocal",
+    layout: "portrait",
+    source: "https://anilist.co/character/302095",
+  },
+  {
+    src: assetPath("band-wall/mygo-anon.png"),
+    title: "Anon Chihaya",
+    caption: "Guitar",
+    layout: "portrait",
+    source: "https://anilist.co/character/302094",
+  },
+  {
+    src: assetPath("band-wall/mygo-taki.png"),
+    title: "Taki Shiina",
+    caption: "Drums",
+    layout: "portrait",
+    source: "https://anilist.co/character/302091",
+  },
+  {
+    src: assetPath("band-wall/mygo-raana.png"),
+    title: "Raana Kaname",
+    caption: "Guitar",
+    layout: "portrait",
+    source: "https://anilist.co/character/302092",
+  },
+  {
+    src: assetPath("band-wall/mygo-soyo.png"),
+    title: "Soyo Nagasaki",
+    caption: "Bass",
+    layout: "portrait",
+    source: "https://anilist.co/character/302093",
+  },
+  {
+    src: assetPath("band-wall/mujica-banner.jpg"),
+    title: "Ave Mujica",
+    caption: "Series banner",
+    layout: "wide",
+    source: "https://anilist.co/anime/169295",
+  },
+  {
+    src: assetPath("band-wall/mujica-cover.jpg"),
+    title: "Ave Mujica",
+    caption: "Key visual",
+    layout: "cover",
+    source: "https://anilist.co/anime/169295",
+  },
+  {
+    src: assetPath("band-wall/mujica-sakiko.jpg"),
+    title: "Sakiko Togawa",
+    caption: "Keyboard",
+    layout: "portrait",
+    source: "https://anilist.co/character/312796",
+  },
+  {
+    src: assetPath("band-wall/mujica-mutsumi.png"),
+    title: "Mutsumi Wakaba",
+    caption: "Guitar",
+    layout: "portrait",
+    source: "https://anilist.co/character/312798",
+  },
+  {
+    src: assetPath("band-wall/mujica-uika.jpg"),
+    title: "Uika Misumi",
+    caption: "Guitar / vocal",
+    layout: "portrait",
+    source: "https://anilist.co/character/312797",
+  },
+  {
+    src: assetPath("band-wall/mujica-umiri.jpg"),
+    title: "Umiri Yahata",
+    caption: "Bass",
+    layout: "portrait",
+    source: "https://anilist.co/character/312799",
+  },
+  {
+    src: assetPath("band-wall/mujica-nyamu.jpg"),
+    title: "Nyamu Yuutenji",
+    caption: "Drums",
+    layout: "portrait",
+    source: "https://anilist.co/character/314493",
   },
 ];
 
@@ -145,46 +228,41 @@ const bandCharacters = [
   {
     name: "Sakiko Togawa",
     role: "Keyboard",
-    image:
-      "https://s4.anilist.co/file/anilistcdn/character/large/b312796-VwamX0i26tsP.jpg",
+    image: assetPath("band-wall/mujica-sakiko.jpg"),
     source: "https://anilist.co/character/312796",
   },
   {
     name: "Mutsumi Wakaba",
     role: "Guitar",
-    image:
-      "https://s4.anilist.co/file/anilistcdn/character/large/b312798-DQxF6RGiGAsB.png",
+    image: assetPath("band-wall/mujica-mutsumi.png"),
     source: "https://anilist.co/character/312798",
   },
   {
     name: "Uika Misumi",
     role: "Guitar / Vocal",
-    image:
-      "https://s4.anilist.co/file/anilistcdn/character/large/b312797-jVfCeiZLz22a.jpg",
+    image: assetPath("band-wall/mujica-uika.jpg"),
     source: "https://anilist.co/character/312797",
   },
   {
     name: "Umiri Yahata",
     role: "Bass",
-    image:
-      "https://s4.anilist.co/file/anilistcdn/character/large/b312799-toCvN6GOl2Rt.jpg",
+    image: assetPath("band-wall/mujica-umiri.jpg"),
     source: "https://anilist.co/character/312799",
   },
   {
     name: "Nyamu Yuutenji",
     role: "Drums",
-    image:
-      "https://s4.anilist.co/file/anilistcdn/character/large/b314493-Yx1jBiTl5rec.jpg",
+    image: assetPath("band-wall/mujica-nyamu.jpg"),
     source: "https://anilist.co/character/314493",
   },
 ];
 
-const pages: Array<{ key: PageKey; label: string }> = [
-  { key: "home", label: "Home" },
-  { key: "projects", label: "Projects" },
-  { key: "publications", label: "Publications" },
-  { key: "awards", label: "Awards" },
-  { key: "gallery", label: "Gallery" },
+const pages: Array<{ key: PageKey; label: string; icon: string }> = [
+  { key: "home", label: "Home", icon: "🎤" },
+  { key: "projects", label: "Projects", icon: "🎸" },
+  { key: "publications", label: "Publications", icon: "🎻" },
+  { key: "awards", label: "Awards", icon: "🥁" },
+  { key: "gallery", label: "Gallery", icon: "🎹" },
 ];
 
 function getPageFromHash(): PageKey {
@@ -428,15 +506,26 @@ function GalleryPage() {
     >
       <div className="gallery-wall">
         {gallery.map((item, index) => (
-          <figure key={item.title} className={`gallery-print gallery-print--${index + 1}`}>
-            <img src={item.src} alt={item.title} />
-            <figcaption>
-              <strong>{item.title}</strong>
-              <span>{item.caption}</span>
-            </figcaption>
-          </figure>
+          <a
+            key={`${item.title}-${index}`}
+            className={`gallery-photo gallery-photo--${item.layout} gallery-photo--${index + 1}`}
+            href={item.source}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <figure>
+              <img src={item.src} alt={item.title} loading="lazy" />
+              <figcaption>
+                <strong>{item.title}</strong>
+                <span>{item.caption}</span>
+              </figcaption>
+            </figure>
+          </a>
         ))}
       </div>
+      <p className="gallery-credit">
+        Image references: AniList / BanG Dream! It&apos;s MyGO!!!!! / Ave Mujica.
+      </p>
     </PageShell>
   );
 }
@@ -495,8 +584,15 @@ export default function App() {
     <main className="site">
       <header className="site-header">
         <nav>
-          <a href="#/" onClick={() => setCurrentPage("home")} className="site-name">
-            {profile.name}
+          <a
+            href="#/"
+            onClick={() => setCurrentPage("home")}
+            className="site-name"
+            aria-label={profile.name}
+          >
+            <span className="site-name__yuyun">Yuyun</span>
+            <span className="site-name__chen">Chen</span>
+            <small>陈彧赟 / research log</small>
           </a>
           <div className="nav-links">
             {pages.map((page) => (
@@ -506,7 +602,8 @@ export default function App() {
                 onClick={() => setCurrentPage(page.key)}
                 aria-current={currentPage === page.key ? "page" : undefined}
               >
-                {page.label}
+                <span className="nav-instrument" aria-hidden="true">{page.icon}</span>
+                <span>{page.label}</span>
               </a>
             ))}
           </div>
