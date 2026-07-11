@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
 
-type PageKey = "home" | "about" | "projects" | "publications" | "awards" | "gallery";
+type PageKey = "home" | "projects" | "publications" | "awards" | "gallery";
 
 const profile = {
   name: "Yuyun Chen（陈彧赟）",
@@ -145,7 +145,6 @@ const gallery = [
 
 const pages: Array<{ key: PageKey; label: string }> = [
   { key: "home", label: "Home" },
-  { key: "about", label: "About" },
   { key: "projects", label: "Projects" },
   { key: "publications", label: "Publications" },
   { key: "awards", label: "Awards" },
@@ -206,110 +205,115 @@ function PageShell({
 
 function HomePage({ setPage }: { setPage: (page: PageKey) => void }) {
   return (
-    <section className="mx-auto grid min-h-[calc(100vh-72px)] max-w-6xl gap-10 px-5 py-12 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-16">
-      <div className="space-y-8">
-        <div className="space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0e7c75]">
-            {profile.role}
-          </p>
-          <h1 className="max-w-3xl text-5xl font-semibold leading-[1.02] sm:text-6xl lg:text-7xl">
-            Developer and researcher building useful systems.
-          </h1>
-          <p className="max-w-2xl text-lg leading-8 text-black/68">
-            {profile.intro}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="#/projects"
-            onClick={() => setPage("projects")}
-            className="rounded-[8px] bg-[#0e7c75] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#095f5a]"
-          >
-            View projects
-          </a>
-          <a
-            href="#/publications"
-            onClick={() => setPage("publications")}
-            className="rounded-[8px] border border-black/20 px-5 py-3 text-sm font-semibold transition hover:border-black/50"
-          >
-            Academic output
-          </a>
-        </div>
-
-        <dl className="grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-          {metrics.map((item) => (
-            <div key={item.label} className="border-l border-black/18 py-2 pl-4">
-              <dt className="text-3xl font-semibold">{item.value}</dt>
-              <dd className="mt-1 text-xs uppercase tracking-[0.14em] text-black/52">
-                {item.label}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      <div className="relative">
-        <img
-          src={assetPath("portfolio-hero.png")}
-          alt="Academic workspace with laptop, notes, and research material"
-          className="aspect-[4/5] w-full rounded-[8px] object-cover shadow-2xl shadow-black/20"
-        />
-        <div className="absolute -bottom-5 left-5 right-5 rounded-[8px] border border-white/70 bg-white/90 p-4 shadow-xl backdrop-blur">
-          <p className="text-sm font-semibold">Current focus</p>
-          <p className="mt-1 text-sm leading-6 text-black/62">
-            {profile.focus.join(" / ")}
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AboutPage() {
-  return (
-    <PageShell
-      kicker="About"
-      title="Personal profile"
-      description="A concise introduction for recruiters, faculty reviewers, and collaborators who want to understand my direction quickly."
-    >
-      <div className="grid gap-8 rounded-[8px] border border-black/10 bg-white p-6 md:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-4">
-          <p className="text-lg leading-8 text-black/70">
-            I am preparing for roles and academic opportunities where engineering
-            practice and research judgment both matter. My work emphasizes clear
-            problem framing, reproducible implementation, and readable
-            communication.
-          </p>
-          <p className="text-base leading-7 text-black/60">
-            My academic interests are grounded in implementation: I care about
-            systems that can be tested, explained, and transferred into real use.
-            I also document process clearly so collaborators can review decisions
-            instead of guessing from final code.
-          </p>
-        </div>
-        <div className="grid gap-3 text-sm">
-          <div className="rounded-[8px] border border-black/10 bg-[#f6f7f4] p-4">
-            <p className="font-semibold">Location</p>
-            <p className="mt-1 text-black/60">{profile.location}</p>
-          </div>
-          <div className="rounded-[8px] border border-black/10 bg-[#f6f7f4] p-4">
-            <p className="font-semibold">Open to</p>
-            <p className="mt-1 text-black/60">
-              Internships, research assistant roles, graduate applications
+    <>
+      <section className="mx-auto grid min-h-[calc(100vh-72px)] max-w-6xl gap-10 px-5 py-12 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-16">
+        <div className="space-y-8">
+          <div className="space-y-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0e7c75]">
+              {profile.role}
+            </p>
+            <h1 className="max-w-3xl text-5xl font-semibold leading-[1.02] sm:text-6xl lg:text-7xl">
+              Developer and researcher building useful systems.
+            </h1>
+            <p className="max-w-2xl text-lg leading-8 text-black/68">
+              {profile.intro}
             </p>
           </div>
-          <div className="rounded-[8px] border border-black/10 bg-[#f6f7f4] p-4">
-            <p className="font-semibold">Links</p>
-            <div className="mt-2 flex flex-wrap gap-3 text-[#0e7c75]">
-              <a href={profile.github}>GitHub</a>
-              <a href={profile.scholar}>Scholar</a>
-              <a href={profile.resume}>Resume</a>
-            </div>
+
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="#/projects"
+              onClick={() => setPage("projects")}
+              className="rounded-[8px] bg-[#0e7c75] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#095f5a]"
+            >
+              View projects
+            </a>
+            <a
+              href="#/publications"
+              onClick={() => setPage("publications")}
+              className="rounded-[8px] border border-black/20 px-5 py-3 text-sm font-semibold transition hover:border-black/50"
+            >
+              Academic output
+            </a>
+          </div>
+
+          <dl className="grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+            {metrics.map((item) => (
+              <div key={item.label} className="border-l border-black/18 py-2 pl-4">
+                <dt className="text-3xl font-semibold">{item.value}</dt>
+                <dd className="mt-1 text-xs uppercase tracking-[0.14em] text-black/52">
+                  {item.label}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <div className="relative">
+          <img
+            src={assetPath("portfolio-hero.png")}
+            alt="Academic workspace with laptop, notes, and research material"
+            className="aspect-[4/5] w-full rounded-[8px] object-cover shadow-2xl shadow-black/20"
+          />
+          <div className="absolute -bottom-5 left-5 right-5 rounded-[8px] border border-white/70 bg-white/90 p-4 shadow-xl backdrop-blur">
+            <p className="text-sm font-semibold">Current focus</p>
+            <p className="mt-1 text-sm leading-6 text-black/62">
+              {profile.focus.join(" / ")}
+            </p>
           </div>
         </div>
-      </div>
-    </PageShell>
+      </section>
+
+      <section className="border-y border-black/10 bg-white px-5 py-12 md:py-16">
+        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.78fr_1.22fr] md:gap-12">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0e7c75]">
+              About
+            </p>
+            <h2 className="mt-3 max-w-md text-3xl font-semibold sm:text-4xl">
+              Engineering practice with research judgment.
+            </h2>
+          </div>
+          <div>
+            <div className="space-y-4">
+              <p className="text-lg leading-8 text-black/70">
+                I am preparing for roles and academic opportunities where
+                engineering practice and research judgment both matter. My work
+                emphasizes clear problem framing, reproducible implementation,
+                and readable communication.
+              </p>
+              <p className="text-base leading-7 text-black/60">
+                My academic interests are grounded in implementation: I care
+                about systems that can be tested, explained, and transferred
+                into real use. I also document process clearly so collaborators
+                can review decisions instead of guessing from final code.
+              </p>
+            </div>
+
+            <dl className="mt-8 grid gap-5 border-t border-black/10 pt-6 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="font-semibold">Location</dt>
+                <dd className="mt-1 text-black/60">{profile.location}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Open to</dt>
+                <dd className="mt-1 leading-6 text-black/60">
+                  Internships, research assistant roles, graduate applications
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Links</dt>
+                <dd className="mt-2 flex flex-wrap gap-3 text-[#0e7c75]">
+                  <a href={profile.github}>GitHub</a>
+                  <a href={profile.scholar}>Scholar</a>
+                  <a href={profile.resume}>Resume</a>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -496,8 +500,6 @@ export default function App() {
 
   const pageContent = useMemo(() => {
     switch (currentPage) {
-      case "about":
-        return <AboutPage />;
       case "projects":
         return <ProjectsPage />;
       case "publications":
