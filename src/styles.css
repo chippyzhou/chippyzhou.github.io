@@ -293,13 +293,15 @@ img { display: block; max-width: 100%; }
 .award-detail strong { color: var(--ink); }
 
 .gallery-wall {
-  min-height: 900px;
-  padding: 44px 6px 24px;
+  max-width: 1040px;
+  min-height: 720px;
+  margin: 0 auto;
+  padding: 36px 6px 24px;
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-auto-rows: 84px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 64px;
   grid-auto-flow: dense;
-  gap: 14px;
+  gap: 10px;
 }
 .gallery-photo {
   color: var(--ink);
@@ -311,13 +313,13 @@ img { display: block; max-width: 100%; }
   width: 100%;
   height: 100%;
   margin: 0;
-  padding: 8px 8px 0;
+  padding: 5px 5px 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
   background: var(--white);
-  border: 1.5px solid var(--ink);
-  box-shadow: 5px 5px 0 var(--yellow);
+  border: 1px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--yellow);
 }
 .gallery-photo img {
   width: 100%;
@@ -326,15 +328,15 @@ img { display: block; max-width: 100%; }
   object-fit: cover;
   object-position: center top;
 }
-.gallery-photo figcaption { min-height: 43px; padding: 7px 2px 8px; }
-.gallery-photo figcaption strong { display: block; font: 800 14px/1 Georgia, serif; }
-.gallery-photo figcaption span { display: block; margin-top: 3px; color: var(--red); font-size: 9px; font-weight: 800; text-transform: uppercase; }
-.gallery-photo--wide { grid-column: span 8; grid-row: span 3; }
-.gallery-photo--cover { grid-column: span 4; grid-row: span 6; }
-.gallery-photo--portrait { grid-column: span 3; grid-row: span 5; }
-.gallery-photo--1, .gallery-photo--5, .gallery-photo--10 { transform: rotate(-1deg); }
-.gallery-photo--3, .gallery-photo--8, .gallery-photo--13 { transform: rotate(1deg); }
-.gallery-photo--7, .gallery-photo--11 { transform: rotate(-0.7deg); }
+.gallery-photo figcaption { min-height: 34px; padding: 5px 2px 6px; }
+.gallery-photo figcaption strong { display: block; font: 800 12px/1 Georgia, serif; }
+.gallery-photo figcaption span { display: block; margin-top: 2px; color: var(--red); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.gallery-photo--wide { grid-column: span 3; grid-row: span 3; }
+.gallery-photo--cover { grid-column: span 2; grid-row: span 5; }
+.gallery-photo--portrait { grid-column: span 1; grid-row: span 4; }
+.gallery-photo--1, .gallery-photo--5, .gallery-photo--10 { transform: rotate(-0.5deg); }
+.gallery-photo--3, .gallery-photo--8, .gallery-photo--13 { transform: rotate(0.5deg); }
+.gallery-photo--7, .gallery-photo--11 { transform: rotate(-0.35deg); }
 .gallery-credit { margin: 6px 0 0; color: var(--muted); font-size: 10px; }
 
 .contact-footer {
@@ -378,6 +380,10 @@ img { display: block; max-width: 100%; }
   .editorial-heading__description { grid-column: 2; }
   .award-entry { grid-template-columns: 70px 1fr; }
   .award-detail { grid-column: 2; }
+  .gallery-wall { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 68px; }
+  .gallery-photo--wide { grid-column: span 2; grid-row: span 3; }
+  .gallery-photo--cover { grid-column: span 1; grid-row: span 4; }
+  .gallery-photo--portrait { grid-column: span 1; grid-row: span 4; }
 }
 
 @media (max-width: 640px) {
@@ -398,8 +404,9 @@ img { display: block; max-width: 100%; }
   .project-entry, .publication-entry, .award-entry { grid-template-columns: 1fr; gap: 12px; }
   .award-detail { grid-column: 1; }
   .publication-status { align-items: flex-start; gap: 12px; }
-  .gallery-wall { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 105px; padding: 30px 0; gap: 10px; }
+  .gallery-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 76px; padding: 26px 0; gap: 8px; }
   .gallery-photo--wide { grid-column: span 2; grid-row: span 2; }
-  .gallery-photo--cover, .gallery-photo--portrait { grid-column: span 1; grid-row: span 3; }
+  .gallery-photo--cover { grid-column: span 1; grid-row: span 4; }
+  .gallery-photo--portrait { grid-column: span 1; grid-row: span 3; }
   .contact-footer { margin: 34px 16px; grid-template-columns: 1fr; }
 }
