@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   createVisitorInvite,
+  deletePrivateEntry,
   isPrivateSpaceConfigured,
   loadAdminDashboard,
   loadPrivateSpace,
   postGuestbookMessage,
+  savePrivateEntry,
   setGuestbookMessageStatus,
   setVisitorInviteStatus,
   unlockPrivateSpace,
   type AdminDashboard,
+  type PrivateEntry,
   type PrivateSpaceContent,
 } from "./privateSpaceApi";
 
@@ -602,10 +605,22 @@ function GalleryPage() {
 
 const visitorSessionKey = "yuyun-private-space-session";
 const ownerSessionKey = "yuyun-owner-console-session";
+const ownerPreviewKey = "yuyun-owner-space-preview";
+
+function takeInitialPrivateSpaceSession() {
+  const ownerPreviewToken = sessionStorage.getItem(ownerPreviewKey);
+  if (ownerPreviewToken) {
+    sessionStorage.removeItem(ownerPreviewKey);
+    return ownerPreviewToken;
+  }
+  const visitorToken = sessionStorage.getItem(visitorSessionKey) || "";
+  localStorage.removeItem(visitorSessionKey);
+  return visitorToken;
+}
 
 function PersonalSpacePage() {
   const [inviteCode, setInviteCode] = useState("");
-  const [sessionToken, setSessionToken] = useState(() => localStorage.getItem(visitorSessionKey) || "");
+  const [sessionToken, setSessionToken] = useState(takeInitialPrivateSpaceSession);
   const [content, setContent] = useState<PrivateSpaceContent | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -614,27 +629,40 @@ function PersonalSpacePage() {
   const [messageSent, setMessageSent] = useState(false);
 
   useEffect(() => {
+    let isCurrentRequest = true;
+
     if (!sessionToken || !isPrivateSpaceConfigured) {
       setIsLoading(false);
-      return;
+      return () => {
+        isCurrentRequest = false;
+      };
     }
 
     setIsLoading(true);
     loadPrivateSpace(sessionToken)
       .then((payload) => {
+        if (!isCurrentRequest) return;
         setContent(payload);
         if (payload.visitor.is_owner) {
           localStorage.setItem(ownerSessionKey, sessionToken);
+          sessionStorage.removeItem(visitorSessionKey);
         } else {
           localStorage.removeItem(ownerSessionKey);
         }
         setError("");
       })
       .catch((requestError: Error) => {
+        if (!isCurrentRequest) return;
         setContent(null);
         setError(requestError.message);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (isCurrentRequest) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrentRequest = false;
+    };
   }, [sessionToken]);
 
   const handleUnlock = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -644,7 +672,13 @@ function PersonalSpacePage() {
     setError("");
     try {
       const visitor = await unlockPrivateSpace(inviteCode);
-      localStorage.setItem(visitorSessionKey, visitor.session_token);
+      if (visitor.is_owner) {
+        localStorage.setItem(ownerSessionKey, visitor.session_token);
+        sessionStorage.removeItem(visitorSessionKey);
+      } else {
+        sessionStorage.setItem(visitorSessionKey, visitor.session_token);
+        localStorage.removeItem(ownerSessionKey);
+      }
       setSessionToken(visitor.session_token);
       setInviteCode("");
     } catch (requestError) {
@@ -671,10 +705,12 @@ function PersonalSpacePage() {
   };
 
   const handleVisitorLogout = () => {
-    localStorage.removeItem(visitorSessionKey);
+    sessionStorage.removeItem(visitorSessionKey);
     localStorage.removeItem(ownerSessionKey);
     setSessionToken("");
     setContent(null);
+    setIsLoading(false);
+    setInviteCode("");
     setMessage("");
     setMessageSent(false);
     setError("");
@@ -734,6 +770,14 @@ function PersonalSpacePage() {
           </div>
         </header>
 
+        {content.visitor.is_owner && (
+          <OwnerSpaceEditor
+            sessionToken={sessionToken}
+            entries={content.entries}
+            onEntriesChange={(entries) => setContent({ ...content, entries })}
+          />
+        )}
+
         <div className="private-archive">
           {content.entries.length === 0 && <p className="archive-empty">The first private entry is being prepared.</p>}
           {content.entries.map((entry) => (
@@ -743,7 +787,7 @@ function PersonalSpacePage() {
                 <p>{entry.kind} {entry.event_date ? `· ${entry.event_date}` : ""}</p>
                 <h2>{entry.title}</h2>
                 <strong>{entry.excerpt}</strong>
-                <div className="archive-entry__body">{entry.body}</div>
+                <div className="archive-entry__body">{renderMarkdown(entry.body)}</div>
               </div>
             </article>
           ))}
@@ -774,6 +818,258 @@ function PersonalSpacePage() {
           </div>
         </section>
       </div>
+    </section>
+  );
+}
+
+type EntryDraft = {
+  id: string | null;
+  kind: PrivateEntry["kind"];
+  title: string;
+  excerpt: string;
+  body: string;
+  image_url: string | null;
+  event_date: string | null;
+  is_published: boolean;
+};
+
+function blankEntryDraft(): EntryDraft {
+  return {
+    id: null,
+    kind: "writing",
+    title: "",
+    excerpt: "",
+    body: "# A new fragment\n\nWrite in **Markdown** here...",
+    image_url: null,
+    event_date: null,
+    is_published: false,
+  };
+}
+
+function entryToDraft(entry: PrivateEntry): EntryDraft {
+  return {
+    id: entry.id,
+    kind: entry.kind,
+    title: entry.title,
+    excerpt: entry.excerpt,
+    body: entry.body,
+    image_url: entry.image_url,
+    event_date: entry.event_date,
+    is_published: entry.is_published,
+  };
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function markdownInline(value: string) {
+  return escapeHtml(value)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>")
+    .replace(/\n/g, "<br />");
+}
+
+function renderMarkdown(markdown: string) {
+  const source = markdown.trim();
+  if (!source) return <p className="markdown-empty">Nothing written yet.</p>;
+
+  return (
+    <>
+      {source.split(/\n{2,}/).map((block, index) => {
+        const lines = block.split("\n");
+        const codeBlock = block.match(/^```[^\n]*\n([\s\S]*?)\n?```$/);
+        const heading = block.match(/^(#{1,3})\s+(.+)$/);
+        const isUnorderedList = lines.every((line) => /^\s*[-*]\s+/.test(line));
+        const isOrderedList = lines.every((line) => /^\s*\d+\.\s+/.test(line));
+        const key = `markdown-${index}`;
+
+        if (codeBlock) {
+          return <pre key={key}><code>{codeBlock[1]}</code></pre>;
+        }
+        if (heading) {
+          const Heading = heading[1].length === 1 ? "h3" : "h4";
+          return <Heading key={key} dangerouslySetInnerHTML={{ __html: markdownInline(heading[2]) }} />;
+        }
+        if (isUnorderedList || isOrderedList) {
+          const List = isOrderedList ? "ol" : "ul";
+          return (
+            <List key={key}>
+              {lines.map((line, itemIndex) => (
+                <li key={`${key}-${itemIndex}`} dangerouslySetInnerHTML={{ __html: markdownInline(line.replace(/^\s*(?:[-*]|\d+\.)\s+/, "")) }} />
+              ))}
+            </List>
+          );
+        }
+        if (lines.every((line) => /^>\s?/.test(line))) {
+          return <blockquote key={key} dangerouslySetInnerHTML={{ __html: markdownInline(lines.map((line) => line.replace(/^>\s?/, "")).join("\n")) }} />;
+        }
+        return <p key={key} dangerouslySetInnerHTML={{ __html: markdownInline(block) }} />;
+      })}
+    </>
+  );
+}
+
+function readImageAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Please choose an image file."));
+      return;
+    }
+    if (file.size > 2_000_000) {
+      reject(new Error("Images must be smaller than 2 MB."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("The image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function OwnerSpaceEditor({
+  sessionToken,
+  entries,
+  onEntriesChange,
+}: {
+  sessionToken: string;
+  entries: PrivateEntry[];
+  onEntriesChange: (entries: PrivateEntry[]) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [draft, setDraft] = useState<EntryDraft>(blankEntryDraft);
+  const [isBusy, setIsBusy] = useState(false);
+  const [editorError, setEditorError] = useState("");
+  const [editorNotice, setEditorNotice] = useState("");
+
+  const updateDraft = <Key extends keyof EntryDraft>(key: Key, value: EntryDraft[Key]) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+    setEditorNotice("");
+  };
+
+  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!draft.title.trim()) {
+      setEditorError("A title is required.");
+      return;
+    }
+    setIsBusy(true);
+    setEditorError("");
+    setEditorNotice("");
+    try {
+      const savedEntry = await savePrivateEntry(sessionToken, {
+        ...draft,
+        title: draft.title.trim(),
+        excerpt: draft.excerpt.trim(),
+      });
+      const nextEntries = entries.some((entry) => entry.id === savedEntry.id)
+        ? entries.map((entry) => entry.id === savedEntry.id ? savedEntry : entry)
+        : [...entries, savedEntry];
+      onEntriesChange(nextEntries);
+      setDraft(entryToDraft(savedEntry));
+      setEditorNotice(savedEntry.is_published ? "Published to your visitors." : "Saved as a private draft.");
+    } catch (requestError) {
+      setEditorError(requestError instanceof Error ? requestError.message : "The entry could not be saved.");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!draft.id || !window.confirm("Delete this private entry?")) return;
+    setIsBusy(true);
+    setEditorError("");
+    try {
+      await deletePrivateEntry(sessionToken, draft.id);
+      onEntriesChange(entries.filter((entry) => entry.id !== draft.id));
+      setDraft(blankEntryDraft());
+      setEditorNotice("Entry deleted.");
+    } catch (requestError) {
+      setEditorError(requestError instanceof Error ? requestError.message : "The entry could not be deleted.");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setEditorError("");
+    try {
+      updateDraft("image_url", await readImageAsDataUrl(file));
+    } catch (uploadError) {
+      setEditorError(uploadError instanceof Error ? uploadError.message : "The image could not be uploaded.");
+    }
+    event.target.value = "";
+  };
+
+  return (
+    <section className="space-editor">
+      <header className="space-editor__header">
+        <div>
+          <p className="space-eyebrow">Owner studio / private editor</p>
+          <h2>Shape the archive.</h2>
+          <p>Write in Markdown, add an image, preview the layout, then publish when ready.</p>
+        </div>
+        <div className="space-editor__actions">
+          <button type="button" onClick={() => { setDraft(blankEntryDraft()); setEditorError(""); setEditorNotice(""); setIsOpen(true); }}>New entry +</button>
+          <button type="button" onClick={() => setIsOpen((open) => !open)}>{isOpen ? "Close editor" : "Open editor"}</button>
+        </div>
+      </header>
+
+      {isOpen && (
+        <div className="space-editor__grid">
+          <aside className="space-editor__entries">
+            <p className="space-editor__label">Your entries</p>
+            {entries.length === 0 && <p className="space-editor__empty">No entries yet.</p>}
+            {entries.map((entry) => (
+              <button type="button" key={entry.id} className={draft.id === entry.id ? "is-selected" : ""} onClick={() => { setDraft(entryToDraft(entry)); setEditorError(""); setEditorNotice(""); }}>
+                <strong>{entry.title}</strong>
+                <small>{entry.is_published ? "Published" : "Draft"} · {entry.kind}</small>
+              </button>
+            ))}
+          </aside>
+
+          <form className="space-editor__form" onSubmit={handleSave}>
+            <div className="space-editor__form-row">
+              <label>Title<input value={draft.title} onChange={(event) => updateDraft("title", event.target.value)} placeholder="A title for this fragment" /></label>
+              <label>Type<select value={draft.kind} onChange={(event) => updateDraft("kind", event.target.value as EntryDraft["kind"])}><option value="writing">Writing</option><option value="photography">Photography</option><option value="film">Film note</option></select></label>
+            </div>
+            <label>Excerpt<input value={draft.excerpt} onChange={(event) => updateDraft("excerpt", event.target.value)} placeholder="The short line visitors see first" /></label>
+            <label>Markdown body<textarea rows={12} value={draft.body} onChange={(event) => updateDraft("body", event.target.value)} placeholder="# Heading\n\nWrite with Markdown..." /></label>
+            <div className="space-editor__form-row">
+              <label>Event date<input type="date" value={draft.event_date || ""} onChange={(event) => updateDraft("event_date", event.target.value || null)} /></label>
+              <label>Image<input type="file" accept="image/*" onChange={handleImageUpload} /></label>
+            </div>
+            {draft.image_url && <div className="space-editor__image"><img src={draft.image_url} alt="Selected entry cover" /><button type="button" onClick={() => updateDraft("image_url", null)}>Remove image</button></div>}
+            <label className="space-editor__publish"><input type="checkbox" checked={draft.is_published} onChange={(event) => updateDraft("is_published", event.target.checked)} /> Publish this entry to invited visitors</label>
+            {editorError && <p className="space-editor__error" role="alert">{editorError}</p>}
+            {editorNotice && <p className="space-editor__notice" role="status">{editorNotice}</p>}
+            <div className="space-editor__footer"><button className="space-editor__save" type="submit" disabled={isBusy}>{isBusy ? "Saving..." : "Save entry"}</button>{draft.id && <button className="space-editor__delete" type="button" onClick={handleDelete} disabled={isBusy}>Delete</button>}</div>
+          </form>
+
+          <aside className="space-editor__preview">
+            <p className="space-editor__label">Live preview</p>
+            <article className="space-editor__preview-card">
+              {draft.image_url && <img src={draft.image_url} alt="Preview cover" />}
+              <div>
+                <p>{draft.kind}{draft.event_date ? ` · ${draft.event_date}` : ""}</p>
+                <h3>{draft.title || "Untitled fragment"}</h3>
+                {draft.excerpt && <strong>{draft.excerpt}</strong>}
+                <div className="archive-entry__body">{renderMarkdown(draft.body)}</div>
+              </div>
+            </article>
+          </aside>
+        </div>
+      )}
     </section>
   );
 }
@@ -846,7 +1142,7 @@ function AdminPage() {
       const identity = await unlockPrivateSpace(ownerCode);
       await refreshDashboard(identity.session_token);
       localStorage.setItem(ownerSessionKey, identity.session_token);
-      localStorage.setItem(visitorSessionKey, identity.session_token);
+      sessionStorage.removeItem(visitorSessionKey);
       setSessionToken(identity.session_token);
       setOwnerCode("");
     } catch (requestError) {
@@ -905,13 +1201,16 @@ function AdminPage() {
 
   const handleSignOut = () => {
     localStorage.removeItem(ownerSessionKey);
-    if (localStorage.getItem(visitorSessionKey) === sessionToken) {
-      localStorage.removeItem(visitorSessionKey);
-    }
+    sessionStorage.removeItem(visitorSessionKey);
+    sessionStorage.removeItem(ownerPreviewKey);
     setSessionToken("");
     setDashboard(null);
     setCreatedCode("");
     setError("");
+  };
+
+  const handleOpenOwnerSpace = () => {
+    sessionStorage.setItem(ownerPreviewKey, sessionToken);
   };
 
   const handleVisitorStatus = async (visitorId: string, isActive: boolean) => {
@@ -979,7 +1278,7 @@ function AdminPage() {
               {busyId === "refresh" ? "Refreshing..." : "Refresh data"}
             </button>
             <button type="button" onClick={handleSignOut}>Sign out</button>
-            <a href="#/space">Personal space →</a>
+            <a href="#/space" onClick={handleOpenOwnerSpace}>Personal space →</a>
           </div>
         </header>
 

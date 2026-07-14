@@ -6,6 +6,7 @@ export type PrivateEntry = {
   body: string;
   image_url: string | null;
   event_date: string | null;
+  is_published: boolean;
 };
 
 export type GuestbookMessage = {
@@ -141,5 +142,38 @@ export function setGuestbookMessageStatus(
     session_token: sessionToken,
     message_id: messageId,
     new_status: status,
+  });
+}
+
+export function savePrivateEntry(
+  sessionToken: string,
+  entry: {
+    id: string | null;
+    kind: PrivateEntry["kind"];
+    title: string;
+    excerpt: string;
+    body: string;
+    image_url: string | null;
+    event_date: string | null;
+    is_published: boolean;
+  },
+) {
+  return rpc<PrivateEntry>("owner_upsert_private_entry", {
+    session_token: sessionToken,
+    entry_id: entry.id,
+    entry_kind: entry.kind,
+    entry_title: entry.title,
+    entry_excerpt: entry.excerpt,
+    entry_body: entry.body,
+    entry_image_url: entry.image_url,
+    entry_event_date: entry.event_date,
+    entry_published: entry.is_published,
+  });
+}
+
+export function deletePrivateEntry(sessionToken: string, entryId: string) {
+  return rpc<{ id: string }>("owner_delete_private_entry", {
+    session_token: sessionToken,
+    entry_id: entryId,
   });
 }
