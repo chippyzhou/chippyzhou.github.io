@@ -145,15 +145,7 @@ begin
       ) order by sort_order, created_at desc)
       from public.private_entries where is_published = true
     ), '[]'::jsonb),
-    'messages', coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'id', m.id, 'visitor_name', i.label, 'body', m.body, 'created_at', m.created_at
-      ) order by m.created_at desc)
-      from public.guestbook_messages m
-      join public.visitor_invites i on i.id = m.invite_id
-      where m.status = 'visible'
-      limit 30
-    ), '[]'::jsonb)
+    'messages', '[]'::jsonb
   );
 end;
 $$;

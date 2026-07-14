@@ -49,17 +49,7 @@ begin
       ) order by sort_order, created_at desc)
       from public.private_entries where is_published = true
     ), '[]'::jsonb),
-    'messages', coalesce((
-      select jsonb_agg(to_jsonb(recent_messages))
-      from (
-        select m.id, i.label as visitor_name, m.body, m.created_at
-        from public.guestbook_messages m
-        join public.visitor_invites i on i.id = m.invite_id
-        where m.status = 'visible'
-        order by m.created_at desc
-        limit 30
-      ) recent_messages
-    ), '[]'::jsonb)
+    'messages', '[]'::jsonb
   );
 end;
 $$;

@@ -601,6 +601,7 @@ function GalleryPage() {
 }
 
 const visitorSessionKey = "yuyun-private-space-session";
+const ownerSessionKey = "yuyun-owner-console-session";
 
 function PersonalSpacePage() {
   const [inviteCode, setInviteCode] = useState("");
@@ -610,6 +611,7 @@ function PersonalSpacePage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(Boolean(sessionToken));
   const [isPosting, setIsPosting] = useState(false);
+  const [messageSent, setMessageSent] = useState(false);
 
   useEffect(() => {
     if (!sessionToken || !isPrivateSpaceConfigured) {
@@ -621,6 +623,11 @@ function PersonalSpacePage() {
     loadPrivateSpace(sessionToken)
       .then((payload) => {
         setContent(payload);
+        if (payload.visitor.is_owner) {
+          localStorage.setItem(ownerSessionKey, sessionToken);
+        } else {
+          localStorage.removeItem(ownerSessionKey);
+        }
         setError("");
       })
       .catch((requestError: Error) => {
@@ -651,10 +658,11 @@ function PersonalSpacePage() {
     if (!message.trim() || !sessionToken || !content) return;
     setIsPosting(true);
     setError("");
+    setMessageSent(false);
     try {
-      const newMessage = await postGuestbookMessage(sessionToken, message);
-      setContent({ ...content, messages: [newMessage, ...content.messages] });
+      await postGuestbookMessage(sessionToken, message);
       setMessage("");
+      setMessageSent(true);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to leave this message.");
     } finally {
@@ -734,28 +742,24 @@ function PersonalSpacePage() {
           <div className="guestbook__intro">
             <p className="space-eyebrow">Guestbook / leave a trace</p>
             <h2>A note before<br />you leave.</h2>
-            <p>Your visitor name will appear beside the message.</p>
+            <p>Your visitor name is attached privately. Only Yuyun can read your note.</p>
           </div>
           <div>
             <form className="guestbook-form" onSubmit={handleMessage}>
               <textarea
                 value={message}
-                onChange={(event) => setMessage(event.target.value)}
+                onChange={(event) => {
+                  setMessage(event.target.value);
+                  setMessageSent(false);
+                }}
                 placeholder="Write something here..."
                 maxLength={500}
                 rows={4}
               />
               <div><span>{message.length}/500</span><button disabled={isPosting || !message.trim()}>{isPosting ? "Posting..." : "Pin this note"}</button></div>
             </form>
+            {messageSent && <p className="guestbook-success" role="status">Your note has been delivered to Yuyun.</p>}
             {error && <p className="space-error" role="alert">{error}</p>}
-            <div className="guestbook-messages">
-              {content.messages.map((item) => (
-                <article key={item.id}>
-                  <p>{item.body}</p>
-                  <footer><strong>{item.visitor_name}</strong><time>{new Date(item.created_at).toLocaleDateString("en-CA")}</time></footer>
-                </article>
-              ))}
-            </div>
           </div>
         </section>
       </div>
@@ -789,7 +793,7 @@ function formatAdminDate(value: string | null) {
 }
 
 function AdminPage() {
-  const [sessionToken, setSessionToken] = useState(() => localStorage.getItem(visitorSessionKey) || "");
+  const [sessionToken, setSessionToken] = useState(() => localStorage.getItem(ownerSessionKey) || "");
   const [ownerCode, setOwnerCode] = useState("");
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [visitorName, setVisitorName] = useState("");
@@ -830,6 +834,7 @@ function AdminPage() {
     try {
       const identity = await unlockPrivateSpace(ownerCode);
       await refreshDashboard(identity.session_token);
+      localStorage.setItem(ownerSessionKey, identity.session_token);
       localStorage.setItem(visitorSessionKey, identity.session_token);
       setSessionToken(identity.session_token);
       setOwnerCode("");
@@ -888,7 +893,10 @@ function AdminPage() {
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem(visitorSessionKey);
+    localStorage.removeItem(ownerSessionKey);
+    if (localStorage.getItem(visitorSessionKey) === sessionToken) {
+      localStorage.removeItem(visitorSessionKey);
+    }
     setSessionToken("");
     setDashboard(null);
     setCreatedCode("");
