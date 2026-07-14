@@ -670,7 +670,7 @@ function PersonalSpacePage() {
           </p>
           <form className="space-unlock" onSubmit={handleUnlock}>
             <label htmlFor="invite-code">Your personal invitation</label>
-            <div>
+            <div className="space-unlock__row">
               <input
                 id="invite-code"
                 type="password"
@@ -678,9 +678,9 @@ function PersonalSpacePage() {
                 onChange={(event) => setInviteCode(event.target.value)}
                 placeholder="Enter invitation code"
                 autoComplete="current-password"
-                disabled={!isPrivateSpaceConfigured || isLoading}
+                autoFocus
               />
-              <button type="submit" disabled={!isPrivateSpaceConfigured || isLoading}>
+              <button type="submit" disabled={!inviteCode.trim() || isLoading}>
                 {isLoading ? "Checking..." : "Enter ↗"}
               </button>
             </div>

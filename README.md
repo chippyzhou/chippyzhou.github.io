@@ -41,7 +41,7 @@ Create a visitor with a strong, unique invitation code:
 
 ```sql
 insert into public.visitor_invites (label, code_hash)
-values ('Visitor name', encode(digest(lower(trim('A-LONG-UNIQUE-CODE')), 'sha256'), 'hex'));
+values ('Visitor name', encode(extensions.digest(lower(trim('A-LONG-UNIQUE-CODE')), 'sha256'), 'hex'));
 ```
 
 Temporarily ban a visitor without deleting their saved sessions or history:

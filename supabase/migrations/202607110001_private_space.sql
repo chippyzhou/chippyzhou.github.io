@@ -1,6 +1,6 @@
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
-create table public.visitor_invites (
+create table if not exists public.visitor_invites (
   id uuid primary key default gen_random_uuid(),
   label text not null,
   code_hash text not null unique,
@@ -11,7 +11,7 @@ create table public.visitor_invites (
   created_at timestamptz not null default now()
 );
 
-create table public.visitor_sessions (
+create table if not exists public.visitor_sessions (
   id uuid primary key default gen_random_uuid(),
   invite_id uuid not null references public.visitor_invites(id) on delete cascade,
   token_hash text not null unique,
@@ -19,7 +19,7 @@ create table public.visitor_sessions (
   created_at timestamptz not null default now()
 );
 
-create table public.private_entries (
+create table if not exists public.private_entries (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in ('writing', 'photography', 'film')),
   title text not null,
@@ -32,7 +32,7 @@ create table public.private_entries (
   created_at timestamptz not null default now()
 );
 
-create table public.guestbook_messages (
+create table if not exists public.guestbook_messages (
   id uuid primary key default gen_random_uuid(),
   invite_id uuid not null references public.visitor_invites(id) on delete cascade,
   body text not null check (char_length(body) between 1 and 500),
@@ -40,7 +40,7 @@ create table public.guestbook_messages (
   created_at timestamptz not null default now()
 );
 
-create table public.visitor_events (
+create table if not exists public.visitor_events (
   id bigint generated always as identity primary key,
   invite_id uuid not null references public.visitor_invites(id) on delete cascade,
   event_type text not null check (event_type in ('unlock', 'return', 'message')),
@@ -63,7 +63,7 @@ as $$
   select i.*
   from public.visitor_sessions s
   join public.visitor_invites i on i.id = s.invite_id
-  where s.token_hash = encode(digest(session_token, 'sha256'), 'hex')
+  where s.token_hash = encode(extensions.digest(session_token, 'sha256'), 'hex')
     and s.expires_at > now()
     and i.is_active = true
     and (i.expires_at is null or i.expires_at > now())
@@ -83,7 +83,7 @@ declare
 begin
   select * into invite
   from public.visitor_invites
-  where code_hash = encode(digest(lower(trim(invite_code)), 'sha256'), 'hex')
+  where code_hash = encode(extensions.digest(lower(trim(invite_code)), 'sha256'), 'hex')
     and is_active = true
     and (expires_at is null or expires_at > now())
   limit 1;
@@ -92,9 +92,9 @@ begin
     raise exception 'This invitation is invalid or has been disabled.';
   end if;
 
-  raw_token := encode(gen_random_bytes(32), 'hex');
+  raw_token := encode(extensions.gen_random_bytes(32), 'hex');
   insert into public.visitor_sessions (invite_id, token_hash)
-  values (invite.id, encode(digest(raw_token, 'sha256'), 'hex'));
+  values (invite.id, encode(extensions.digest(raw_token, 'sha256'), 'hex'));
 
   update public.visitor_invites
   set visit_count = visit_count + 1, last_seen_at = now()

@@ -406,16 +406,17 @@ img { display: block; max-width: 100%; }
 .space-lock__intro { max-width: 520px; margin: 28px auto; color: #aaa4ad; font: 400 15px/1.75 Georgia, serif; }
 .space-unlock { max-width: 510px; margin: 34px auto 0; text-align: left; }
 .space-unlock label { display: block; margin-bottom: 8px; color: #d7af68; font-size: 9px; font-weight: 900; text-transform: uppercase; }
-.space-unlock > div { display: grid; grid-template-columns: 1fr auto; border-bottom: 1px solid #827887; }
+.space-unlock__row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
 .space-unlock input, .space-unlock button {
   min-height: 52px;
-  border: 0;
-  background: transparent;
+  border: 1px solid #827887;
+  background: #17151d;
   color: #f5f0e8;
   font: 700 14px Georgia, serif;
 }
-.space-unlock input { min-width: 0; outline: 0; }
-.space-unlock button { padding: 0 4px 0 24px; color: #d2314a; cursor: pointer; }
+.space-unlock input { min-width: 0; padding: 0 15px; outline: 0; cursor: text; }
+.space-unlock input:focus { border-color: #d7af68; box-shadow: 0 0 0 2px rgba(215,175,104,.15); }
+.space-unlock button { padding: 0 18px; border-color: #d2314a; color: #d2314a; cursor: pointer; }
 .space-unlock button:disabled, .space-unlock input:disabled { cursor: not-allowed; opacity: .55; }
 .space-status, .space-error { margin: 15px 0 0; color: #d7af68; font-size: 11px; }
 .space-error { color: #f07486; }
@@ -626,8 +627,8 @@ img { display: block; max-width: 100%; }
   .note-sheet__mark { display: none; }
   .personal-space--locked { min-height: calc(100dvh - 64px); padding: 48px 18px; }
   .space-lock h1 { font-size: 53px; }
-  .space-unlock > div { grid-template-columns: 1fr; }
-  .space-unlock button { min-height: 42px; padding: 0; text-align: right; }
+  .space-unlock__row { grid-template-columns: 1fr; }
+  .space-unlock button { min-height: 46px; padding: 0 14px; text-align: center; }
   .personal-space--open { padding: 48px 18px 70px; }
   .space-welcome { grid-template-columns: 1fr; gap: 34px; }
   .space-welcome h1 { font-size: 47px; }
