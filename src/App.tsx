@@ -763,10 +763,19 @@ function PersonalSpacePage() {
   );
 }
 
-function makeInviteCode() {
-  const bytes = crypto.getRandomValues(new Uint8Array(7));
-  const suffix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `yuyun-${suffix}`;
+function makeInvitePrefix(visitorName: string) {
+  return visitorName
+    .trim()
+    .normalize("NFKC")
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}_-]/gu, "")
+    .replace(/-+/g, "-") || "visitor";
+}
+
+function makeInviteSuffix() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(13));
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
 }
 
 function formatAdminDate(value: string | null) {
@@ -784,13 +793,14 @@ function AdminPage() {
   const [ownerCode, setOwnerCode] = useState("");
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [visitorName, setVisitorName] = useState("");
-  const [inviteCode, setInviteCode] = useState(makeInviteCode);
+  const [inviteSuffix, setInviteSuffix] = useState(makeInviteSuffix);
   const [expiresAt, setExpiresAt] = useState("");
   const [createdCode, setCreatedCode] = useState("");
   const [copiedCode, setCopiedCode] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(Boolean(sessionToken));
   const [busyId, setBusyId] = useState("");
+  const inviteCode = `${makeInvitePrefix(visitorName)}-${inviteSuffix}`;
 
   const refreshDashboard = async (token: string) => {
     const payload = await loadAdminDashboard(token);
@@ -845,7 +855,7 @@ function AdminPage() {
       setCreatedCode(inviteCode);
       setCopiedCode(false);
       setVisitorName("");
-      setInviteCode(makeInviteCode());
+      setInviteSuffix(makeInviteSuffix());
       setExpiresAt("");
       await refreshDashboard(sessionToken);
     } catch (requestError) {
@@ -968,7 +978,7 @@ function AdminPage() {
             <div className="admin-panel__heading"><span>01</span><h2>Create visitor</h2></div>
             <form className="invite-form" onSubmit={handleCreateInvite}>
               <label>Visitor name<input value={visitorName} onChange={(event) => setVisitorName(event.target.value)} placeholder="e.g. Chen / close friend" /></label>
-              <label>Invitation code<div className="invite-code-field"><input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} minLength={10} /><button type="button" onClick={() => setInviteCode(makeInviteCode())}>Generate</button></div></label>
+              <label>Invitation code <small>visitor name + 13 random characters</small><div className="invite-code-field"><input value={inviteCode} readOnly /><button type="button" onClick={() => setInviteSuffix(makeInviteSuffix())}>Generate</button></div></label>
               <label>Expires on <small>optional</small><input type="date" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} /></label>
               <button className="admin-primary" disabled={busyId === "create" || !visitorName.trim() || inviteCode.trim().length < 10}>{busyId === "create" ? "Creating..." : "Create invitation"}</button>
             </form>
