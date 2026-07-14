@@ -441,6 +441,20 @@ img { display: block; max-width: 100%; }
   text-transform: uppercase;
 }
 .owner-console-link:hover { color: #f5f0e8; }
+.space-signout {
+  width: 100%;
+  min-height: 32px;
+  margin-top: 16px;
+  padding: 7px 9px;
+  border: 1px solid #655d69;
+  background: transparent;
+  color: #aaa4ad;
+  font: 900 9px/1 Arial, Helvetica, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.space-signout:hover { border-color: #d2314a; color: #f07486; }
 .private-archive { padding: 60px 0; display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
 .archive-empty { grid-column: 1 / -1; padding: 80px 20px; color: #77717b; border: 1px dashed #524b58; text-align: center; font: italic 18px Georgia, serif; }
 .archive-entry { min-height: 330px; overflow: hidden; background: #1b1922; border-top: 1px solid #d7af68; }

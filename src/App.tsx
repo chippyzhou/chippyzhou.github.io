@@ -670,6 +670,16 @@ function PersonalSpacePage() {
     }
   };
 
+  const handleVisitorLogout = () => {
+    localStorage.removeItem(visitorSessionKey);
+    localStorage.removeItem(ownerSessionKey);
+    setSessionToken("");
+    setContent(null);
+    setMessage("");
+    setMessageSent(false);
+    setError("");
+  };
+
   if (!content) {
     return (
       <section className="personal-space personal-space--locked">
@@ -720,6 +730,7 @@ function PersonalSpacePage() {
             <strong>#{String(content.visitor.visitor_number).padStart(3, "0")}</strong>
             <small>{content.visitor.visit_count} recorded visit{content.visitor.visit_count === 1 ? "" : "s"}</small>
             {content.visitor.is_owner && <a className="owner-console-link" href="#/admin">Manage visitors →</a>}
+            <button className="space-signout" type="button" onClick={handleVisitorLogout}>Log out</button>
           </div>
         </header>
 
