@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  createVisitorInvite,
   isPrivateSpaceConfigured,
+  loadAdminDashboard,
   loadPrivateSpace,
   postGuestbookMessage,
+  setGuestbookMessageStatus,
+  setVisitorInviteStatus,
   unlockPrivateSpace,
+  type AdminDashboard,
   type PrivateSpaceContent,
 } from "./privateSpaceApi";
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
 
-type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "space";
+type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "space" | "admin";
 
 const profile = {
   name: "Yuyun Chen（陈彧赟）",
@@ -301,7 +306,7 @@ const pages: Array<{ key: PageKey; label: string; icon: string }> = [
 
 function getPageFromHash(): PageKey {
   const raw = window.location.hash.replace(/^#\/?/, "");
-  return pages.some((page) => page.key === raw) ? (raw as PageKey) : "home";
+  return [...pages.map((page) => page.key), "admin"].includes(raw as PageKey) ? (raw as PageKey) : "home";
 }
 
 function GithubIcon() {
@@ -706,6 +711,7 @@ function PersonalSpacePage() {
             <span>VISITOR PASS</span>
             <strong>#{String(content.visitor.visitor_number).padStart(3, "0")}</strong>
             <small>{content.visitor.visit_count} recorded visit{content.visitor.visit_count === 1 ? "" : "s"}</small>
+            {content.visitor.is_owner && <a className="owner-console-link" href="#/admin">Manage visitors →</a>}
           </div>
         </header>
 
@@ -752,6 +758,264 @@ function PersonalSpacePage() {
             </div>
           </div>
         </section>
+      </div>
+    </section>
+  );
+}
+
+function makeInviteCode() {
+  const bytes = crypto.getRandomValues(new Uint8Array(7));
+  const suffix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `yuyun-${suffix}`;
+}
+
+function formatAdminDate(value: string | null) {
+  if (!value) return "Never";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function AdminPage() {
+  const [sessionToken, setSessionToken] = useState(() => localStorage.getItem(visitorSessionKey) || "");
+  const [ownerCode, setOwnerCode] = useState("");
+  const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
+  const [visitorName, setVisitorName] = useState("");
+  const [inviteCode, setInviteCode] = useState(makeInviteCode);
+  const [expiresAt, setExpiresAt] = useState("");
+  const [createdCode, setCreatedCode] = useState("");
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(Boolean(sessionToken));
+  const [busyId, setBusyId] = useState("");
+
+  const refreshDashboard = async (token: string) => {
+    const payload = await loadAdminDashboard(token);
+    setDashboard(payload);
+    setError("");
+    return payload;
+  };
+
+  useEffect(() => {
+    if (!sessionToken) {
+      setIsLoading(false);
+      return;
+    }
+    refreshDashboard(sessionToken)
+      .catch((requestError: Error) => {
+        setDashboard(null);
+        setError(requestError.message);
+      })
+      .finally(() => setIsLoading(false));
+  }, [sessionToken]);
+
+  const handleOwnerLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!ownerCode.trim()) return;
+    setIsLoading(true);
+    setError("");
+    try {
+      const identity = await unlockPrivateSpace(ownerCode);
+      await refreshDashboard(identity.session_token);
+      localStorage.setItem(visitorSessionKey, identity.session_token);
+      setSessionToken(identity.session_token);
+      setOwnerCode("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Owner access could not be verified.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateInvite = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!sessionToken || !visitorName.trim() || !inviteCode.trim()) return;
+    setBusyId("create");
+    setError("");
+    try {
+      await createVisitorInvite(
+        sessionToken,
+        visitorName,
+        inviteCode,
+        expiresAt ? new Date(`${expiresAt}T23:59:59`).toISOString() : null,
+      );
+      setCreatedCode(inviteCode);
+      setCopiedCode(false);
+      setVisitorName("");
+      setInviteCode(makeInviteCode());
+      setExpiresAt("");
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "The visitor could not be created.");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    if (!createdCode) return;
+    try {
+      await navigator.clipboard.writeText(createdCode);
+      setCopiedCode(true);
+    } catch {
+      setError("Copy failed. Select the invitation code and copy it manually.");
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!sessionToken) return;
+    setBusyId("refresh");
+    try {
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "The dashboard could not be refreshed.");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem(visitorSessionKey);
+    setSessionToken("");
+    setDashboard(null);
+    setCreatedCode("");
+    setError("");
+  };
+
+  const handleVisitorStatus = async (visitorId: string, isActive: boolean) => {
+    if (!sessionToken) return;
+    setBusyId(visitorId);
+    setError("");
+    try {
+      await setVisitorInviteStatus(sessionToken, visitorId, isActive);
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "The visitor status could not be changed.");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const handleMessageStatus = async (messageId: string, status: "visible" | "hidden") => {
+    if (!sessionToken) return;
+    setBusyId(messageId);
+    setError("");
+    try {
+      await setGuestbookMessageStatus(sessionToken, messageId, status);
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "The message status could not be changed.");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  if (!dashboard) {
+    return (
+      <section className="admin-login">
+        <div>
+          <p className="kicker">Owner console / private access</p>
+          <h1>Visitor<br />control room.</h1>
+          <p>Use your owner invitation to manage visitors, activity, and guestbook moderation.</p>
+          <form onSubmit={handleOwnerLogin}>
+            <input
+              type="password"
+              value={ownerCode}
+              onChange={(event) => setOwnerCode(event.target.value)}
+              placeholder="Owner invitation code"
+              autoFocus
+            />
+            <button type="submit" disabled={isLoading || !ownerCode.trim()}>{isLoading ? "Checking..." : "Open console"}</button>
+          </form>
+          {error && <p className="admin-error" role="alert">{error}</p>}
+          <a href="#/space">← Back to personal space</a>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="admin-page">
+      <div className="admin-page__inner">
+        <header className="admin-header">
+          <div>
+            <p className="kicker">Owner console / {dashboard.owner_name}</p>
+            <h1>Visitor control room</h1>
+          </div>
+          <div className="admin-header__actions">
+            <button type="button" onClick={handleRefresh} disabled={busyId === "refresh"}>
+              {busyId === "refresh" ? "Refreshing..." : "Refresh data"}
+            </button>
+            <button type="button" onClick={handleSignOut}>Sign out</button>
+            <a href="#/space">Personal space →</a>
+          </div>
+        </header>
+
+        <div className="admin-stats">
+          <div><strong>{dashboard.stats.total_visitors}</strong><span>Total visitors</span></div>
+          <div><strong>{dashboard.stats.active_visitors}</strong><span>Active access</span></div>
+          <div><strong>{dashboard.stats.total_visits}</strong><span>Total unlocks</span></div>
+          <div><strong>{dashboard.stats.total_messages}</strong><span>Messages</span></div>
+        </div>
+
+        {error && <p className="admin-error" role="alert">{error}</p>}
+
+        <div className="admin-grid">
+          <section className="admin-panel admin-panel--create">
+            <div className="admin-panel__heading"><span>01</span><h2>Create visitor</h2></div>
+            <form className="invite-form" onSubmit={handleCreateInvite}>
+              <label>Visitor name<input value={visitorName} onChange={(event) => setVisitorName(event.target.value)} placeholder="e.g. Chen / close friend" /></label>
+              <label>Invitation code<div className="invite-code-field"><input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} minLength={10} /><button type="button" onClick={() => setInviteCode(makeInviteCode())}>Generate</button></div></label>
+              <label>Expires on <small>optional</small><input type="date" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} /></label>
+              <button className="admin-primary" disabled={busyId === "create" || !visitorName.trim() || inviteCode.trim().length < 10}>{busyId === "create" ? "Creating..." : "Create invitation"}</button>
+            </form>
+            {createdCode && (
+              <div className="created-invite">
+                <span>New invitation ready</span>
+                <div><strong>{createdCode}</strong><button type="button" onClick={handleCopyInvite}>{copiedCode ? "Copied" : "Copy"}</button></div>
+                <small>Send this code to the visitor. It cannot be recovered from the database later.</small>
+              </div>
+            )}
+          </section>
+
+          <section className="admin-panel admin-panel--visitors">
+            <div className="admin-panel__heading"><span>02</span><h2>Visitor access</h2></div>
+            <div className="visitor-table">
+              {dashboard.invitations.length === 0 && <p className="admin-empty">No visitors yet.</p>}
+              {dashboard.invitations.map((visitor) => (
+                <article key={visitor.id}>
+                  <div><strong>{visitor.label}</strong><span className={visitor.is_active ? "status-active" : "status-paused"}>{visitor.is_active ? "Active" : "Paused"}</span></div>
+                  <dl><div><dt>Visits</dt><dd>{visitor.visit_count}</dd></div><div><dt>Last seen</dt><dd>{formatAdminDate(visitor.last_seen_at)}</dd></div><div><dt>Expires</dt><dd>{visitor.expires_at ? formatAdminDate(visitor.expires_at) : "No expiry"}</dd></div></dl>
+                  <button disabled={busyId === visitor.id} onClick={() => handleVisitorStatus(visitor.id, !visitor.is_active)}>{visitor.is_active ? "Pause access" : "Restore access"}</button>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="admin-panel admin-panel--activity">
+            <div className="admin-panel__heading"><span>03</span><h2>Recent activity</h2></div>
+            <div className="activity-list">
+              {dashboard.events.length === 0 && <p className="admin-empty">No activity yet.</p>}
+              {dashboard.events.map((event) => <div key={event.id}><span>{event.event_type}</span><strong>{event.visitor_name}</strong><time>{formatAdminDate(event.created_at)}</time></div>)}
+            </div>
+          </section>
+
+          <section className="admin-panel admin-panel--messages">
+            <div className="admin-panel__heading"><span>04</span><h2>Guestbook moderation</h2></div>
+            <div className="moderation-list">
+              {dashboard.messages.length === 0 && <p className="admin-empty">No messages yet.</p>}
+              {dashboard.messages.map((messageItem) => (
+                <article key={messageItem.id} className={messageItem.status === "hidden" ? "is-hidden" : ""}>
+                  <p>{messageItem.body}</p>
+                  <footer><span><strong>{messageItem.visitor_name}</strong> · {formatAdminDate(messageItem.created_at)}</span><button disabled={busyId === messageItem.id} onClick={() => handleMessageStatus(messageItem.id, messageItem.status === "visible" ? "hidden" : "visible")}>{messageItem.status === "visible" ? "Hide" : "Show"}</button></footer>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </section>
   );
@@ -816,6 +1080,8 @@ export default function App() {
         return <GalleryPage />;
       case "space":
         return <PersonalSpacePage />;
+      case "admin":
+        return <AdminPage />;
       default:
         return <HomePage setPage={setCurrentPage} />;
     }

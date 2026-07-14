@@ -4,6 +4,7 @@ create table if not exists public.visitor_invites (
   id uuid primary key default gen_random_uuid(),
   label text not null,
   code_hash text not null unique,
+  is_owner boolean not null default false,
   is_active boolean not null default true,
   expires_at timestamptz,
   visit_count integer not null default 0,
@@ -108,6 +109,7 @@ begin
     'name', invite.label,
     'visitor_number', visitor_number,
     'visit_count', invite.visit_count,
+    'is_owner', invite.is_owner,
     'session_token', raw_token
   );
 end;
@@ -133,7 +135,8 @@ begin
     'visitor', jsonb_build_object(
       'name', invite.label,
       'visitor_number', visitor_number,
-      'visit_count', invite.visit_count
+      'visit_count', invite.visit_count,
+      'is_owner', invite.is_owner
     ),
     'entries', coalesce((
       select jsonb_agg(jsonb_build_object(
