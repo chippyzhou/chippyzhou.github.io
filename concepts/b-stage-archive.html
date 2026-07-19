@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Concept B - Stage Archive</title>
+    <style>
+      :root { --paper:#fafbff; --ink:#29263d; --wine:#8b3048; --silver:#cbd0dc; --blue:#44527f; --line:#d9dce5; }
+      * { box-sizing:border-box; } body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.55 ui-sans-serif,system-ui,sans-serif; }
+      .page { max-width:1280px; margin:auto; padding:20px 32px 48px; }
+      .top { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:22px; padding-bottom:18px; border-bottom:1px solid var(--ink); }
+      .sigil { width:44px; height:44px; border:2px solid var(--wine); border-radius:50%; display:grid; place-items:center; color:var(--wine); font-size:23px; }
+      .top p { margin:0; font-size:11px; letter-spacing:.15em; text-transform:uppercase; font-weight:800; } .top nav { display:flex; justify-content:flex-end; gap:20px; font-size:12px; }
+      .hero { display:grid; grid-template-columns:.8fr 1.2fr; gap:48px; padding:64px 0 42px; border-bottom:1px solid var(--ink); }
+      .side-label { color:var(--wine); font-size:11px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; writing-mode:vertical-rl; transform:rotate(180deg); }
+      .hero-left { display:flex; gap:18px; }.hero h1 { margin:0; font:700 clamp(58px,8vw,108px)/.86 Georgia,serif; letter-spacing:0; } .hero h1 em { color:var(--wine); font-style:normal; }
+      .hero-copy { max-width:500px; margin-top:25px; font-size:18px; line-height:1.7; }.archive-tag { display:inline-block; margin-top:30px; padding:7px 10px; border:1px solid var(--wine); color:var(--wine); font-size:11px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+      .stage { position:relative; min-height:390px; border:1px solid var(--ink); padding:20px; background:white; }.stage::before, .stage::after { content:""; position:absolute; top:0; bottom:0; width:12%; background:var(--ink); opacity:.05; }.stage::before{left:12%;}.stage::after{right:12%;}
+      .stage-head { position:relative; display:flex; justify-content:space-between; color:var(--wine); font:700 22px Georgia,serif; }.portraits { position:relative; display:grid; grid-template-columns:repeat(5,1fr); gap:9px; margin-top:40px; }
+      .portrait { min-height:220px; position:relative; border:1px solid var(--ink); background:var(--wash); overflow:hidden; }.portrait::before { content:""; position:absolute; width:80%; height:60%; top:24px; left:10%; border-radius:48% 48% 42% 42%; background:var(--hair); }.portrait::after { content:""; position:absolute; width:56%; height:36%; top:102px; left:22%; border-radius:50%; border:2px solid var(--ink); background:rgba(255,255,255,.75); }
+      .portrait span { position:absolute; bottom:9px; left:8px; right:8px; padding-top:6px; border-top:1px solid var(--ink); font-size:9px; font-weight:900; letter-spacing:.08em; text-align:center; }.caption { position:relative; margin:14px 0 0; font-size:11px; color:var(--blue); }
+      .archive { display:grid; grid-template-columns:1fr 1.2fr .85fr; border-bottom:1px solid var(--ink); }.archive > section { min-height:230px; padding:23px; border-right:1px solid var(--ink); }.archive > section:last-child { border-right:0; }.archive h2 { margin:0 0 18px; color:var(--wine); font-size:11px; letter-spacing:.15em; text-transform:uppercase; }.number { font:700 66px/1 Georgia,serif; }.list { display:grid; gap:9px; }.list div { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--line); padding:7px 0; }.list b { font-family:Georgia,serif; }.list span { color:var(--wine); font-weight:800; font-size:12px; }.motifs { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; font-size:28px; color:var(--wine); }.motifs div { border:1px solid var(--wine); display:grid; place-items:center; min-height:48px; }
+      .footer { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; padding-top:36px; }.footer h2 { margin:4px 0; font:700 35px Georgia,serif; }.contact { display:flex; gap:9px; }.contact a { width:46px; height:46px; display:grid; place-items:center; border:1px solid var(--wine); color:var(--wine); text-decoration:none; font-weight:900; }
+      @media (max-width:760px) { .page{padding:16px;} .top{grid-template-columns:auto 1fr;}.top nav{display:none;}.hero{grid-template-columns:1fr;gap:28px;padding-top:42px;}.stage{min-height:330px;}.portrait{min-height:155px;}.portrait::after{top:76px;}.archive{grid-template-columns:1fr;}.archive>section{border-right:0;border-bottom:1px solid var(--ink);}.archive>section:last-child{border-bottom:0;}.footer{align-items:flex-start;flex-direction:column;} }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="top"><div class="sigil">✧</div><p>Yuyun Chen / Personal Research Archive</p><nav><span>Work</span><span>Publications</span><span>Honors</span><span>Archive</span></nav></header>
+      <section class="hero"><div class="hero-left"><div class="side-label">Archive No. 2026</div><div><h1>Notes for<br /><em>the next</em><br />stage.</h1><p class="hero-copy">Research, systems, and competition work arranged as a living archive: exact enough for review, personal enough to remember where every idea began.</p><span class="archive-tag">Open to AI PM / Algorithm Internships</span></div></div>
+      <aside class="stage"><div class="stage-head"><span>ORIGINAL BAND ARCHIVE</span><span>01 / 05</span></div><div class="portraits"><div class="portrait" style="--wash:#e6e8f0;--hair:#29263d"><span>VOICE</span></div><div class="portrait" style="--wash:#f4e0e4;--hair:#8b3048"><span>GUITAR</span></div><div class="portrait" style="--wash:#e1e6f2;--hair:#44527f"><span>BASS</span></div><div class="portrait" style="--wash:#eee5e7;--hair:#64415c"><span>DRUMS</span></div><div class="portrait" style="--wash:#e8e8ec;--hair:#55576d"><span>KEYS</span></div></div><p class="caption">Five original archive badges: stage energy without borrowing existing characters.</p></aside></section>
+      <section class="archive"><section><h2>Honors / live set</h2><div class="number">03</div><p>competition records, each paired with the model and result that carried it.</p></section><section><h2>Selected studies</h2><div class="list"><div><b>SAWS</b><span>MCM/ICM / Top 7%</span></div><div><b>HFV-BPP</b><span>MathorCup / 1st Prize</span></div><div><b>PDRC</b><span>APMCM / 2nd Prize</span></div></div></section><section><h2>Stage marginalia</h2><div class="motifs"><div>◌</div><div>♬</div><div>⌁</div><div>✦</div><div>⌇</div><div>⌁</div></div><p>mask, string, spotlight, notebook.</p></section></section>
+      <footer class="footer"><div><p>GUANGZHOU, CHINA</p><h2>Let&apos;s make the next note count.</h2><p>AI product management or algorithm engineering internships.</p></div><div class="contact"><a href="https://github.com/chippyzhou" aria-label="GitHub">GH</a><a href="mailto:chensilu_0717@outlook.com" aria-label="Outlook email">@</a></div></footer>
+    </main>
+  </body>
+</html>
