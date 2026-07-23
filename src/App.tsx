@@ -151,7 +151,7 @@ const copy = {
     dragImage: "Drag to reorder",
     selectedEntryCover: "Selected entry cover",
     expandEntry: "Expand",
-    collapseEntry: "Collapse",
+    collapseEntry: "Close article",
     publishEntry: "Publish this entry to invited visitors",
     saving: "Saving...",
     saveEntry: "Save entry",
@@ -334,7 +334,7 @@ const copy = {
     dragImage: "拖拽调整顺序",
     selectedEntryCover: "已选记录封面",
     expandEntry: "展开",
-    collapseEntry: "收起",
+    collapseEntry: "收起文章",
     publishEntry: "向受邀访客发布这篇记录",
     saving: "保存中...",
     saveEntry: "保存记录",
@@ -944,8 +944,8 @@ function ProjectsPage({ language }: { language: Language }) {
       <div className="project-list">
         {projects.map((project, index) => (
           <article key={project.title} className="project-entry">
-            <div className="entry-index">{String(index + 1).padStart(2, "0")}</div>
-            <div>
+            <div className="entry-index project-entry__index">{String(index + 1).padStart(2, "0")}</div>
+            <div className="project-entry__body">
               <p className="entry-meta">{localized(language, project.type, project.typeZh)} / {project.period}</p>
               <h2>{localized(language, project.title, project.titleZh)}</h2>
               <p>{localized(language, project.summary, project.summaryZh)}</p>
@@ -953,7 +953,7 @@ function ProjectsPage({ language }: { language: Language }) {
                 {(language === "zh" ? project.tagsZh : project.tags).map((tag) => <span key={tag}>{tag}</span>)}
               </div>
             </div>
-            <a href={project.link} className="entry-link">{tr(language, "openNote")}</a>
+            <a href={project.link} className="entry-link project-entry__link">{tr(language, "openNote")} <span aria-hidden="true">↗</span></a>
           </article>
         ))}
       </div>
@@ -973,8 +973,8 @@ function PublicationsPage({ language }: { language: Language }) {
       <div className="publication-list">
         {publications.map((paper, index) => (
           <article key={paper.title} className="publication-entry">
-            <div className="entry-index">{String(index + 1).padStart(2, "0")}</div>
-            <div>
+            <div className="entry-index publication-entry__index">{String(index + 1).padStart(2, "0")}</div>
+            <div className="publication-entry__citation">
               <p className="entry-meta">{localized(language, paper.venue, paper.venueZh)}</p>
               <h2>{localized(language, paper.title, paper.titleZh)}</h2>
               <p>{localized(language, paper.summary, paper.summaryZh)}</p>
@@ -994,7 +994,7 @@ function TechnicalNotesPage({ language }: { language: Language }) {
   return (
     <PageShell
       language={language}
-      index="03"
+      index="04"
       kicker={tr(language, "notesKicker")}
       title={tr(language, "notesTitle")}
       description={tr(language, "notesDescription")}
@@ -1026,7 +1026,7 @@ function AwardsPage({ language }: { language: Language }) {
   return (
     <PageShell
       language={language}
-      index="04"
+      index="03"
       kicker={tr(language, "awardsKicker")}
       title={tr(language, "awardsTitle")}
       description={tr(language, "awardsDescription")}
@@ -1035,7 +1035,7 @@ function AwardsPage({ language }: { language: Language }) {
         {awards.map((award, index) => (
           <article key={award.title} className="award-entry">
             <div className="award-number">{String(index + 1).padStart(2, "0")}</div>
-            <div>
+            <div className="award-entry__result">
               <p className="entry-meta">{award.year}</p>
               <h2>{localized(language, award.result, award.resultZh)}</h2>
               <p className="award-result">{award.title}</p>
@@ -1320,6 +1320,9 @@ function PersonalSpacePage({ language }: { language: Language }) {
           {content.entries.map((entry) => {
             const images = parseEntryImages(entry.image_url);
             const cover = images.find((image) => image.isCover) || images[0];
+            const galleryImages = cover
+              ? images.filter((image) => image.id !== cover.id)
+              : images;
             const isExpanded = expandedEntryIds.has(entry.id);
             return (
               <article
@@ -1328,37 +1331,59 @@ function PersonalSpacePage({ language }: { language: Language }) {
               >
                 {cover && <img className="archive-entry__cover" src={cover.src} alt="" />}
                 <div className="archive-entry__content">
-                  <p>{localized(language, entry.kind, {
-                    writing: tr(language, "writing"),
-                    photography: tr(language, "photography"),
-                    film: tr(language, "filmNote"),
-                  }[entry.kind])} {entry.event_date ? `· ${entry.event_date}` : ""}</p>
+                  <div className="archive-entry__meta-row">
+                    <p>{localized(language, entry.kind, {
+                      writing: tr(language, "writing"),
+                      photography: tr(language, "photography"),
+                      film: tr(language, "filmNote"),
+                    }[entry.kind])} {entry.event_date ? `· ${entry.event_date}` : ""}</p>
+                    {isExpanded && (
+                      <button
+                        className="archive-entry__collapse archive-entry__collapse--top"
+                        type="button"
+                        onClick={() => toggleEntry(entry.id)}
+                      >
+                        {tr(language, "collapseEntry")}
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    )}
+                  </div>
                   <h2>{entry.title}</h2>
                   {entry.excerpt && <strong>{entry.excerpt}</strong>}
-                  <p className="archive-entry__preview-text">{markdownPreview(entry.body)}</p>
+                  {!isExpanded && <p className="archive-entry__preview-text">{markdownPreview(entry.body)}</p>}
                   {isExpanded && (
                     <>
-                      {images.length > 0 && (
+                      <div className="archive-entry__body">{renderMarkdown(entry.body, language)}</div>
+                      {galleryImages.length > 0 && (
                         <div className="archive-entry__gallery">
-                          {images.map((image) => (
+                          {galleryImages.map((image) => (
                             <figure className={`archive-entry__media archive-entry__media--${image.size}`} key={image.id}>
                               <img src={image.src} alt="" />
                             </figure>
                           ))}
                         </div>
                       )}
-                      <div className="archive-entry__body">{renderMarkdown(entry.body, language)}</div>
+                      <button
+                        className="archive-entry__toggle archive-entry__collapse--bottom"
+                        type="button"
+                        onClick={() => toggleEntry(entry.id)}
+                      >
+                        {tr(language, "collapseEntry")}
+                        <span aria-hidden="true">↑</span>
+                      </button>
                     </>
                   )}
-                  <button
-                    className="archive-entry__toggle"
-                    type="button"
-                    aria-expanded={isExpanded}
-                    onClick={() => toggleEntry(entry.id)}
-                  >
-                    {isExpanded ? tr(language, "collapseEntry") : tr(language, "expandEntry")}
-                    <span aria-hidden="true">{isExpanded ? "↑" : "↓"}</span>
-                  </button>
+                  {!isExpanded && (
+                    <button
+                      className="archive-entry__toggle"
+                      type="button"
+                      aria-expanded={false}
+                      onClick={() => toggleEntry(entry.id)}
+                    >
+                      {tr(language, "expandEntry")}
+                      <span aria-hidden="true">↓</span>
+                    </button>
+                  )}
                 </div>
               </article>
             );

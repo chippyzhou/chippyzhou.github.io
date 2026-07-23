@@ -98,6 +98,17 @@ describe("owner session restoration", () => {
     expect(navigation.indexOf("Tech Notes📓")).toBe(navigation.indexOf("Gallery🎹") - 1);
   });
 
+  it("keeps page chapter numbers aligned with the top navigation order", () => {
+    window.location.hash = "#/awards";
+    const { unmount } = render(<App />);
+    expect(document.querySelector(".chapter-no")?.textContent).toBe("03");
+
+    unmount();
+    window.location.hash = "#/notes";
+    render(<App />);
+    expect(document.querySelector(".chapter-no")?.textContent).toBe("04");
+  });
+
   it("copies the Outlook address and shows a confirmation", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -162,7 +173,20 @@ describe("owner session restoration", () => {
         title: "A private note",
         excerpt: "A short excerpt",
         body: "| Model | Score |\n| --- | ---: |\n| Baseline | 0.91 |",
-        image_url: null,
+        image_url: `yuyun-media-v1:${JSON.stringify([
+          {
+            id: "cover",
+            src: "data:image/webp;base64,cover",
+            size: "full",
+            isCover: true,
+          },
+          {
+            id: "inline",
+            src: "data:image/webp;base64,inline",
+            size: "small",
+            isCover: false,
+          },
+        ])}`,
         event_date: "2026-07-23",
         is_published: true,
       }],
@@ -176,7 +200,22 @@ describe("owner session restoration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Expand" }));
 
-    expect(container.querySelector(".archive-entry")?.classList.contains("is-expanded")).toBe(true);
+    const expandedEntry = container.querySelector(".archive-entry");
+    const body = container.querySelector(".archive-entry__body");
+    const gallery = container.querySelector(".archive-entry__gallery");
+    expect(expandedEntry?.classList.contains("is-expanded")).toBe(true);
+    expect(body).toBeTruthy();
     expect(container.querySelector("table")).toBeTruthy();
+    expect(gallery?.querySelectorAll("img")).toHaveLength(1);
+    expect(gallery?.querySelector("img")?.getAttribute("src")).toContain("inline");
+    expect(body && gallery
+      ? Boolean(body.compareDocumentPosition(gallery) & Node.DOCUMENT_POSITION_FOLLOWING)
+      : false).toBe(true);
+
+    const closeButtons = screen.getAllByRole("button", { name: "Close article" });
+    expect(closeButtons).toHaveLength(2);
+    fireEvent.click(closeButtons[0]);
+    expect(expandedEntry?.classList.contains("is-expanded")).toBe(false);
+    expect(container.querySelector("table")).toBeNull();
   });
 });
