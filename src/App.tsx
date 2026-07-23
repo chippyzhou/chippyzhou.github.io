@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 import {
   createVisitorInvite,
   deletePrivateEntry,
@@ -79,6 +80,8 @@ const copy = {
     personalInvitation: "Your personal invitation",
     invitationPlaceholder: "Enter invitation code",
     checking: "Checking...",
+    restoringAccess: "Restoring your private access...",
+    requestTimedOut: "The connection took too long. You can try again now.",
     enter: "Enter ↗",
     privateSetup: "Private archive setup in progress.",
     invitationFootnote: "Each invitation belongs to one visitor and may be paused without erasing its history.",
@@ -122,6 +125,9 @@ const copy = {
     nothingWritten: "Nothing written yet.",
     eventDate: "Event date",
     image: "Image",
+    imageUploadHelp: "Large images are resized and compressed automatically before saving.",
+    optimizingImage: "Optimizing image...",
+    imageReady: "Image optimized and ready.",
     removeImage: "Remove image",
     selectedEntryCover: "Selected entry cover",
     publishEntry: "Publish this entry to invited visitors",
@@ -242,6 +248,8 @@ const copy = {
     personalInvitation: "你的专属邀请",
     invitationPlaceholder: "输入邀请密钥",
     checking: "检查中...",
+    restoringAccess: "正在恢复你的私人访问权限...",
+    requestTimedOut: "连接等待时间过长，现在可以重新尝试。",
     enter: "进入 ↗",
     privateSetup: "私人档案正在设置中。",
     invitationFootnote: "每个邀请只属于一位访客，可以暂停访问，但不会抹去历史记录。",
@@ -285,6 +293,9 @@ const copy = {
     nothingWritten: "还没有写下内容。",
     eventDate: "记录日期",
     image: "图片",
+    imageUploadHelp: "大尺寸图片会在保存前自动缩放和压缩。",
+    optimizingImage: "正在优化图片...",
+    imageReady: "图片已优化，可以保存。",
     removeImage: "移除图片",
     selectedEntryCover: "已选记录封面",
     publishEntry: "向受邀访客发布这篇记录",
@@ -984,8 +995,8 @@ function AwardsPage({ language }: { language: Language }) {
             <div className="award-number">{String(index + 1).padStart(2, "0")}</div>
             <div>
               <p className="entry-meta">{award.year}</p>
-              <h2>{award.title}</h2>
-              <p className="award-result">{localized(language, award.result, award.resultZh)}</p>
+              <h2>{localized(language, award.result, award.resultZh)}</h2>
+              <p className="award-result">{award.title}</p>
             </div>
             <p className="award-detail">{language === "zh" ? award.detailZh : award.detail}</p>
           </article>
@@ -1050,9 +1061,31 @@ function takeInitialPrivateSpaceSession() {
     sessionStorage.removeItem(ownerPreviewKey);
     return ownerPreviewToken;
   }
-  const visitorToken = sessionStorage.getItem(visitorSessionKey) || "";
-  localStorage.removeItem(visitorSessionKey);
-  return visitorToken;
+  return localStorage.getItem(ownerSessionKey)
+    || sessionStorage.getItem(visitorSessionKey)
+    || "";
+}
+
+function requestErrorMessage(error: unknown, language: Language, fallback: string) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return tr(language, "requestTimedOut");
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
+function SessionLoading({ language, admin = false }: { language: Language; admin?: boolean }) {
+  return (
+    <section
+      className={admin ? "admin-session-loading" : "personal-space personal-space--loading"}
+      data-testid={admin ? "admin-session-loading" : "private-session-loading"}
+      aria-live="polite"
+    >
+      <div className="session-loading__inner">
+        <span aria-hidden="true" />
+        <p>{tr(language, "restoringAccess")}</p>
+      </div>
+    </section>
+  );
 }
 
 function PersonalSpacePage({ language }: { language: Language }) {
@@ -1061,7 +1094,8 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const [content, setContent] = useState<PrivateSpaceContent | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(Boolean(sessionToken));
+  const [isRestoring, setIsRestoring] = useState(Boolean(sessionToken));
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
 
@@ -1069,13 +1103,13 @@ function PersonalSpacePage({ language }: { language: Language }) {
     let isCurrentRequest = true;
 
     if (!sessionToken || !isPrivateSpaceConfigured) {
-      setIsLoading(false);
+      setIsRestoring(false);
       return () => {
         isCurrentRequest = false;
       };
     }
 
-    setIsLoading(true);
+    setIsRestoring(true);
     loadPrivateSpace(sessionToken)
       .then((payload) => {
         if (!isCurrentRequest) return;
@@ -1091,21 +1125,28 @@ function PersonalSpacePage({ language }: { language: Language }) {
       .catch((requestError: Error) => {
         if (!isCurrentRequest) return;
         setContent(null);
-        setError(requestError.message);
+        if (localStorage.getItem(ownerSessionKey) === sessionToken) {
+          localStorage.removeItem(ownerSessionKey);
+        }
+        if (sessionStorage.getItem(visitorSessionKey) === sessionToken) {
+          sessionStorage.removeItem(visitorSessionKey);
+        }
+        setSessionToken("");
+        setError(requestErrorMessage(requestError, language, localized(language, "Unable to restore this session.", "无法恢复当前会话。")));
       })
       .finally(() => {
-        if (isCurrentRequest) setIsLoading(false);
+        if (isCurrentRequest) setIsRestoring(false);
       });
 
     return () => {
       isCurrentRequest = false;
     };
-  }, [sessionToken]);
+  }, [language, sessionToken]);
 
   const handleUnlock = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!inviteCode.trim()) return;
-    setIsLoading(true);
+    setIsUnlocking(true);
     setError("");
     try {
       const visitor = await unlockPrivateSpace(inviteCode);
@@ -1116,11 +1157,13 @@ function PersonalSpacePage({ language }: { language: Language }) {
         sessionStorage.setItem(visitorSessionKey, visitor.session_token);
         localStorage.removeItem(ownerSessionKey);
       }
+      setIsRestoring(true);
       setSessionToken(visitor.session_token);
       setInviteCode("");
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : localized(language, "Unable to unlock this space.", "无法打开这个空间。"));
-      setIsLoading(false);
+      setError(requestErrorMessage(requestError, language, localized(language, "Unable to unlock this space.", "无法打开这个空间。")));
+    } finally {
+      setIsUnlocking(false);
     }
   };
 
@@ -1146,12 +1189,17 @@ function PersonalSpacePage({ language }: { language: Language }) {
     localStorage.removeItem(ownerSessionKey);
     setSessionToken("");
     setContent(null);
-    setIsLoading(false);
+    setIsRestoring(false);
+    setIsUnlocking(false);
     setInviteCode("");
     setMessage("");
     setMessageSent(false);
     setError("");
   };
+
+  if (sessionToken && isRestoring && !content) {
+    return <SessionLoading language={language} />;
+  }
 
   if (!content) {
     return (
@@ -1162,7 +1210,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
           <div className="space-lock__symbol" aria-hidden="true">✦</div>
           <h1>{tr(language, "lastEncore")}<br /><em>{tr(language, "lastEncoreEm")}</em></h1>
           <p className="space-lock__intro">{tr(language, "privateIntro")}</p>
-          <form className="space-unlock" onSubmit={handleUnlock}>
+          <form className="space-unlock" onSubmit={handleUnlock} aria-busy={isUnlocking}>
             <label htmlFor="invite-code">{tr(language, "personalInvitation")}</label>
             <div className="space-unlock__row">
               <input
@@ -1174,8 +1222,8 @@ function PersonalSpacePage({ language }: { language: Language }) {
                 autoComplete="current-password"
                 autoFocus
               />
-              <button type="submit" disabled={!inviteCode.trim() || isLoading}>
-                {isLoading ? tr(language, "checking") : tr(language, "enter")}
+              <button type="submit" disabled={!inviteCode.trim() || isUnlocking}>
+                {isUnlocking ? tr(language, "checking") : tr(language, "enter")}
               </button>
             </div>
           </form>
@@ -1299,80 +1347,52 @@ function entryToDraft(entry: PrivateEntry): EntryDraft {
   };
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function markdownInline(value: string) {
-  return escapeHtml(value)
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/__([^_]+)__/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/_([^_]+)_/g, "<em>$1</em>")
-    .replace(/\n/g, "<br />");
-}
-
 function renderMarkdown(markdown: string, language: Language) {
-  const source = markdown.trim();
-  if (!source) return <p className="markdown-empty">{tr(language, "nothingWritten")}</p>;
-
-  return (
-    <>
-      {source.split(/\n{2,}/).map((block, index) => {
-        const lines = block.split("\n");
-        const codeBlock = block.match(/^```[^\n]*\n([\s\S]*?)\n?```$/);
-        const heading = block.match(/^(#{1,3})\s+(.+)$/);
-        const isUnorderedList = lines.every((line) => /^\s*[-*]\s+/.test(line));
-        const isOrderedList = lines.every((line) => /^\s*\d+\.\s+/.test(line));
-        const key = `markdown-${index}`;
-
-        if (codeBlock) {
-          return <pre key={key}><code>{codeBlock[1]}</code></pre>;
-        }
-        if (heading) {
-          const Heading = heading[1].length === 1 ? "h3" : "h4";
-          return <Heading key={key} dangerouslySetInnerHTML={{ __html: markdownInline(heading[2]) }} />;
-        }
-        if (isUnorderedList || isOrderedList) {
-          const List = isOrderedList ? "ol" : "ul";
-          return (
-            <List key={key}>
-              {lines.map((line, itemIndex) => (
-                <li key={`${key}-${itemIndex}`} dangerouslySetInnerHTML={{ __html: markdownInline(line.replace(/^\s*(?:[-*]|\d+\.)\s+/, "")) }} />
-              ))}
-            </List>
-          );
-        }
-        if (lines.every((line) => /^>\s?/.test(line))) {
-          return <blockquote key={key} dangerouslySetInnerHTML={{ __html: markdownInline(lines.map((line) => line.replace(/^>\s?/, "")).join("\n")) }} />;
-        }
-        return <p key={key} dangerouslySetInnerHTML={{ __html: markdownInline(block) }} />;
-      })}
-    </>
-  );
+  return <MarkdownRenderer source={markdown} emptyLabel={tr(language, "nothingWritten")} />;
 }
 
-function readImageAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      reject(new Error("Please choose an image file."));
-      return;
-    }
-    if (file.size > 2_000_000) {
-      reject(new Error("Images must be smaller than 2 MB."));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("The image could not be read."));
-    reader.readAsDataURL(file);
+const maxStoredImageCharacters = 3_500_000;
+const maxImageDimension = 2_400;
+
+function loadImageFile(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("The image could not be read."));
+    image.src = url;
   });
+}
+
+async function optimizeImageForStorage(file: File) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Please choose an image file.");
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await loadImageFile(objectUrl);
+    let scale = Math.min(1, maxImageDimension / Math.max(image.naturalWidth, image.naturalHeight));
+
+    while (scale >= 0.18) {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("The image editor is unavailable in this browser.");
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      for (const quality of [0.9, 0.82, 0.74, 0.66, 0.58]) {
+        const dataUrl = canvas.toDataURL("image/webp", quality);
+        if (dataUrl.length <= maxStoredImageCharacters) return dataUrl;
+      }
+      scale *= 0.78;
+    }
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  throw new Error("The image is too complex to optimize. Please choose a different image.");
 }
 
 function OwnerSpaceEditor({
@@ -1389,6 +1409,7 @@ function OwnerSpaceEditor({
   const [isOpen, setIsOpen] = useState(true);
   const [draft, setDraft] = useState<EntryDraft>(() => blankEntryDraft(language));
   const [isBusy, setIsBusy] = useState(false);
+  const [isOptimizingImage, setIsOptimizingImage] = useState(false);
   const [editorError, setEditorError] = useState("");
   const [editorNotice, setEditorNotice] = useState("");
 
@@ -1445,10 +1466,16 @@ function OwnerSpaceEditor({
     const file = event.target.files?.[0];
     if (!file) return;
     setEditorError("");
+    setEditorNotice(tr(language, "optimizingImage"));
+    setIsOptimizingImage(true);
     try {
-      updateDraft("image_url", await readImageAsDataUrl(file));
+      updateDraft("image_url", await optimizeImageForStorage(file));
+      setEditorNotice(tr(language, "imageReady"));
     } catch (uploadError) {
       setEditorError(uploadError instanceof Error ? uploadError.message : localized(language, "The image could not be uploaded.", "图片上传失败。"));
+      setEditorNotice("");
+    } finally {
+      setIsOptimizingImage(false);
     }
     event.target.value = "";
   };
@@ -1483,19 +1510,34 @@ function OwnerSpaceEditor({
           <form className="space-editor__form" onSubmit={handleSave}>
             <div className="space-editor__form-row">
               <label>{tr(language, "title")}<input value={draft.title} onChange={(event) => updateDraft("title", event.target.value)} placeholder={tr(language, "titlePlaceholder")} /></label>
-              <label>{tr(language, "type")}<select value={draft.kind} onChange={(event) => updateDraft("kind", event.target.value as EntryDraft["kind"])}><option value="writing">{tr(language, "writing")}</option><option value="photography">{tr(language, "photography")}</option><option value="film">{tr(language, "filmNote")}</option></select></label>
+              <fieldset className="space-editor__kind">
+                <legend>{tr(language, "type")}</legend>
+                <div role="group" aria-label={tr(language, "type")}>
+                  {(["writing", "photography", "film"] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      aria-pressed={draft.kind === kind}
+                      className={draft.kind === kind ? "is-active" : ""}
+                      onClick={() => updateDraft("kind", kind)}
+                    >
+                      {kind === "writing" ? tr(language, "writing") : kind === "photography" ? tr(language, "photography") : tr(language, "filmNote")}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
             <label>{tr(language, "excerpt")}<input value={draft.excerpt} onChange={(event) => updateDraft("excerpt", event.target.value)} placeholder={tr(language, "excerptPlaceholder")} /></label>
             <label>{tr(language, "markdownBody")}<textarea rows={12} value={draft.body} onChange={(event) => updateDraft("body", event.target.value)} placeholder={tr(language, "markdownPlaceholder")} /></label>
             <div className="space-editor__form-row">
               <label>{tr(language, "eventDate")}<input type="date" value={draft.event_date || ""} onChange={(event) => updateDraft("event_date", event.target.value || null)} /></label>
-              <label>{tr(language, "image")}<input type="file" accept="image/*" onChange={handleImageUpload} /></label>
+              <label>{tr(language, "image")}<input type="file" accept="image/*" onChange={handleImageUpload} /><small>{tr(language, "imageUploadHelp")}</small></label>
             </div>
             {draft.image_url && <div className="space-editor__image"><img src={draft.image_url} alt={tr(language, "selectedEntryCover")} /><button type="button" onClick={() => updateDraft("image_url", null)}>{tr(language, "removeImage")}</button></div>}
             <label className="space-editor__publish"><input type="checkbox" checked={draft.is_published} onChange={(event) => updateDraft("is_published", event.target.checked)} /> {tr(language, "publishEntry")}</label>
             {editorError && <p className="space-editor__error" role="alert">{editorError}</p>}
             {editorNotice && <p className="space-editor__notice" role="status">{editorNotice}</p>}
-            <div className="space-editor__footer"><button className="space-editor__save" type="submit" disabled={isBusy}>{isBusy ? tr(language, "saving") : tr(language, "saveEntry")}</button>{draft.id && <button className="space-editor__delete" type="button" onClick={handleDelete} disabled={isBusy}>{tr(language, "delete")}</button>}</div>
+            <div className="space-editor__footer"><button className="space-editor__save" type="submit" disabled={isBusy || isOptimizingImage}>{isOptimizingImage ? tr(language, "optimizingImage") : isBusy ? tr(language, "saving") : tr(language, "saveEntry")}</button>{draft.id && <button className="space-editor__delete" type="button" onClick={handleDelete} disabled={isBusy || isOptimizingImage}>{tr(language, "delete")}</button>}</div>
           </form>
 
           <aside className="space-editor__preview">
@@ -1543,6 +1585,7 @@ function formatAdminDate(value: string | null, language: Language) {
 
 function AdminPage({ language }: { language: Language }) {
   const [sessionToken, setSessionToken] = useState(() => localStorage.getItem(ownerSessionKey) || "");
+  const verifiedSessionRef = useRef("");
   const [ownerCode, setOwnerCode] = useState("");
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [visitorName, setVisitorName] = useState("");
@@ -1551,7 +1594,8 @@ function AdminPage({ language }: { language: Language }) {
   const [createdCode, setCreatedCode] = useState("");
   const [copiedCode, setCopiedCode] = useState(false);
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(Boolean(sessionToken));
+  const [isRestoring, setIsRestoring] = useState(Boolean(sessionToken));
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [busyId, setBusyId] = useState("");
   const inviteCode = `${makeInvitePrefix(visitorName)}-${inviteSuffix}`;
 
@@ -1564,33 +1608,61 @@ function AdminPage({ language }: { language: Language }) {
 
   useEffect(() => {
     if (!sessionToken) {
-      setIsLoading(false);
+      setIsRestoring(false);
       return;
     }
-    refreshDashboard(sessionToken)
-      .catch((requestError: Error) => {
-        setDashboard(null);
-        setError(requestError.message);
+    if (verifiedSessionRef.current === sessionToken) {
+      setIsRestoring(false);
+      return;
+    }
+
+    let isCurrentRequest = true;
+    setIsRestoring(true);
+    loadAdminDashboard(sessionToken)
+      .then((payload) => {
+        if (!isCurrentRequest) return;
+        verifiedSessionRef.current = sessionToken;
+        setDashboard(payload);
+        setError("");
       })
-      .finally(() => setIsLoading(false));
-  }, [sessionToken]);
+      .catch((requestError: Error) => {
+        if (!isCurrentRequest) return;
+        localStorage.removeItem(ownerSessionKey);
+        verifiedSessionRef.current = "";
+        setSessionToken("");
+        setDashboard(null);
+        setError(requestErrorMessage(requestError, language, localized(language, "Owner access could not be restored.", "无法恢复管理员权限。")));
+      })
+      .finally(() => {
+        if (isCurrentRequest) setIsRestoring(false);
+      });
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [language, sessionToken]);
 
   const handleOwnerLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!ownerCode.trim()) return;
-    setIsLoading(true);
+    setIsSubmitting(true);
     setError("");
     try {
       const identity = await unlockPrivateSpace(ownerCode);
-      await refreshDashboard(identity.session_token);
+      if (!identity.is_owner) {
+        throw new Error(localized(language, "This invitation does not have owner access.", "这个邀请没有管理员权限。"));
+      }
+      const payload = await loadAdminDashboard(identity.session_token);
+      verifiedSessionRef.current = identity.session_token;
+      setDashboard(payload);
       localStorage.setItem(ownerSessionKey, identity.session_token);
       sessionStorage.removeItem(visitorSessionKey);
       setSessionToken(identity.session_token);
       setOwnerCode("");
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Owner access could not be verified.");
+      setError(requestErrorMessage(requestError, language, localized(language, "Owner access could not be verified.", "无法验证管理员权限。")));
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -1645,8 +1717,11 @@ function AdminPage({ language }: { language: Language }) {
     localStorage.removeItem(ownerSessionKey);
     sessionStorage.removeItem(visitorSessionKey);
     sessionStorage.removeItem(ownerPreviewKey);
+    verifiedSessionRef.current = "";
     setSessionToken("");
     setDashboard(null);
+    setIsRestoring(false);
+    setIsSubmitting(false);
     setCreatedCode("");
     setError("");
   };
@@ -1683,6 +1758,10 @@ function AdminPage({ language }: { language: Language }) {
     }
   };
 
+  if (sessionToken && isRestoring && !dashboard) {
+    return <SessionLoading language={language} admin />;
+  }
+
   if (!dashboard) {
     return (
       <section className="admin-login">
@@ -1690,7 +1769,7 @@ function AdminPage({ language }: { language: Language }) {
           <p className="kicker">{tr(language, "ownerConsoleKicker")}</p>
           <h1>{tr(language, "visitorControlRoom")}</h1>
           <p>{tr(language, "ownerConsoleIntro")}</p>
-          <form onSubmit={handleOwnerLogin}>
+          <form onSubmit={handleOwnerLogin} aria-busy={isSubmitting}>
             <input
               type="password"
               value={ownerCode}
@@ -1698,7 +1777,7 @@ function AdminPage({ language }: { language: Language }) {
               placeholder={tr(language, "ownerCodePlaceholder")}
               autoFocus
             />
-            <button type="submit" disabled={isLoading || !ownerCode.trim()}>{isLoading ? tr(language, "checking") : tr(language, "openConsole")}</button>
+            <button type="submit" disabled={isSubmitting || !ownerCode.trim()}>{isSubmitting ? tr(language, "checking") : tr(language, "openConsole")}</button>
           </form>
           {error && <p className="admin-error" role="alert">{error}</p>}
           <a href="#/space">{tr(language, "backToSpace")}</a>
@@ -1877,7 +1956,7 @@ export default function App() {
   return (
     <>
       <main className="site">
-        <header className="site-header">
+        <header className={`site-header${currentPage === "space" ? " site-header--dark" : ""}`}>
           <nav>
           <a
             href="#/"

@@ -35,6 +35,24 @@ img { display: block; max-width: 100%; }
   background: rgba(247, 248, 255, 0.96);
   border-bottom: 2px solid var(--ink);
   backdrop-filter: blur(10px);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.site-header--dark {
+  background: rgba(14, 13, 18, 0.97);
+  border-bottom-color: #514b57;
+}
+.site-header--dark .site-name small,
+.site-header--dark .nav-links a { color: #bdb7c1; }
+.site-header--dark .nav-links a:hover { color: #efd08b; }
+.site-header--dark .nav-links a[aria-current="page"] {
+  color: #f17b8c;
+  border-color: #dc3e57;
+}
+.site-header--dark .language-toggle,
+.site-header--dark .volume-mark {
+  border-color: #68616d;
+  background: #19171e;
+  color: #efd08b;
 }
 .site-header nav {
   min-height: 70px;
@@ -417,7 +435,27 @@ img { display: block; max-width: 100%; }
   bottom: -28px;
   color: rgba(210, 49, 74, .13);
   font: 900 clamp(100px, 19vw, 260px)/.7 Georgia, serif;
+  pointer-events: none;
 }
+.personal-space--loading, .admin-session-loading {
+  min-height: calc(100vh - 70px);
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+  background: #111018;
+  color: #f5f0e8;
+}
+.session-loading__inner { display: grid; justify-items: center; gap: 16px; }
+.session-loading__inner span {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #514a57;
+  border-top-color: #d7af68;
+  border-radius: 50%;
+  animation: session-spin 720ms linear infinite;
+}
+.session-loading__inner p { margin: 0; color: #aaa4ad; font: 13px/1.5 Arial, Helvetica, sans-serif; }
+@keyframes session-spin { to { transform: rotate(360deg); } }
 .space-lock { width: min(690px, 100%); text-align: center; }
 .space-eyebrow { margin: 0 0 18px; color: #d7af68; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
 .space-lock__symbol { width: 48px; height: 48px; margin: 0 auto 28px; display: grid; place-items: center; border: 1px solid #d7af68; border-radius: 50%; color: #d7af68; }
@@ -487,7 +525,7 @@ img { display: block; max-width: 100%; }
 .archive-entry h2 { margin: 7px 0 14px; font: 700 29px/1.05 Georgia, serif; }
 .archive-entry strong { color: #b4adb7; font: italic 14px/1.5 Georgia, serif; }
 .archive-entry__body { margin-top: 18px; color: #8f8993; font: 15px/1.75 Georgia, serif; }
-.archive-entry__body p { margin: 0 0 14px; }
+.archive-entry__body p { margin: 0 0 14px; color: inherit; font-size: inherit; font-weight: inherit; text-transform: none; }
 .archive-entry__body h3, .archive-entry__body h4 { margin: 0 0 13px; color: #f5f0e8; font: 700 23px/1.15 Georgia, serif; }
 .archive-entry__body h4 { font-size: 19px; }
 .archive-entry__body strong { color: #d7af68; font: inherit; font-weight: 700; }
@@ -498,6 +536,21 @@ img { display: block; max-width: 100%; }
 .archive-entry__body pre { margin: 0 0 14px; padding: 14px; overflow-x: auto; background: #121017; color: #e8c97b; font: 12px/1.6 "SFMono-Regular", Consolas, monospace; }
 .archive-entry__body code { padding: 2px 5px; background: #121017; color: #e8c97b; font: 12px "SFMono-Regular", Consolas, monospace; }
 .archive-entry__body a { color: #ed667a; }
+.archive-entry__body hr { margin: 24px 0; border: 0; border-top: 1px solid #524b58; }
+.archive-entry__body img { width: auto; max-width: 100%; height: auto; margin: 10px 0 18px; border: 1px solid #524b58; }
+.archive-entry__body table { width: 100%; margin: 12px 0 20px; border-collapse: collapse; font-size: 13px; }
+.archive-entry__body th, .archive-entry__body td { padding: 9px 10px; border: 1px solid #524b58; text-align: left; }
+.archive-entry__body th { color: #f5f0e8; background: #25212b; }
+.archive-entry__body .contains-task-list { padding-left: 0; list-style: none; }
+.archive-entry__body .task-list-item { display: flex; align-items: flex-start; gap: 8px; }
+.archive-entry__body .task-list-item input { margin-top: 5px; accent-color: #d7af68; }
+.archive-entry__body mark { padding: 1px 4px; background: #d7af68; color: #17151d; }
+.obsidian-wikilink { color: #9fb5ff; border-bottom: 1px dashed #6f84c8; cursor: default; }
+.obsidian-attachment { display: inline-flex; padding: 2px 7px; border: 1px solid #655d69; color: #c8c1ca; font: 11px/1.5 "SFMono-Regular", Consolas, monospace; }
+.archive-entry__body blockquote:has(.obsidian-callout__badge) { padding: 16px 18px; background: #211e27; border: 1px solid #524b58; border-left: 3px solid #d7af68; }
+.obsidian-callout__badge { display: inline-block; margin: 0 7px 5px 0; color: #d7af68; font: 900 9px/1 Arial, Helvetica, sans-serif; letter-spacing: .08em; }
+.archive-entry__body .footnotes { margin-top: 28px; padding-top: 16px; border-top: 1px solid #524b58; font-size: 12px; }
+.archive-entry__body .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
 .markdown-empty { color: #77717b; font-style: italic; }
 .space-editor { margin: 42px 0 15px; padding: 24px; background: #211e27; border: 1px solid #524b58; box-shadow: 7px 7px 0 rgba(210, 49, 74, .35); }
 .space-editor__header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid #524b58; }
@@ -526,7 +579,7 @@ img { display: block; max-width: 100%; }
 .space-editor__entries small { margin-top: 6px; color: #8f8993; font-size: 9px; text-transform: uppercase; }
 .space-editor__empty { color: #77717b; font: italic 13px Georgia, serif; }
 .space-editor__form { min-width: 0; display: grid; align-content: start; gap: 13px; }
-.space-editor__form label { display: grid; gap: 6px; color: #aaa4ad; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.space-editor__form label, .space-editor__kind legend { display: grid; gap: 6px; color: #aaa4ad; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
 .space-editor__form input:not([type="checkbox"]), .space-editor__form select, .space-editor__form textarea {
   width: 100%;
   min-width: 0;
@@ -542,7 +595,27 @@ img { display: block; max-width: 100%; }
 .space-editor__form textarea { min-height: 220px; resize: vertical; font: 16px/1.65 "Comic Sans MS", "Bradley Hand", cursive; }
 .space-editor__form input:focus, .space-editor__form select:focus, .space-editor__form textarea:focus { border-color: #d7af68; }
 .space-editor__form input[type="file"] { padding: 7px; color: #aaa4ad; font-size: 11px; }
+.space-editor__form label > small { color: #77717b; font-size: 9px; font-weight: 500; letter-spacing: 0; line-height: 1.45; text-transform: none; }
 .space-editor__form-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(120px, .8fr); gap: 12px; }
+.space-editor__kind { min-width: 0; margin: 0; padding: 0; border: 0; }
+.space-editor__kind legend { margin-bottom: 6px; padding: 0; }
+.space-editor__kind > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #655d69; }
+.space-editor__kind button {
+  min-width: 0;
+  min-height: 39px;
+  padding: 7px 5px;
+  border: 0;
+  border-right: 1px solid #655d69;
+  border-radius: 0;
+  background: transparent;
+  color: #8f8993;
+  font: 700 10px/1.2 Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+.space-editor__kind button:last-child { border-right: 0; }
+.space-editor__kind button:hover { color: #f5f0e8; background: #25212b; }
+.space-editor__kind button.is-active { background: #d7af68; color: #17151d; }
+.space-editor__kind button:focus-visible { outline: 2px solid #f5f0e8; outline-offset: 2px; }
 .space-editor__publish { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 8px !important; color: #d7af68 !important; }
 .space-editor__publish input { width: 16px; height: 16px; accent-color: #d2314a; }
 .space-editor__image { position: relative; min-width: 0; }
@@ -808,6 +881,11 @@ img { display: block; max-width: 100%; }
     cursor: pointer;
     grid-column: 3;
     grid-row: 1;
+  }
+  .site-header--dark .nav-toggle {
+    border-color: #68616d;
+    background: #19171e;
+    color: #f7f2f4;
   }
   .nav-toggle span {
     width: 100%;

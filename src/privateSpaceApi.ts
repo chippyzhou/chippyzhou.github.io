@@ -66,6 +66,7 @@ export type AdminDashboard = {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const requestTimeoutMs = 15_000;
 
 export const isPrivateSpaceConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -74,15 +75,29 @@ async function rpc<T>(name: string, body: Record<string, unknown>): Promise<T> {
     throw new Error("The private space is not connected yet.");
   }
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
-    method: "POST",
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
+  let response: Response;
+
+  try {
+    response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new DOMException("The request timed out.", "AbortError");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
