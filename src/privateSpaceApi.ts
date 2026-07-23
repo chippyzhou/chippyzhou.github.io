@@ -67,16 +67,38 @@ export type AdminDashboard = {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const requestTimeoutMs = 15_000;
+const saveRequestTimeoutMs = 30_000;
 
 export const isPrivateSpaceConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-async function rpc<T>(name: string, body: Record<string, unknown>): Promise<T> {
+export class PrivateSpaceRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "PrivateSpaceRequestError";
+    this.status = status;
+  }
+}
+
+export function isTransientPrivateSpaceError(error: unknown) {
+  return (error instanceof DOMException && error.name === "AbortError")
+    || error instanceof TypeError
+    || (error instanceof PrivateSpaceRequestError
+      && (error.status === 408 || error.status === 429 || error.status >= 500));
+}
+
+async function rpc<T>(
+  name: string,
+  body: Record<string, unknown>,
+  timeoutMs = requestTimeoutMs,
+): Promise<T> {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("The private space is not connected yet.");
   }
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   let response: Response;
 
   try {
@@ -101,7 +123,10 @@ async function rpc<T>(name: string, body: Record<string, unknown>): Promise<T> {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new Error(payload?.message || "The request could not be completed.");
+    throw new PrivateSpaceRequestError(
+      payload?.message || "The request could not be completed.",
+      response.status,
+    );
   }
 
   return response.json() as Promise<T>;
@@ -183,7 +208,7 @@ export function savePrivateEntry(
     entry_image_url: entry.image_url,
     entry_event_date: entry.event_date,
     entry_published: entry.is_published,
-  });
+  }, saveRequestTimeoutMs);
 }
 
 export function deletePrivateEntry(sessionToken: string, entryId: string) {
