@@ -23,6 +23,7 @@ import {
   parseEntryImages,
   serializeEntryImages,
   type EntryImage,
+  type EntryImageAlign,
   type EntryImageSize,
 } from "./privateEntryMedia";
 
@@ -106,11 +107,23 @@ const copy = {
     guestbookKicker: "Guestbook / leave a trace",
     guestbookTitle: "A note before",
     guestbookTitleEm: "you leave.",
-    guestbookIntro: "Your visitor name is attached privately. Only Yuyun can read your note.",
+    guestbookIntro: "Your notes stay visible only to you and Yuyun. They cannot be edited or deleted here.",
     guestbookPlaceholder: "Write something here...",
     posting: "Posting...",
     pinNote: "Pin this note",
     noteDelivered: "Your note has been delivered to Yuyun.",
+    yourMessages: "Your pinned notes",
+    noMessagesYet: "Nothing pinned yet.",
+    messageTime: "Pinned",
+    filterByType: "Filter by type",
+    filterByYear: "Filter by year",
+    allTypes: "All types",
+    allYears: "All years",
+    entriesShown: "entries shown",
+    noFilteredEntries: "No entries match these filters.",
+    viewDouban: "View on Douban",
+    doubanLink: "Douban movie link",
+    doubanLinkPlaceholder: "https://movie.douban.com/subject/...",
     ownerStudio: "Owner studio / private editor",
     shapeArchive: "Shape the archive.",
     editorIntro: "Write in Markdown, arrange images, preview the layout, then publish when ready.",
@@ -149,6 +162,17 @@ const copy = {
     moveEarlier: "Move image earlier",
     moveLater: "Move image later",
     dragImage: "Drag to reorder",
+    insertImage: "Insert at cursor",
+    imageInserted: "Image marker inserted into the article.",
+    imageCaption: "Caption",
+    imageCaptionPlaceholder: "Optional image caption",
+    imageAlignment: "Alignment",
+    alignLeft: "Left",
+    alignCenter: "Center",
+    alignRight: "Right",
+    coverCrop: "Card cover crop",
+    coverCropHelp: "Drag the image to choose the part shown on the collapsed card.",
+    resetCrop: "Reset crop",
     selectedEntryCover: "Selected entry cover",
     expandEntry: "Expand",
     collapseEntry: "Close article",
@@ -289,11 +313,23 @@ const copy = {
     guestbookKicker: "留言板 / 留下一点痕迹",
     guestbookTitle: "离开之前，",
     guestbookTitleEm: "写一句话。",
-    guestbookIntro: "你的访客名称会被私密附上，只有 Yuyun 可以看到留言。",
+    guestbookIntro: "留言只对你本人和 Yuyun 可见；访客端不能编辑或删除。",
     guestbookPlaceholder: "在这里写点什么...",
     posting: "发布中...",
     pinNote: "钉住这张便签",
     noteDelivered: "你的留言已经送达 Yuyun。",
+    yourMessages: "你留下的便签",
+    noMessagesYet: "还没有留下便签。",
+    messageTime: "写于",
+    filterByType: "按类型筛选",
+    filterByYear: "按年份筛选",
+    allTypes: "全部类型",
+    allYears: "全部年份",
+    entriesShown: "篇记录",
+    noFilteredEntries: "没有符合当前筛选条件的记录。",
+    viewDouban: "前往豆瓣",
+    doubanLink: "豆瓣电影链接",
+    doubanLinkPlaceholder: "https://movie.douban.com/subject/...",
     ownerStudio: "管理员工作室 / 私人编辑器",
     shapeArchive: "塑造这座档案馆。",
     editorIntro: "使用 Markdown 写作，排列多张图片，预览排版，准备好后再发布。",
@@ -332,6 +368,17 @@ const copy = {
     moveEarlier: "向前移动图片",
     moveLater: "向后移动图片",
     dragImage: "拖拽调整顺序",
+    insertImage: "插入正文光标处",
+    imageInserted: "图片标记已插入正文。",
+    imageCaption: "图片说明",
+    imageCaptionPlaceholder: "可选的图片说明",
+    imageAlignment: "对齐方式",
+    alignLeft: "左对齐",
+    alignCenter: "居中",
+    alignRight: "右对齐",
+    coverCrop: "卡片封面裁切",
+    coverCropHelp: "拖动图片，选择折叠卡片上要展示的区域。",
+    resetCrop: "重置裁切",
     selectedEntryCover: "已选记录封面",
     expandEntry: "展开",
     collapseEntry: "收起文章",
@@ -1130,6 +1177,85 @@ function SessionLoading({ language, admin = false }: { language: Language; admin
   );
 }
 
+function entryKindLabel(language: Language, kind: PrivateEntry["kind"]) {
+  return kind === "writing"
+    ? tr(language, "writing")
+    : kind === "photography"
+      ? tr(language, "photography")
+      : tr(language, "filmNote");
+}
+
+function formatPrivateDate(value: string, language: Language) {
+  return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function getInlineMediaIds(markdown: string) {
+  const ids = new Set<string>();
+  for (const match of markdown.matchAll(/\{\{media:([^}]+)\}\}/gu)) {
+    ids.add(match[1].trim());
+  }
+  return ids;
+}
+
+function EntryMediaFigure({ image, inline = false }: { image: EntryImage; inline?: boolean }) {
+  return (
+    <figure
+      className={`${inline ? "archive-entry__inline-media" : "archive-entry__media"} archive-entry__media--${image.size} archive-entry__media--align-${image.align}`}
+      data-media-id={image.id}
+    >
+      <img
+        src={image.src}
+        alt={image.caption}
+        loading="lazy"
+        style={{ objectPosition: `${image.focusX}% ${image.focusY}%` }}
+      />
+      {image.caption && <figcaption>{image.caption}</figcaption>}
+    </figure>
+  );
+}
+
+function renderRichEntryBody(markdown: string, images: EntryImage[], language: Language) {
+  const imageById = new Map(images.map((image) => [image.id, image]));
+  const tokenPattern = /\{\{media:([^}]+)\}\}/gu;
+  const sections: React.ReactNode[] = [];
+  let cursor = 0;
+  let sectionIndex = 0;
+
+  for (const match of markdown.matchAll(tokenPattern)) {
+    const index = match.index || 0;
+    const text = markdown.slice(cursor, index);
+    if (text.trim()) {
+      sections.push(
+        <div className="archive-entry__markdown-section" key={`text-${sectionIndex++}`}>
+          {renderMarkdown(text, language)}
+        </div>,
+      );
+    }
+    const image = imageById.get(match[1].trim());
+    if (image) {
+      sections.push(<EntryMediaFigure image={image} inline key={`media-${image.id}-${sectionIndex++}`} />);
+    }
+    cursor = index + match[0].length;
+  }
+
+  const remainder = markdown.slice(cursor);
+  if (remainder.trim() || sections.length === 0) {
+    sections.push(
+      <div className="archive-entry__markdown-section" key={`text-${sectionIndex}`}>
+        {renderMarkdown(remainder, language)}
+      </div>,
+    );
+  }
+
+  return sections;
+}
+
 function PersonalSpacePage({ language }: { language: Language }) {
   const [inviteCode, setInviteCode] = useState("");
   const [sessionToken, setSessionToken] = useState(takeInitialPrivateSpaceSession);
@@ -1139,8 +1265,20 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const [isRestoring, setIsRestoring] = useState(Boolean(sessionToken));
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
-  const [messageSent, setMessageSent] = useState(false);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(() => new Set());
+  const [entryKindFilter, setEntryKindFilter] = useState<"all" | PrivateEntry["kind"]>("all");
+  const [entryYearFilter, setEntryYearFilter] = useState("all");
+
+  const entryYears = useMemo(() => Array.from(new Set(
+    (content?.entries || [])
+      .map((entry) => entry.event_date?.slice(0, 4))
+      .filter((year): year is string => Boolean(year)),
+  )).sort((left, right) => right.localeCompare(left)), [content?.entries]);
+
+  const filteredEntries = useMemo(() => (content?.entries || []).filter((entry) => (
+    (entryKindFilter === "all" || entry.kind === entryKindFilter)
+    && (entryYearFilter === "all" || entry.event_date?.startsWith(entryYearFilter))
+  )), [content?.entries, entryKindFilter, entryYearFilter]);
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -1213,15 +1351,28 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const handleMessage = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!message.trim() || !sessionToken || !content) return;
+    const body = message.trim();
+    const requestId = crypto.randomUUID();
     setIsPosting(true);
     setError("");
-    setMessageSent(false);
     try {
-      await postGuestbookMessage(sessionToken, message);
+      let savedMessage;
+      try {
+        savedMessage = await postGuestbookMessage(sessionToken, body, requestId);
+      } catch (requestError) {
+        if (!isTransientPrivateSpaceError(requestError)) throw requestError;
+        savedMessage = await postGuestbookMessage(sessionToken, body, requestId);
+      }
+      setContent((current) => current ? {
+        ...current,
+        messages: [
+          savedMessage,
+          ...current.messages.filter((item) => item.id !== savedMessage.id),
+        ],
+      } : current);
       setMessage("");
-      setMessageSent(true);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : localized(language, "Unable to leave this message.", "留言发送失败。"));
+      setError(requestErrorMessage(requestError, language, localized(language, "Unable to leave this message.", "留言发送失败。")));
     } finally {
       setIsPosting(false);
     }
@@ -1236,8 +1387,9 @@ function PersonalSpacePage({ language }: { language: Language }) {
     setIsUnlocking(false);
     setInviteCode("");
     setMessage("");
-    setMessageSent(false);
     setExpandedEntryIds(new Set());
+    setEntryKindFilter("all");
+    setEntryYearFilter("all");
     setError("");
   };
 
@@ -1315,28 +1467,63 @@ function PersonalSpacePage({ language }: { language: Language }) {
           />
         )}
 
+        {content.entries.length > 0 && (
+          <div className="archive-filters">
+            <p><strong>{filteredEntries.length}</strong> {tr(language, "entriesShown")}</p>
+            <label>
+              <span>{tr(language, "filterByType")}</span>
+              <select
+                aria-label={tr(language, "filterByType")}
+                value={entryKindFilter}
+                onChange={(event) => setEntryKindFilter(event.target.value as "all" | PrivateEntry["kind"])}
+              >
+                <option value="all">{tr(language, "allTypes")}</option>
+                <option value="writing">{tr(language, "writing")}</option>
+                <option value="photography">{tr(language, "photography")}</option>
+                <option value="film">{tr(language, "filmNote")}</option>
+              </select>
+            </label>
+            <label>
+              <span>{tr(language, "filterByYear")}</span>
+              <select
+                aria-label={tr(language, "filterByYear")}
+                value={entryYearFilter}
+                onChange={(event) => setEntryYearFilter(event.target.value)}
+              >
+                <option value="all">{tr(language, "allYears")}</option>
+                {entryYears.map((year) => <option value={year} key={year}>{year}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+
         <div className="private-archive">
           {content.entries.length === 0 && <p className="archive-empty">{tr(language, "firstEntry")}</p>}
-          {content.entries.map((entry) => {
+          {content.entries.length > 0 && filteredEntries.length === 0 && <p className="archive-empty">{tr(language, "noFilteredEntries")}</p>}
+          {filteredEntries.map((entry) => {
             const images = parseEntryImages(entry.image_url);
             const cover = images.find((image) => image.isCover) || images[0];
+            const inlineMediaIds = getInlineMediaIds(entry.body);
             const galleryImages = cover
-              ? images.filter((image) => image.id !== cover.id)
-              : images;
+              ? images.filter((image) => image.id !== cover.id && !inlineMediaIds.has(image.id))
+              : images.filter((image) => !inlineMediaIds.has(image.id));
             const isExpanded = expandedEntryIds.has(entry.id);
             return (
               <article
                 className={`archive-entry archive-entry--${entry.kind}${isExpanded ? " is-expanded" : ""}${cover ? "" : " archive-entry--no-cover"}`}
                 key={entry.id}
               >
-                {cover && <img className="archive-entry__cover" src={cover.src} alt="" />}
+                {cover && (
+                  <img
+                    className="archive-entry__cover"
+                    src={cover.src}
+                    alt={cover.caption}
+                    style={{ objectPosition: `${cover.focusX}% ${cover.focusY}%` }}
+                  />
+                )}
                 <div className="archive-entry__content">
                   <div className="archive-entry__meta-row">
-                    <p>{localized(language, entry.kind, {
-                      writing: tr(language, "writing"),
-                      photography: tr(language, "photography"),
-                      film: tr(language, "filmNote"),
-                    }[entry.kind])} {entry.event_date ? `· ${entry.event_date}` : ""}</p>
+                    <p>{entryKindLabel(language, entry.kind)} {entry.event_date ? `· ${entry.event_date}` : ""}</p>
                     {isExpanded && (
                       <button
                         className="archive-entry__collapse archive-entry__collapse--top"
@@ -1351,16 +1538,19 @@ function PersonalSpacePage({ language }: { language: Language }) {
                   <h2>{entry.title}</h2>
                   {entry.excerpt && <strong>{entry.excerpt}</strong>}
                   {!isExpanded && <p className="archive-entry__preview-text">{markdownPreview(entry.body)}</p>}
+                  {entry.kind === "film" && entry.external_url && (
+                    <a className="archive-entry__external" href={entry.external_url} target="_blank" rel="noreferrer">
+                      {tr(language, "viewDouban")} <span aria-hidden="true">↗</span>
+                    </a>
+                  )}
                   {isExpanded && (
                     <>
-                      <div className="archive-entry__body">{renderMarkdown(entry.body, language)}</div>
+                      <div className="archive-entry__body">
+                        {renderRichEntryBody(entry.body, images, language)}
+                      </div>
                       {galleryImages.length > 0 && (
                         <div className="archive-entry__gallery">
-                          {galleryImages.map((image) => (
-                            <figure className={`archive-entry__media archive-entry__media--${image.size}`} key={image.id}>
-                              <img src={image.src} alt="" />
-                            </figure>
-                          ))}
+                          {galleryImages.map((image) => <EntryMediaFigure image={image} key={image.id} />)}
                         </div>
                       )}
                       <button
@@ -1402,7 +1592,6 @@ function PersonalSpacePage({ language }: { language: Language }) {
                 value={message}
                 onChange={(event) => {
                   setMessage(event.target.value);
-                  setMessageSent(false);
                 }}
                 placeholder={tr(language, "guestbookPlaceholder")}
                 maxLength={500}
@@ -1410,8 +1599,21 @@ function PersonalSpacePage({ language }: { language: Language }) {
               />
               <div><span>{message.length}/500</span><button disabled={isPosting || !message.trim()}>{isPosting ? tr(language, "posting") : tr(language, "pinNote")}</button></div>
             </form>
-            {messageSent && <p className="guestbook-success" role="status">{tr(language, "noteDelivered")}</p>}
             {error && <p className="space-error" role="alert">{error}</p>}
+            <div className="guestbook-history">
+              <p className="space-editor__label">{tr(language, "yourMessages")}</p>
+              {content.messages.length === 0 && <p className="guestbook-history__empty">{tr(language, "noMessagesYet")}</p>}
+              <div className="guestbook-history__grid">
+                {content.messages.map((item) => (
+                  <article className="guestbook-note" key={item.id}>
+                    <p>{item.body}</p>
+                    <time dateTime={item.created_at}>
+                      {tr(language, "messageTime")} · {formatPrivateDate(item.created_at, language)}
+                    </time>
+                  </article>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -1426,6 +1628,8 @@ type EntryDraft = {
   excerpt: string;
   body: string;
   images: EntryImage[];
+  imagesDirty: boolean;
+  external_url: string | null;
   event_date: string | null;
   is_published: boolean;
 };
@@ -1438,6 +1642,8 @@ function blankEntryDraft(language: Language): EntryDraft {
     excerpt: "",
     body: tr(language, "newFragmentMarkdown"),
     images: [],
+    imagesDirty: false,
+    external_url: null,
     event_date: null,
     is_published: false,
   };
@@ -1451,6 +1657,8 @@ function entryToDraft(entry: PrivateEntry): EntryDraft {
     excerpt: entry.excerpt,
     body: entry.body,
     images: parseEntryImages(entry.image_url),
+    imagesDirty: false,
+    external_url: entry.external_url || null,
     event_date: entry.event_date,
     is_published: entry.is_published,
   };
@@ -1460,9 +1668,9 @@ function renderMarkdown(markdown: string, language: Language) {
   return <MarkdownRenderer source={markdown} emptyLabel={tr(language, "nothingWritten")} />;
 }
 
-const maxSingleImageCharacters = 1_100_000;
-const maxMediaEnvelopeCharacters = 3_700_000;
-const maxImageDimension = 2_000;
+const maxSingleImageCharacters = 10_500_000;
+const maxMediaEnvelopeCharacters = 11_500_000;
+const maxImageDimension = 4_096;
 
 function loadImageFile(url: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -1474,6 +1682,17 @@ function loadImageFile(url: string) {
   });
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string"
+      ? resolve(reader.result)
+      : reject(new Error("The image could not be read."));
+    reader.onerror = () => reject(new Error("The image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function optimizeImageForStorage(file: File, maxCharacters = maxSingleImageCharacters) {
   if (!file.type.startsWith("image/")) {
     throw new Error("Please choose an image file.");
@@ -1482,6 +1701,14 @@ async function optimizeImageForStorage(file: File, maxCharacters = maxSingleImag
   const objectUrl = URL.createObjectURL(file);
   try {
     const image = await loadImageFile(objectUrl);
+    const estimatedDataUrlLength = Math.ceil(file.size * 4 / 3) + 128;
+    if (
+      estimatedDataUrlLength <= maxCharacters
+      && Math.max(image.naturalWidth, image.naturalHeight) <= maxImageDimension
+    ) {
+      return readFileAsDataUrl(file);
+    }
+
     let scale = Math.min(1, maxImageDimension / Math.max(image.naturalWidth, image.naturalHeight));
 
     while (scale >= 0.08) {
@@ -1492,7 +1719,7 @@ async function optimizeImageForStorage(file: File, maxCharacters = maxSingleImag
       if (!context) throw new Error("The image editor is unavailable in this browser.");
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-      for (const quality of [0.9, 0.82, 0.74, 0.66, 0.58, 0.48, 0.4]) {
+      for (const quality of [0.96, 0.9, 0.84, 0.76, 0.68, 0.58, 0.48, 0.4]) {
         const dataUrl = canvas.toDataURL("image/webp", quality);
         if (dataUrl.length <= maxCharacters) return dataUrl;
       }
@@ -1523,6 +1750,14 @@ function OwnerSpaceEditor({
   const [draggedImageId, setDraggedImageId] = useState("");
   const [editorError, setEditorError] = useState("");
   const [editorNotice, setEditorNotice] = useState("");
+  const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const cropDragRef = useRef<{
+    imageId: string;
+    pointerX: number;
+    pointerY: number;
+    focusX: number;
+    focusY: number;
+  } | null>(null);
 
   const updateDraft = <Key extends keyof EntryDraft>(key: Key, value: EntryDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -1530,7 +1765,11 @@ function OwnerSpaceEditor({
   };
 
   const updateImages = (updater: (images: EntryImage[]) => EntryImage[]) => {
-    setDraft((current) => ({ ...current, images: updater(current.images) }));
+    setDraft((current) => ({
+      ...current,
+      images: updater(current.images),
+      imagesDirty: true,
+    }));
     setEditorNotice("");
   };
 
@@ -1543,31 +1782,18 @@ function OwnerSpaceEditor({
     setIsBusy(true);
     setEditorError("");
     setEditorNotice("");
+    const stableEntryId = draft.id || crypto.randomUUID();
     const payload = {
-      id: draft.id,
+      id: stableEntryId,
       kind: draft.kind,
       title: draft.title.trim(),
       excerpt: draft.excerpt.trim(),
       body: draft.body,
-      image_url: serializeEntryImages(draft.images),
+      image_url: draft.imagesDirty || !draft.id ? serializeEntryImages(draft.images) : null,
+      external_url: draft.kind === "film" ? draft.external_url?.trim() || null : null,
+      replace_image: draft.imagesDirty || !draft.id,
       event_date: draft.event_date,
       is_published: draft.is_published,
-    };
-    const findSavedEntry = async () => {
-      try {
-        const latest = await loadPrivateSpace(sessionToken);
-        return latest.entries.find((entry) => (
-          entry.kind === payload.kind
-          && entry.title === payload.title
-          && entry.excerpt === payload.excerpt
-          && entry.body === payload.body
-          && entry.image_url === payload.image_url
-          && entry.event_date === payload.event_date
-          && entry.is_published === payload.is_published
-        )) || null;
-      } catch {
-        return null;
-      }
     };
     try {
       let savedEntry: PrivateEntry;
@@ -1575,19 +1801,7 @@ function OwnerSpaceEditor({
         savedEntry = await savePrivateEntry(sessionToken, payload);
       } catch (requestError) {
         if (!isTransientPrivateSpaceError(requestError)) throw requestError;
-        const alreadySaved = await findSavedEntry();
-        if (alreadySaved) {
-          savedEntry = alreadySaved;
-        } else {
-          try {
-            savedEntry = await savePrivateEntry(sessionToken, payload);
-          } catch (retryError) {
-            if (!isTransientPrivateSpaceError(retryError)) throw retryError;
-            const savedAfterRetry = await findSavedEntry();
-            if (!savedAfterRetry) throw retryError;
-            savedEntry = savedAfterRetry;
-          }
-        }
+        savedEntry = await savePrivateEntry(sessionToken, payload);
       }
       const nextEntries = entries.some((entry) => entry.id === savedEntry.id)
         ? entries.map((entry) => entry.id === savedEntry.id ? savedEntry : entry)
@@ -1640,6 +1854,10 @@ function OwnerSpaceEditor({
           id: crypto.randomUUID(),
           src,
           size: "medium",
+          align: "center",
+          caption: "",
+          focusX: 50,
+          focusY: 50,
           isCover: false,
         });
         remainingBudget -= src.length;
@@ -1653,7 +1871,7 @@ function OwnerSpaceEditor({
       if ((serializeEntryImages(nextImages)?.length || 0) > maxMediaEnvelopeCharacters) {
         throw new Error("These images could not fit in one article after optimization.");
       }
-      setDraft((current) => ({ ...current, images: nextImages }));
+      setDraft((current) => ({ ...current, images: nextImages, imagesDirty: true }));
       setEditorNotice(tr(language, "imageReady"));
     } catch (uploadError) {
       setEditorError(uploadError instanceof Error ? uploadError.message : localized(language, "The image could not be uploaded.", "图片上传失败。"));
@@ -1673,6 +1891,61 @@ function OwnerSpaceEditor({
 
   const setImageSize = (imageId: string, size: EntryImageSize) => {
     updateImages((images) => images.map((image) => image.id === imageId ? { ...image, size } : image));
+  };
+
+  const setImageAlignment = (imageId: string, align: EntryImageAlign) => {
+    updateImages((images) => images.map((image) => image.id === imageId ? { ...image, align } : image));
+  };
+
+  const setImageCaption = (imageId: string, caption: string) => {
+    updateImages((images) => images.map((image) => image.id === imageId ? { ...image, caption } : image));
+  };
+
+  const setImageFocus = (imageId: string, focusX: number, focusY: number) => {
+    updateImages((images) => images.map((image) => image.id === imageId ? {
+      ...image,
+      focusX: Math.min(100, Math.max(0, focusX)),
+      focusY: Math.min(100, Math.max(0, focusY)),
+    } : image));
+  };
+
+  const insertImageAtCursor = (imageId: string) => {
+    const textarea = bodyTextareaRef.current;
+    const marker = `{{media:${imageId}}}`;
+    const start = textarea?.selectionStart ?? draft.body.length;
+    const end = textarea?.selectionEnd ?? start;
+    const before = draft.body.slice(0, start);
+    const after = draft.body.slice(end);
+    const prefix = before.endsWith("\n\n") || before.length === 0 ? "" : "\n\n";
+    const suffix = after.startsWith("\n\n") || after.length === 0 ? "" : "\n\n";
+    const nextBody = `${before}${prefix}${marker}${suffix}${after}`;
+    updateDraft("body", nextBody);
+    setEditorNotice(tr(language, "imageInserted"));
+    window.requestAnimationFrame(() => {
+      const cursor = before.length + prefix.length + marker.length;
+      textarea?.focus();
+      textarea?.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const handleCropPointerDown = (event: React.PointerEvent<HTMLDivElement>, image: EntryImage) => {
+    cropDragRef.current = {
+      imageId: image.id,
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      focusX: image.focusX,
+      focusY: image.focusY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleCropPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = cropDragRef.current;
+    if (!drag) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const focusX = drag.focusX - ((event.clientX - drag.pointerX) / Math.max(bounds.width, 1)) * 100;
+    const focusY = drag.focusY - ((event.clientY - drag.pointerY) / Math.max(bounds.height, 1)) * 100;
+    setImageFocus(drag.imageId, focusX, focusY);
   };
 
   const removeImage = (imageId: string) => {
@@ -1719,7 +1992,7 @@ function OwnerSpaceEditor({
             {entries.map((entry) => (
               <button type="button" key={entry.id} className={draft.id === entry.id ? "is-selected" : ""} onClick={() => { setDraft(entryToDraft(entry)); setEditorError(""); setEditorNotice(""); }}>
                 <strong>{entry.title}</strong>
-                <small>{entry.is_published ? tr(language, "published") : tr(language, "draft")} · {localized(language, entry.kind, { writing: tr(language, "writing"), photography: tr(language, "photography"), film: tr(language, "filmNote") }[entry.kind])}</small>
+                <small>{entry.is_published ? tr(language, "published") : tr(language, "draft")} · {entryKindLabel(language, entry.kind)}</small>
               </button>
             ))}
           </aside>
@@ -1745,11 +2018,59 @@ function OwnerSpaceEditor({
               </fieldset>
             </div>
             <label>{tr(language, "excerpt")}<input value={draft.excerpt} onChange={(event) => updateDraft("excerpt", event.target.value)} placeholder={tr(language, "excerptPlaceholder")} /></label>
-            <label>{tr(language, "markdownBody")}<textarea rows={12} value={draft.body} onChange={(event) => updateDraft("body", event.target.value)} placeholder={tr(language, "markdownPlaceholder")} /></label>
+            {draft.kind === "film" && (
+              <label>
+                {tr(language, "doubanLink")}
+                <input
+                  type="url"
+                  value={draft.external_url || ""}
+                  onChange={(event) => updateDraft("external_url", event.target.value || null)}
+                  placeholder={tr(language, "doubanLinkPlaceholder")}
+                />
+              </label>
+            )}
+            <label>
+              {tr(language, "markdownBody")}
+              <textarea
+                ref={bodyTextareaRef}
+                rows={12}
+                value={draft.body}
+                onChange={(event) => updateDraft("body", event.target.value)}
+                placeholder={tr(language, "markdownPlaceholder")}
+              />
+            </label>
             <div className="space-editor__form-row">
               <label>{tr(language, "eventDate")}<input type="date" value={draft.event_date || ""} onChange={(event) => updateDraft("event_date", event.target.value || null)} /></label>
               <label>{tr(language, "image")}<input type="file" accept="image/*" multiple onChange={handleImageUpload} /><small>{tr(language, "imageUploadHelp")}</small></label>
             </div>
+            {previewCover && (
+              <section className="space-editor__cover-crop">
+                <div>
+                  <strong>{tr(language, "coverCrop")}</strong>
+                  <small>{tr(language, "coverCropHelp")}</small>
+                </div>
+                <div
+                  className="space-editor__crop-frame"
+                  role="img"
+                  aria-label={tr(language, "coverCrop")}
+                  onPointerDown={(event) => handleCropPointerDown(event, previewCover)}
+                  onPointerMove={handleCropPointerMove}
+                  onPointerUp={() => { cropDragRef.current = null; }}
+                  onPointerCancel={() => { cropDragRef.current = null; }}
+                >
+                  <img
+                    src={previewCover.src}
+                    alt={previewCover.caption}
+                    draggable={false}
+                    style={{ objectPosition: `${previewCover.focusX}% ${previewCover.focusY}%` }}
+                  />
+                  <span aria-hidden="true" />
+                </div>
+                <button type="button" onClick={() => setImageFocus(previewCover.id, 50, 50)}>
+                  {tr(language, "resetCrop")}
+                </button>
+              </section>
+            )}
             {draft.images.length > 0 && (
               <div className="space-editor__media-list">
                 {draft.images.map((image, index) => (
@@ -1767,7 +2088,11 @@ function OwnerSpaceEditor({
                     }}
                   >
                     <div className="space-editor__media-thumb">
-                      <img src={image.src} alt="" />
+                      <img
+                        src={image.src}
+                        alt={image.caption}
+                        style={{ objectPosition: `${image.focusX}% ${image.focusY}%` }}
+                      />
                       <span>{String(index + 1).padStart(2, "0")}</span>
                     </div>
                     <div className="space-editor__media-controls">
@@ -1779,6 +2104,14 @@ function OwnerSpaceEditor({
                           onChange={(event) => setCoverImage(image.id, event.target.checked)}
                         />
                         {image.isCover ? tr(language, "coverImage") : tr(language, "setAsCover")}
+                      </label>
+                      <label className="space-editor__caption">
+                        {tr(language, "imageCaption")}
+                        <input
+                          value={image.caption}
+                          onChange={(event) => setImageCaption(image.id, event.target.value)}
+                          placeholder={tr(language, "imageCaptionPlaceholder")}
+                        />
                       </label>
                       <fieldset>
                         <legend>{tr(language, "displaySize")}</legend>
@@ -1796,7 +2129,24 @@ function OwnerSpaceEditor({
                           ))}
                         </div>
                       </fieldset>
+                      <fieldset>
+                        <legend>{tr(language, "imageAlignment")}</legend>
+                        <div className="space-editor__align-options">
+                          {(["left", "center", "right"] as const).map((align) => (
+                            <button
+                              type="button"
+                              key={align}
+                              className={image.align === align ? "is-active" : ""}
+                              aria-pressed={image.align === align}
+                              onClick={() => setImageAlignment(image.id, align)}
+                            >
+                              {tr(language, align === "left" ? "alignLeft" : align === "center" ? "alignCenter" : "alignRight")}
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
                       <div className="space-editor__media-actions">
+                        <button type="button" onClick={() => insertImageAtCursor(image.id)}>{tr(language, "insertImage")}</button>
                         <button type="button" disabled={index === 0} aria-label={tr(language, "moveEarlier")} title={tr(language, "moveEarlier")} onClick={() => moveImageByOffset(image.id, -1)}>↑</button>
                         <button type="button" disabled={index === draft.images.length - 1} aria-label={tr(language, "moveLater")} title={tr(language, "moveLater")} onClick={() => moveImageByOffset(image.id, 1)}>↓</button>
                         <button type="button" className="is-remove" onClick={() => removeImage(image.id)}>{tr(language, "removeImage")}</button>
@@ -1815,12 +2165,25 @@ function OwnerSpaceEditor({
           <aside className="space-editor__preview">
             <p className="space-editor__label">{tr(language, "livePreview")}</p>
             <article className="space-editor__preview-card">
-              {previewCover && <img src={previewCover.src} alt={tr(language, "selectedEntryCover")} />}
+              {previewCover && (
+                <img
+                  src={previewCover.src}
+                  alt={tr(language, "selectedEntryCover")}
+                  style={{ objectPosition: `${previewCover.focusX}% ${previewCover.focusY}%` }}
+                />
+              )}
               <div>
-                <p>{localized(language, draft.kind, { writing: tr(language, "writing"), photography: tr(language, "photography"), film: tr(language, "filmNote") }[draft.kind])}{draft.event_date ? ` · ${draft.event_date}` : ""}</p>
+                <p>{entryKindLabel(language, draft.kind)}{draft.event_date ? ` · ${draft.event_date}` : ""}</p>
                 <h3>{draft.title || tr(language, "untitledFragment")}</h3>
                 {draft.excerpt && <strong>{draft.excerpt}</strong>}
-                <div className="archive-entry__body">{renderMarkdown(draft.body, language)}</div>
+                {draft.kind === "film" && draft.external_url && (
+                  <a className="archive-entry__external" href={draft.external_url} target="_blank" rel="noreferrer">
+                    {tr(language, "viewDouban")} <span aria-hidden="true">↗</span>
+                  </a>
+                )}
+                <div className="archive-entry__body">
+                  {renderRichEntryBody(draft.body, draft.images, language)}
+                </div>
               </div>
             </article>
           </aside>

@@ -5,6 +5,7 @@ export type PrivateEntry = {
   excerpt: string;
   body: string;
   image_url: string | null;
+  external_url: string | null;
   event_date: string | null;
   is_published: boolean;
 };
@@ -66,8 +67,8 @@ export type AdminDashboard = {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const requestTimeoutMs = 15_000;
-const saveRequestTimeoutMs = 30_000;
+const requestTimeoutMs = 12_000;
+const saveRequestTimeoutMs = 20_000;
 
 export const isPrivateSpaceConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -140,10 +141,11 @@ export function loadPrivateSpace(sessionToken: string) {
   return rpc<PrivateSpaceContent>("get_private_space", { session_token: sessionToken });
 }
 
-export function postGuestbookMessage(sessionToken: string, message: string) {
-  return rpc<GuestbookMessage>("post_guestbook_message", {
+export function postGuestbookMessage(sessionToken: string, message: string, requestId: string) {
+  return rpc<GuestbookMessage>("post_guestbook_message_v2", {
     session_token: sessionToken,
     message_body: message,
+    request_id: requestId,
   });
 }
 
@@ -194,11 +196,13 @@ export function savePrivateEntry(
     excerpt: string;
     body: string;
     image_url: string | null;
+    external_url: string | null;
+    replace_image: boolean;
     event_date: string | null;
     is_published: boolean;
   },
 ) {
-  return rpc<PrivateEntry>("owner_upsert_private_entry", {
+  return rpc<PrivateEntry>("owner_upsert_private_entry_v2", {
     session_token: sessionToken,
     entry_id: entry.id,
     entry_kind: entry.kind,
@@ -206,6 +210,8 @@ export function savePrivateEntry(
     entry_excerpt: entry.excerpt,
     entry_body: entry.body,
     entry_image_url: entry.image_url,
+    entry_external_url: entry.external_url,
+    entry_replace_image: entry.replace_image,
     entry_event_date: entry.event_date,
     entry_published: entry.is_published,
   }, saveRequestTimeoutMs);

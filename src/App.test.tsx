@@ -123,7 +123,7 @@ describe("owner session restoration", () => {
     expect(screen.getByRole("status").textContent).toContain("Email address copied to clipboard");
   });
 
-  it("automatically retries the first transient entry save with the same entry id", async () => {
+  it("automatically retries the first transient entry save with one stable entry id", async () => {
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
     window.location.hash = "#/space";
     api.loadPrivateSpace.mockResolvedValue({
@@ -152,9 +152,45 @@ describe("owner session restoration", () => {
     await waitFor(() => expect(api.savePrivateEntry).toHaveBeenCalledTimes(2));
     const firstId = api.savePrivateEntry.mock.calls[0][1].id;
     const secondId = api.savePrivateEntry.mock.calls[1][1].id;
-    expect(firstId).toBeNull();
+    expect(firstId).toBeTruthy();
     expect(secondId).toBe(firstId);
     expect(await screen.findByText("Saved as a private draft.")).toBeTruthy();
+  });
+
+  it("retries a guestbook post once and immediately renders the saved read-only card", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: {
+        name: "Visitor",
+        visitor_number: 2,
+        visit_count: 1,
+        is_owner: false,
+      },
+      entries: [],
+      messages: [],
+    });
+    api.postGuestbookMessage
+      .mockRejectedValueOnce(new DOMException("Timed out", "AbortError"))
+      .mockResolvedValue({
+        id: "message-one",
+        visitor_name: "Visitor",
+        body: "I was here.",
+        created_at: "2026-07-23T05:00:00.000Z",
+      });
+
+    render(<App />);
+    fireEvent.change(await screen.findByPlaceholderText("Write something here..."), {
+      target: { value: "I was here." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Pin this note" }));
+
+    await waitFor(() => expect(api.postGuestbookMessage).toHaveBeenCalledTimes(2));
+    expect(api.postGuestbookMessage.mock.calls[0][2]).toBeTruthy();
+    expect(api.postGuestbookMessage.mock.calls[1][2]).toBe(api.postGuestbookMessage.mock.calls[0][2]);
+    expect(await screen.findByText("I was here.")).toBeTruthy();
+    expect(screen.queryByText("Your note has been delivered to Yuyun.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete message" })).toBeNull();
   });
 
   it("keeps article cards collapsed until the visitor expands one", async () => {
@@ -172,21 +208,30 @@ describe("owner session restoration", () => {
         kind: "writing",
         title: "A private note",
         excerpt: "A short excerpt",
-        body: "| Model | Score |\n| --- | ---: |\n| Baseline | 0.91 |",
+        body: "Intro paragraph.\n\n{{media:inline}}\n\n| Model | Score |\n| --- | ---: |\n| Baseline | 0.91 |",
         image_url: `yuyun-media-v1:${JSON.stringify([
           {
             id: "cover",
             src: "data:image/webp;base64,cover",
             size: "full",
+            align: "center",
+            caption: "",
+            focusX: 24,
+            focusY: 72,
             isCover: true,
           },
           {
             id: "inline",
             src: "data:image/webp;base64,inline",
             size: "small",
+            align: "right",
+            caption: "Inline result",
+            focusX: 50,
+            focusY: 50,
             isCover: false,
           },
         ])}`,
+        external_url: null,
         event_date: "2026-07-23",
         is_published: true,
       }],
@@ -202,14 +247,15 @@ describe("owner session restoration", () => {
 
     const expandedEntry = container.querySelector(".archive-entry");
     const body = container.querySelector(".archive-entry__body");
-    const gallery = container.querySelector(".archive-entry__gallery");
+    const inlineMedia = container.querySelector(".archive-entry__inline-media");
     expect(expandedEntry?.classList.contains("is-expanded")).toBe(true);
     expect(body).toBeTruthy();
     expect(container.querySelector("table")).toBeTruthy();
-    expect(gallery?.querySelectorAll("img")).toHaveLength(1);
-    expect(gallery?.querySelector("img")?.getAttribute("src")).toContain("inline");
-    expect(body && gallery
-      ? Boolean(body.compareDocumentPosition(gallery) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(container.querySelector(".archive-entry__gallery")).toBeNull();
+    expect(inlineMedia?.querySelector("img")?.getAttribute("src")).toContain("inline");
+    const table = container.querySelector("table");
+    expect(inlineMedia && table
+      ? Boolean(inlineMedia.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING)
       : false).toBe(true);
 
     const closeButtons = screen.getAllByRole("button", { name: "Close article" });
@@ -217,5 +263,54 @@ describe("owner session restoration", () => {
     fireEvent.click(closeButtons[0]);
     expect(expandedEntry?.classList.contains("is-expanded")).toBe(false);
     expect(container.querySelector("table")).toBeNull();
+  });
+
+  it("renders film notes with a Douban link and filters entries by type and year", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: {
+        name: "Visitor",
+        visitor_number: 2,
+        visit_count: 1,
+        is_owner: false,
+      },
+      entries: [
+        {
+          id: "film-one",
+          kind: "film",
+          title: "A film note",
+          excerpt: "After the screening",
+          body: "A review.",
+          image_url: null,
+          external_url: "https://movie.douban.com/subject/1295644/",
+          event_date: "2026-07-20",
+          is_published: true,
+        },
+        {
+          id: "writing-one",
+          kind: "writing",
+          title: "A notebook page",
+          excerpt: "An essay",
+          body: "A draft.",
+          image_url: null,
+          external_url: null,
+          event_date: "2025-05-10",
+          is_published: true,
+        },
+      ],
+      messages: [],
+    });
+
+    render(<App />);
+    expect((await screen.findByRole("link", { name: "View on Douban" })).getAttribute("href"))
+      .toBe("https://movie.douban.com/subject/1295644/");
+
+    fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "writing" } });
+    expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Filter by year"), { target: { value: "2026" } });
+    expect(screen.queryByRole("heading", { name: "A notebook page" })).toBeNull();
   });
 });

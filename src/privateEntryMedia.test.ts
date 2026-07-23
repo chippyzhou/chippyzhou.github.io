@@ -8,8 +8,26 @@ import {
 } from "./privateEntryMedia";
 
 const images: EntryImage[] = [
-  { id: "one", src: "data:image/webp;base64,one", size: "small", isCover: false },
-  { id: "two", src: "data:image/webp;base64,two", size: "full", isCover: true },
+  {
+    id: "one",
+    src: "data:image/webp;base64,one",
+    size: "small",
+    align: "left",
+    caption: "First image",
+    focusX: 50,
+    focusY: 50,
+    isCover: false,
+  },
+  {
+    id: "two",
+    src: "data:image/webp;base64,two",
+    size: "full",
+    align: "center",
+    caption: "",
+    focusX: 27,
+    focusY: 68,
+    isCover: true,
+  },
 ];
 
 describe("private entry media", () => {
@@ -23,9 +41,29 @@ describe("private entry media", () => {
         id: "legacy-cover",
         src: "https://example.com/cover.jpg",
         size: "large",
+        align: "center",
+        caption: "",
+        focusX: 50,
+        focusY: 50,
         isCover: true,
       },
     ]);
+  });
+
+  it("adds centered crop and layout defaults to old media envelopes", () => {
+    const legacyEnvelope = `yuyun-media-v1:${JSON.stringify([{
+      id: "old",
+      src: "data:image/webp;base64,old",
+      size: "medium",
+      isCover: true,
+    }])}`;
+
+    expect(parseEntryImages(legacyEnvelope)[0]).toMatchObject({
+      align: "center",
+      caption: "",
+      focusX: 50,
+      focusY: 50,
+    });
   });
 
   it("reorders images without changing their layout settings", () => {
