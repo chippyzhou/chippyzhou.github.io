@@ -342,4 +342,36 @@ describe("owner session restoration", () => {
     expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
     expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
   });
+
+  it("uses the creation date for undated visitor entries and keeps them filterable", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: {
+        name: "Visitor",
+        visitor_number: 2,
+        visit_count: 1,
+        is_owner: false,
+      },
+      entries: [{
+        id: "undated-writing",
+        kind: "writing",
+        title: "A saved fragment",
+        excerpt: "No event date was selected",
+        body: "A draft.",
+        image_url: null,
+        external_url: null,
+        event_date: null,
+        display_date: "2025-04-06",
+        is_published: true,
+      }],
+      messages: [],
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("Writing · 2025-04-06")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2025-01-01" } });
+    expect(screen.getByRole("heading", { name: "A saved fragment" })).toBeTruthy();
+  });
 });

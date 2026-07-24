@@ -1181,6 +1181,10 @@ function entryKindLabel(language: Language, kind: PrivateEntry["kind"]) {
       : tr(language, "filmNote");
 }
 
+function privateEntryDisplayDate(entry: PrivateEntry) {
+  return entry.display_date || entry.event_date || "";
+}
+
 function formatPrivateDate(value: string, language: Language) {
   return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
     year: "numeric",
@@ -1267,10 +1271,10 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const [entryEndDate, setEntryEndDate] = useState("");
 
   const filteredEntries = useMemo(() => (content?.entries || []).filter((entry) => {
-    const entryDate = entry.event_date;
+    const entryDate = privateEntryDisplayDate(entry);
     return (entryKindFilter === "all" || entry.kind === entryKindFilter)
-      && (!entryStartDate || Boolean(entryDate && entryDate >= entryStartDate))
-      && (!entryEndDate || Boolean(entryDate && entryDate <= entryEndDate));
+      && (!entryStartDate || (entryDate && entryDate >= entryStartDate))
+      && (!entryEndDate || (entryDate && entryDate <= entryEndDate));
   }), [content?.entries, entryEndDate, entryKindFilter, entryStartDate]);
 
   useEffect(() => {
@@ -1510,6 +1514,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
               ? images.filter((image) => image.id !== cover.id && !inlineMediaIds.has(image.id))
               : images.filter((image) => !inlineMediaIds.has(image.id));
             const isExpanded = expandedEntryIds.has(entry.id);
+            const displayDate = privateEntryDisplayDate(entry);
             return (
               <article
                 className={`archive-entry archive-entry--${entry.kind}${isExpanded ? " is-expanded" : ""}${cover ? "" : " archive-entry--no-cover"}`}
@@ -1525,7 +1530,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
                 )}
                 <div className="archive-entry__content">
                   <div className="archive-entry__meta-row">
-                    <p>{entryKindLabel(language, entry.kind)} {entry.event_date ? `· ${entry.event_date}` : ""}</p>
+                    <p>{entryKindLabel(language, entry.kind)} {displayDate ? `· ${displayDate}` : ""}</p>
                     {isExpanded && (
                       <button
                         className="archive-entry__collapse archive-entry__collapse--top"

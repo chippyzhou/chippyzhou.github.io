@@ -7,6 +7,7 @@ export type PrivateEntry = {
   image_url: string | null;
   external_url: string | null;
   event_date: string | null;
+  display_date?: string | null;
   is_published: boolean;
 };
 
