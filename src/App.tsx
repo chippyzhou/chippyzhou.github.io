@@ -99,8 +99,6 @@ const copy = {
     visitor: "visitor",
     welcomeAfterHours: "Welcome after hours,",
     visitorPass: "VISITOR PASS",
-    recordedVisit: "recorded visit",
-    recordedVisits: "recorded visits",
     manageVisitors: "Manage visitors →",
     logOut: "Log out",
     firstEntry: "The first private entry is being prepared.",
@@ -116,9 +114,9 @@ const copy = {
     noMessagesYet: "Nothing pinned yet.",
     messageTime: "Pinned",
     filterByType: "Filter by type",
-    filterByYear: "Filter by year",
+    filterStartDate: "Start date",
+    filterEndDate: "End date",
     allTypes: "All types",
-    allYears: "All years",
     entriesShown: "entries shown",
     noFilteredEntries: "No entries match these filters.",
     viewDouban: "View on Douban",
@@ -305,8 +303,6 @@ const copy = {
     visitor: "访客",
     welcomeAfterHours: "欢迎来到闭馆之后，",
     visitorPass: "访客通行证",
-    recordedVisit: "次访问记录",
-    recordedVisits: "次访问记录",
     manageVisitors: "管理访客 →",
     logOut: "退出登录",
     firstEntry: "第一篇私人记录正在准备中。",
@@ -322,9 +318,9 @@ const copy = {
     noMessagesYet: "还没有留下便签。",
     messageTime: "写于",
     filterByType: "按类型筛选",
-    filterByYear: "按年份筛选",
+    filterStartDate: "起始日期",
+    filterEndDate: "终止日期",
     allTypes: "全部类型",
-    allYears: "全部年份",
     entriesShown: "篇记录",
     noFilteredEntries: "没有符合当前筛选条件的记录。",
     viewDouban: "前往豆瓣",
@@ -1267,18 +1263,15 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const [isPosting, setIsPosting] = useState(false);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(() => new Set());
   const [entryKindFilter, setEntryKindFilter] = useState<"all" | PrivateEntry["kind"]>("all");
-  const [entryYearFilter, setEntryYearFilter] = useState("all");
+  const [entryStartDate, setEntryStartDate] = useState("");
+  const [entryEndDate, setEntryEndDate] = useState("");
 
-  const entryYears = useMemo(() => Array.from(new Set(
-    (content?.entries || [])
-      .map((entry) => entry.event_date?.slice(0, 4))
-      .filter((year): year is string => Boolean(year)),
-  )).sort((left, right) => right.localeCompare(left)), [content?.entries]);
-
-  const filteredEntries = useMemo(() => (content?.entries || []).filter((entry) => (
-    (entryKindFilter === "all" || entry.kind === entryKindFilter)
-    && (entryYearFilter === "all" || entry.event_date?.startsWith(entryYearFilter))
-  )), [content?.entries, entryKindFilter, entryYearFilter]);
+  const filteredEntries = useMemo(() => (content?.entries || []).filter((entry) => {
+    const entryDate = entry.event_date;
+    return (entryKindFilter === "all" || entry.kind === entryKindFilter)
+      && (!entryStartDate || Boolean(entryDate && entryDate >= entryStartDate))
+      && (!entryEndDate || Boolean(entryDate && entryDate <= entryEndDate));
+  }), [content?.entries, entryEndDate, entryKindFilter, entryStartDate]);
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -1389,7 +1382,8 @@ function PersonalSpacePage({ language }: { language: Language }) {
     setMessage("");
     setExpandedEntryIds(new Set());
     setEntryKindFilter("all");
-    setEntryYearFilter("all");
+    setEntryStartDate("");
+    setEntryEndDate("");
     setError("");
   };
 
@@ -1452,7 +1446,6 @@ function PersonalSpacePage({ language }: { language: Language }) {
           <div className="visitor-pass">
             <span>{tr(language, "visitorPass")}</span>
             <strong>#{String(content.visitor.visitor_number).padStart(3, "0")}</strong>
-            <small>{content.visitor.visit_count} {content.visitor.visit_count === 1 ? tr(language, "recordedVisit") : tr(language, "recordedVisits")}</small>
             {content.visitor.is_owner && <a className="owner-console-link" href="#/admin">{tr(language, "manageVisitors")}</a>}
             <button className="space-signout" type="button" onClick={handleVisitorLogout}>{tr(language, "logOut")}</button>
           </div>
@@ -1484,15 +1477,24 @@ function PersonalSpacePage({ language }: { language: Language }) {
               </select>
             </label>
             <label>
-              <span>{tr(language, "filterByYear")}</span>
-              <select
-                aria-label={tr(language, "filterByYear")}
-                value={entryYearFilter}
-                onChange={(event) => setEntryYearFilter(event.target.value)}
-              >
-                <option value="all">{tr(language, "allYears")}</option>
-                {entryYears.map((year) => <option value={year} key={year}>{year}</option>)}
-              </select>
+              <span>{tr(language, "filterStartDate")}</span>
+              <input
+                type="date"
+                aria-label={tr(language, "filterStartDate")}
+                value={entryStartDate}
+                max={entryEndDate || undefined}
+                onChange={(event) => setEntryStartDate(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>{tr(language, "filterEndDate")}</span>
+              <input
+                type="date"
+                aria-label={tr(language, "filterEndDate")}
+                value={entryEndDate}
+                min={entryStartDate || undefined}
+                onChange={(event) => setEntryEndDate(event.target.value)}
+              />
             </label>
           </div>
         )}

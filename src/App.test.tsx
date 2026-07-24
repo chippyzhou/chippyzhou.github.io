@@ -193,6 +193,27 @@ describe("owner session restoration", () => {
     expect(screen.queryByRole("button", { name: "Delete message" })).toBeNull();
   });
 
+  it("keeps visit counts out of the visitor pass", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: {
+        name: "Visitor",
+        visitor_number: 2,
+        visit_count: 7,
+        is_owner: false,
+      },
+      entries: [],
+      messages: [],
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("VISITOR PASS")).toBeTruthy();
+    expect(screen.getByText("#002")).toBeTruthy();
+    expect(screen.queryByText("7 recorded visits")).toBeNull();
+  });
+
   it("keeps article cards collapsed until the visitor expands one", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
     window.location.hash = "#/space";
@@ -265,7 +286,7 @@ describe("owner session restoration", () => {
     expect(container.querySelector("table")).toBeNull();
   });
 
-  it("renders film notes with a Douban link and filters entries by type and year", async () => {
+  it("renders film notes with a Douban link and filters entries by type and date range", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
     window.location.hash = "#/space";
     api.loadPrivateSpace.mockResolvedValue({
@@ -310,7 +331,15 @@ describe("owner session restoration", () => {
     expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
     expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText("Filter by year"), { target: { value: "2026" } });
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-01-01" } });
     expect(screen.queryByRole("heading", { name: "A notebook page" })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "all" } });
+    expect(screen.getByRole("heading", { name: "A film note" })).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2025-12-31" } });
+    expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
   });
 });

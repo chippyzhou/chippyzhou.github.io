@@ -575,7 +575,7 @@ img { display: block; max-width: 100%; }
 .space-welcome { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 48px; align-items: end; padding-bottom: 55px; border-bottom: 1px solid #524b58; }
 .space-welcome h1 { font-size: clamp(48px, 6vw, 82px); }
 .visitor-pass { padding: 18px; border: 1px solid #d7af68; transform: rotate(2deg); }
-.visitor-pass span, .visitor-pass small { display: block; color: #9d96a1; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.visitor-pass span { display: block; color: #9d96a1; font-size: 9px; font-weight: 900; text-transform: uppercase; }
 .visitor-pass strong { display: block; margin: 14px 0; color: #d7af68; font: 700 44px/1 Georgia, serif; }
 .owner-console-link {
   margin-top: 15px;
@@ -615,16 +615,18 @@ img { display: block; max-width: 100%; }
 .archive-filters > p { margin: 0 auto 2px 0; color: #77717b; font: 10px/1.3 Arial, Helvetica, sans-serif; text-transform: uppercase; }
 .archive-filters > p strong { color: #d7af68; font-size: 18px; }
 .archive-filters label { display: grid; gap: 5px; color: #8f8993; font: 900 8px/1 Arial, Helvetica, sans-serif; letter-spacing: .07em; text-transform: uppercase; }
-.archive-filters select {
+.archive-filters select,
+.archive-filters input {
   min-width: 144px;
   min-height: 36px;
-  padding: 7px 28px 7px 9px;
   border: 1px solid #655d69;
   border-radius: 0;
   background: #17151d;
   color: #f5f0e8;
   font: 700 11px/1 Arial, Helvetica, sans-serif;
 }
+.archive-filters select { padding: 7px 28px 7px 9px; }
+.archive-filters input { min-width: 152px; padding: 7px 9px; color-scheme: dark; }
 .private-archive { padding: 60px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .archive-empty { grid-column: 1 / -1; padding: 80px 20px; color: #77717b; border: 1px dashed #524b58; text-align: center; font: italic 18px Georgia, serif; }
 .archive-entry {
@@ -1424,7 +1426,7 @@ img { display: block; max-width: 100%; }
   .archive-filters { align-items: stretch; flex-wrap: wrap; }
   .archive-filters > p { width: 100%; margin-bottom: 4px; }
   .archive-filters label { flex: 1 1 130px; }
-  .archive-filters select { width: 100%; min-width: 0; }
+  .archive-filters select, .archive-filters input { width: 100%; min-width: 0; }
   .private-archive { grid-template-columns: 1fr; padding: 45px 0; }
   .archive-entry { grid-column: 1; height: 420px; }
   .archive-entry--photography:not(.is-expanded) { height: 460px; grid-template-rows: 250px minmax(0, 1fr); }
