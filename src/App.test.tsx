@@ -98,6 +98,15 @@ describe("owner session restoration", () => {
     expect(navigation.indexOf("Tech Notes📓")).toBe(navigation.indexOf("Gallery🎹") - 1);
   });
 
+  it("uses compact Chinese labels in the top navigation", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
+
+    const navigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
+    expect(navigation).toEqual(["首页🎤", "项目🎸", "学术🎻", "竞赛🥁", "笔记📓", "图片墙🎹", "个人🔐"]);
+  });
+
   it("keeps page chapter numbers aligned with the top navigation order", () => {
     window.location.hash = "#/awards";
     const { unmount } = render(<App />);
