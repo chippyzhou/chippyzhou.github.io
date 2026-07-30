@@ -118,6 +118,20 @@ describe("owner session restoration", () => {
     expect(document.querySelector(".chapter-no")?.textContent).toBe("04");
   });
 
+  it("lists EgoSafe as the second publication with its arXiv link and authors", () => {
+    window.location.hash = "#/publications";
+
+    render(<App />);
+
+    const publicationHeadings = screen.getAllByRole("heading", { level: 2 });
+    expect(publicationHeadings[1].textContent).toBe(
+      "EgoSafe: A First-Person Mobile-Captured Benchmark for Visual Safety Understanding",
+    );
+    expect(screen.getByText("Yuyun Chen*, Tianao Li*, TianQuan Feng, Cen Chen, Huiping Zhuang, Hao Peng, and Ziqian Zeng")).toBeTruthy();
+    const links = screen.getAllByRole("link", { name: "Read ↗" });
+    expect(links[1].getAttribute("href")).toBe("https://arxiv.org/abs/2607.26518");
+  });
+
   it("copies the Outlook address and shows a confirmation", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {

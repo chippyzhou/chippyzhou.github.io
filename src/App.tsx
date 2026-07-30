@@ -528,6 +528,7 @@ const publications = [
   {
     title: "Adaptive Interfaces for Research Workflows",
     titleZh: "面向研究工作流的自适应界面",
+    authors: null,
     venue: "Conference / Journal / arXiv, 2026",
     venueZh: "会议 / 期刊 / arXiv，2026",
     status: "Under review",
@@ -538,20 +539,22 @@ const publications = [
     link: "#",
   },
   {
-    title: "A Short Research Note on Applied Systems",
-    titleZh: "应用系统研究短札",
-    venue: "Workshop / Student Symposium, 2025",
-    venueZh: "工作坊 / 学生论坛，2025",
-    status: "Presented",
-    statusZh: "已展示",
+    title: "EgoSafe: A First-Person Mobile-Captured Benchmark for Visual Safety Understanding",
+    titleZh: "EgoSafe：面向视觉安全理解的第一人称移动端采集基准",
+    authors: "Yuyun Chen*, Tianao Li*, TianQuan Feng, Cen Chen, Huiping Zhuang, Hao Peng, and Ziqian Zeng",
+    venue: "arXiv:2607.26518, 2026",
+    venueZh: "arXiv:2607.26518，2026",
+    status: "arXiv preprint",
+    statusZh: "arXiv 预印本",
     summary:
-      "A concise report on prototype evaluation, data preparation, and practical constraints in applied software systems.",
-    summaryZh: "关于应用软件系统原型评估、数据准备和实际约束的一份简短报告。",
-    link: "#",
+      "Introduces EgoSafe-Bench, with 12,000 evaluation samples built from 3,000 first-person mobile video clips, and a Hierarchical Reasoning Evaluation framework for evidence anchoring, blind-spot deduction, and intent inference in LVLMs.",
+    summaryZh: "提出 EgoSafe-Bench：基于 3,000 段第一人称移动端视频构建 12,000 个评测样本，并以层次化推理评测（HRE）框架检验 LVLM 的证据锚定、盲区推断与意图识别能力。",
+    link: "https://arxiv.org/abs/2607.26518",
   },
   {
     title: "Course Project Report or Technical Whitepaper",
     titleZh: "课程项目报告或技术白皮书",
+    authors: null,
     venue: "Department archive, 2025",
     venueZh: "院系档案，2025",
     status: "Published online",
@@ -1020,6 +1023,7 @@ function PublicationsPage({ language }: { language: Language }) {
             <div className="publication-entry__citation">
               <p className="entry-meta">{localized(language, paper.venue, paper.venueZh)}</p>
               <h2>{localized(language, paper.title, paper.titleZh)}</h2>
+              {paper.authors && <p className="publication-authors">{paper.authors}</p>}
               <p>{localized(language, paper.summary, paper.summaryZh)}</p>
             </div>
             <div className="publication-status">

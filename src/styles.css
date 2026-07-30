@@ -373,6 +373,11 @@ img { display: block; max-width: 100%; }
   letter-spacing: 0;
   text-transform: none;
 }
+.publication-authors {
+  margin: 8px 0 10px !important;
+  color: var(--ink) !important;
+  font: 700 12px/1.55 Georgia, "Times New Roman", serif;
+}
 .publication-entry__citation > p:last-child { margin-bottom: 0; }
 .publication-status {
   padding-left: 20px;
