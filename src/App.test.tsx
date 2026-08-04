@@ -118,18 +118,39 @@ describe("owner session restoration", () => {
     expect(document.querySelector(".chapter-no")?.textContent).toBe("04");
   });
 
-  it("lists EgoSafe as the second publication with its arXiv link and authors", () => {
+  it("lists GSRS first and EgoSafe second without exposing the confidential GSRS PDF", () => {
     window.location.hash = "#/publications";
 
     render(<App />);
 
     const publicationHeadings = screen.getAllByRole("heading", { level: 2 });
+    expect(publicationHeadings).toHaveLength(2);
+    expect(publicationHeadings[0].textContent).toBe(
+      "Sparse Attention for Video Generation Acceleration via Growing Sparsity and Reduced Search",
+    );
     expect(publicationHeadings[1].textContent).toBe(
       "EgoSafe: A First-Person Mobile-Captured Benchmark for Visual Safety Understanding",
     );
+    expect(screen.getByText("Submitted to NeurIPS 2026")).toBeTruthy();
     expect(screen.getByText("Yuyun Chen*, Tianao Li*, TianQuan Feng, Cen Chen, Huiping Zhuang, Hao Peng, and Ziqian Zeng")).toBeTruthy();
     const links = screen.getAllByRole("link", { name: "Read ↗" });
-    expect(links[1].getAttribute("href")).toBe("https://arxiv.org/abs/2607.26518");
+    expect(links[0].getAttribute("href")).toBe("https://arxiv.org/abs/2607.26518");
+  });
+
+  it("keeps one coming-soon placeholder on the projects and technical notes pages", () => {
+    window.location.hash = "#/projects";
+    const { unmount } = render(<App />);
+
+    expect(document.querySelectorAll(".project-entry")).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Open note ↗" })).toBeNull();
+
+    unmount();
+    window.location.hash = "#/notes";
+    render(<App />);
+
+    expect(document.querySelectorAll(".note-sheet")).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
   });
 
   it("copies the Outlook address and shows a confirmation", async () => {

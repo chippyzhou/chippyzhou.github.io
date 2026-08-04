@@ -478,65 +478,39 @@ const profile = {
 const metrics = [
   { value: "6+", label: "Selected projects" },
   { value: "03", label: "Competition awards" },
-  { value: "03", label: "Publications / preprints" },
+  { value: "02", label: "Publications / preprints" },
   { value: "02", label: "Research directions" },
 ];
 
 const projects = [
   {
-    title: "Research Assistant Platform",
-    titleZh: "科研助理平台",
-    type: "Full-stack project",
-    typeZh: "全栈项目",
-    period: "2026",
-    link: "https://github.com/yourname/research-platform",
+    title: "Coming soon",
+    titleZh: "待更新",
+    type: "Project archive",
+    typeZh: "项目档案",
+    period: "In preparation",
+    link: null,
     summary:
-      "A web system for collecting literature notes, experiments, and reproducible research logs in one workflow.",
-    summaryZh: "一个把文献笔记、实验记录和可复现研究日志收纳到同一工作流中的 Web 系统。",
-    tags: ["React", "Data workflow", "Research tooling"],
-    tagsZh: ["React", "数据工作流", "研究工具"],
-  },
-  {
-    title: "Competition Analytics Dashboard",
-    titleZh: "竞赛分析仪表盘",
-    type: "Data product",
-    typeZh: "数据产品",
-    period: "2025",
-    link: "https://github.com/yourname/analytics-dashboard",
-    summary:
-      "An interactive dashboard for comparing model outputs, team progress, and judging metrics during competitions.",
-    summaryZh: "一个用于竞赛期间比较模型输出、团队进度和评审指标的交互式仪表盘。",
-    tags: ["Visualization", "Python", "Model evaluation"],
-    tagsZh: ["可视化", "Python", "模型评估"],
-  },
-  {
-    title: "Campus Service Assistant",
-    titleZh: "校园服务助手",
-    type: "Applied AI",
-    typeZh: "应用 AI",
-    period: "2025",
-    link: "https://github.com/yourname/campus-assistant",
-    summary:
-      "A prototype assistant for academic service scenarios, with retrieval, structured prompts, and evaluation cases.",
-    summaryZh: "面向学术服务场景的助手原型，包含检索、结构化提示词和评测用例。",
-    tags: ["LLM", "RAG", "Prototype"],
-    tagsZh: ["LLM", "RAG", "原型"],
+      "Selected project details, demos, and repository links are being organized and will be added here.",
+    summaryZh: "项目详情、演示与代码仓库链接正在整理，将在这里陆续更新。",
+    tags: ["Coming soon"],
+    tagsZh: ["待更新"],
   },
 ];
 
 const publications = [
   {
-    title: "Adaptive Interfaces for Research Workflows",
-    titleZh: "面向研究工作流的自适应界面",
+    title: "Sparse Attention for Video Generation Acceleration via Growing Sparsity and Reduced Search",
+    titleZh: "基于渐进稀疏与缩减搜索的视频生成稀疏注意力加速",
     authors: null,
-    venue: "Conference / Journal / arXiv, 2026",
-    venueZh: "会议 / 期刊 / arXiv，2026",
+    venue: "Submitted to NeurIPS 2026",
+    venueZh: "投稿至 NeurIPS 2026",
     status: "Under review",
     statusZh: "审稿中",
     summary:
-      "A study of how structured interfaces can reduce friction in literature review, experiment tracking, and collaborative research documentation.",
-    summaryZh: "研究结构化界面如何降低文献综述、实验跟踪和协作研究记录中的摩擦。",
-    link: "#",
+      "Proposes Growing Sparsity and Reduced Search (GSRS), a training-free sparse-attention framework that progressively increases sparsity during denoising and reuses an early sparse mask to reduce later search. On HunyuanVideo and Wan 2.1, GSRS delivers 1.78x-2.21x acceleration while preserving generation quality.",
+    summaryZh: "提出无需训练的稀疏注意力框架 GSRS：随去噪过程逐步提高稀疏率，并复用早期稀疏掩码以缩减后续搜索空间。在 HunyuanVideo 与 Wan 2.1 上实现 1.78x-2.21x 加速，同时保持生成质量。",
+    link: null,
   },
   {
     title: "EgoSafe: A First-Person Mobile-Captured Benchmark for Visual Safety Understanding",
@@ -550,19 +524,6 @@ const publications = [
       "Introduces EgoSafe-Bench, with 12,000 evaluation samples built from 3,000 first-person mobile video clips, and a Hierarchical Reasoning Evaluation framework for evidence anchoring, blind-spot deduction, and intent inference in LVLMs.",
     summaryZh: "提出 EgoSafe-Bench：基于 3,000 段第一人称移动端视频构建 12,000 个评测样本，并以层次化推理评测（HRE）框架检验 LVLM 的证据锚定、盲区推断与意图识别能力。",
     link: "https://arxiv.org/abs/2607.26518",
-  },
-  {
-    title: "Course Project Report or Technical Whitepaper",
-    titleZh: "课程项目报告或技术白皮书",
-    authors: null,
-    venue: "Department archive, 2025",
-    venueZh: "院系档案，2025",
-    status: "Published online",
-    statusZh: "已在线发布",
-    summary:
-      "A formal technical report documenting system motivation, design choices, experimental setup, and implementation findings.",
-    summaryZh: "记录系统动机、设计选择、实验设置和实现结论的正式技术报告。",
-    link: "#",
   },
 ];
 
@@ -637,37 +598,15 @@ const awards = [
 
 const technicalNotes = [
   {
-    date: "2026.07",
-    title: "From a model to a system: notes on applied AI prototypes",
-    titleZh: "从模型到系统：应用 AI 原型笔记",
-    summary: "A working checklist for turning model output into a testable product flow, including data boundaries, evaluation cases, and failure states.",
-    summaryZh: "把模型输出转化为可测试产品流程的一份工作清单，包含数据边界、评测用例和失败状态。",
-    tags: ["Applied AI", "Evaluation", "Product thinking"],
-    tagsZh: ["应用 AI", "评测", "产品思维"],
-    status: "Working note",
-    statusZh: "工作笔记",
-  },
-  {
-    date: "2026.05",
-    title: "Multi-objective optimization field notes",
-    titleZh: "多目标优化现场笔记",
-    summary: "Practical observations from combining packing heuristics, genetic search, and cost constraints in mathematical modeling competitions.",
-    summaryZh: "在数学建模竞赛中结合装箱启发式算法、遗传搜索和成本约束时积累的实践观察。",
-    tags: ["Optimization", "Block-GA", "HFV-BPP"],
-    tagsZh: ["优化", "Block-GA", "HFV-BPP"],
-    status: "Model diary",
-    statusZh: "模型日记",
-  },
-  {
-    date: "2026.03",
-    title: "Building a reproducible research log",
-    titleZh: "搭建可复现的研究日志",
-    summary: "A compact structure for tracking assumptions, datasets, parameters, experiments, and decisions without losing the narrative behind the result.",
-    summaryZh: "用紧凑的结构记录假设、数据集、参数、实验和决策，同时保留结果背后的叙事。",
-    tags: ["Research workflow", "Data", "Reproducibility"],
-    tagsZh: ["研究工作流", "数据", "可复现性"],
-    status: "Living document",
-    statusZh: "持续更新",
+    date: "",
+    title: "Coming soon",
+    titleZh: "待更新",
+    summary: "Technical notes and experiment records are being organized and will appear here soon.",
+    summaryZh: "技术笔记与实验记录正在整理，将在这里陆续更新。",
+    tags: ["Coming soon"],
+    tagsZh: ["待更新"],
+    status: "Notes archive",
+    statusZh: "笔记档案",
   },
 ];
 
@@ -999,7 +938,9 @@ function ProjectsPage({ language }: { language: Language }) {
                 {(language === "zh" ? project.tagsZh : project.tags).map((tag) => <span key={tag}>{tag}</span>)}
               </div>
             </div>
-            <a href={project.link} className="entry-link project-entry__link">{tr(language, "openNote")} <span aria-hidden="true">↗</span></a>
+            {project.link && (
+              <a href={project.link} className="entry-link project-entry__link">{tr(language, "openNote")} <span aria-hidden="true">↗</span></a>
+            )}
           </article>
         ))}
       </div>
@@ -1028,7 +969,7 @@ function PublicationsPage({ language }: { language: Language }) {
             </div>
             <div className="publication-status">
               <span>{localized(language, paper.status, paper.statusZh)}</span>
-              <a href={paper.link}>{tr(language, "read")}</a>
+              {paper.link && <a href={paper.link}>{tr(language, "read")}</a>}
             </div>
           </article>
         ))}
@@ -1051,7 +992,7 @@ function TechnicalNotesPage({ language }: { language: Language }) {
           <article className="note-sheet" key={note.title}>
             <div className="note-sheet__rail">
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <time>{note.date}</time>
+              {note.date && <time>{note.date}</time>}
             </div>
             <div className="note-sheet__body">
               <p className="entry-meta">{localized(language, note.status, note.statusZh)}</p>
