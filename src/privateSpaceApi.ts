@@ -8,7 +8,19 @@ export type PrivateEntry = {
   external_url: string | null;
   event_date: string | null;
   display_date?: string | null;
+  music_track_id: string | null;
   is_published: boolean;
+};
+
+export type PrivateMusicTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  audio_url: string;
+  cover_url: string | null;
+  external_url: string | null;
+  is_active: boolean;
+  sort_order: number;
 };
 
 export type GuestbookMessage = {
@@ -29,6 +41,7 @@ export type VisitorIdentity = {
 export type PrivateSpaceContent = {
   visitor: Omit<VisitorIdentity, "session_token">;
   entries: PrivateEntry[];
+  playlist: PrivateMusicTrack[];
   messages: GuestbookMessage[];
 };
 
@@ -134,8 +147,15 @@ async function rpc<T>(
   return response.json() as Promise<T>;
 }
 
-export function unlockPrivateSpace(code: string) {
-  return rpc<VisitorIdentity>("unlock_private_space", { invite_code: code });
+export async function unlockPrivateSpace(code: string) {
+  const response = await rpc<VisitorIdentity | { error: string; status?: number }>(
+    "unlock_private_space",
+    { invite_code: code },
+  );
+  if ("error" in response) {
+    throw new PrivateSpaceRequestError(response.error, response.status || 401);
+  }
+  return response;
 }
 
 export function loadPrivateSpace(sessionToken: string) {
@@ -200,10 +220,11 @@ export function savePrivateEntry(
     external_url: string | null;
     replace_image: boolean;
     event_date: string | null;
+    music_track_id?: string | null;
     is_published: boolean;
   },
 ) {
-  return rpc<PrivateEntry>("owner_upsert_private_entry_v2", {
+  const body = {
     session_token: sessionToken,
     entry_id: entry.id,
     entry_kind: entry.kind,
@@ -215,7 +236,14 @@ export function savePrivateEntry(
     entry_replace_image: entry.replace_image,
     entry_event_date: entry.event_date,
     entry_published: entry.is_published,
-  }, saveRequestTimeoutMs);
+  };
+
+  return "music_track_id" in entry
+    ? rpc<PrivateEntry>("owner_upsert_private_entry_v3", {
+      ...body,
+      entry_music_track_id: entry.music_track_id,
+    }, saveRequestTimeoutMs)
+    : rpc<PrivateEntry>("owner_upsert_private_entry_v2", body, saveRequestTimeoutMs);
 }
 
 export function deletePrivateEntry(sessionToken: string, entryId: string) {
@@ -223,4 +251,42 @@ export function deletePrivateEntry(sessionToken: string, entryId: string) {
     session_token: sessionToken,
     entry_id: entryId,
   });
+}
+
+export function savePrivateMusicTrack(
+  sessionToken: string,
+  track: {
+    id: string | null;
+    title: string;
+    artist: string;
+    audio_url: string;
+    cover_url: string | null;
+    external_url: string | null;
+    is_active: boolean;
+  },
+) {
+  return rpc<PrivateMusicTrack>("owner_upsert_private_music_track", {
+    session_token: sessionToken,
+    track_id: track.id,
+    track_title: track.title,
+    track_artist: track.artist,
+    track_audio_url: track.audio_url,
+    track_cover_url: track.cover_url,
+    track_external_url: track.external_url,
+    track_active: track.is_active,
+  }, saveRequestTimeoutMs);
+}
+
+export function deletePrivateMusicTrack(sessionToken: string, trackId: string) {
+  return rpc<{ id: string }>("owner_delete_private_music_track", {
+    session_token: sessionToken,
+    track_id: trackId,
+  });
+}
+
+export function reorderPrivateMusicTracks(sessionToken: string, trackIds: string[]) {
+  return rpc<PrivateMusicTrack[]>("owner_reorder_private_music_tracks", {
+    session_token: sessionToken,
+    track_ids: trackIds,
+  }, saveRequestTimeoutMs);
 }

@@ -44,4 +44,17 @@ describe("Obsidian Markdown", () => {
     expect(container.querySelector(".obsidian-wikilink")?.textContent).toBe("Experiment log");
     expect(container.querySelector(".katex")).toBeTruthy();
   });
+
+  it("renders raw HTML and script URLs as inert text rather than executable content", () => {
+    const { container } = render(
+      <MarkdownRenderer
+        emptyLabel="Empty"
+        source={'<script>window.__xss = true</script>\n\n[bad](javascript:alert(1))'}
+      />,
+    );
+
+    expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect((window as Window & { __xss?: boolean }).__xss).toBeUndefined();
+  });
 });

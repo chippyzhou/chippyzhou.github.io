@@ -7,9 +7,9 @@ Reference screenshot: [joe-carlsmith-longform-layout.png](design-references/joe-
 Source visible in the reference:
 `https://joecarlsmith.com/2026/03/19/on-restraining-ai-development-for-the-sake-of-safety/`
 
-Use this direction for future technical-note and long-form article reading
-views, without replacing the portfolio homepage or the private-space visual
-identity.
+This is now the default public-site edition. The girl-band editorial treatment
+remains available as the alternate `VOL. 02` theme, while the private-space
+identity stays intentionally darker and more theatrical.
 
 ### Visual language
 

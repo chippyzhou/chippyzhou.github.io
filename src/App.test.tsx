@@ -8,6 +8,9 @@ const api = vi.hoisted(() => ({
   loadAdminDashboard: vi.fn(),
   loadPrivateSpace: vi.fn(),
   postGuestbookMessage: vi.fn(),
+  savePrivateMusicTrack: vi.fn(),
+  deletePrivateMusicTrack: vi.fn(),
+  reorderPrivateMusicTracks: vi.fn(),
   savePrivateEntry: vi.fn(),
   setGuestbookMessageStatus: vi.fn(),
   setVisitorInviteStatus: vi.fn(),
@@ -31,6 +34,11 @@ describe("owner session restoration", () => {
     window.location.hash = "#/";
     window.scrollTo = vi.fn();
     vi.resetAllMocks();
+    Object.defineProperties(window.HTMLMediaElement.prototype, {
+      load: { configurable: true, value: vi.fn() },
+      pause: { configurable: true, value: vi.fn() },
+      play: { configurable: true, value: vi.fn().mockResolvedValue(undefined) },
+    });
   });
 
   afterEach(() => {
@@ -131,7 +139,9 @@ describe("owner session restoration", () => {
     expect(publicationHeadings[1].textContent).toBe(
       "EgoSafe: A First-Person Mobile-Captured Benchmark for Visual Safety Understanding",
     );
-    expect(screen.getByText("Submitted to NeurIPS 2026")).toBeTruthy();
+    expect(screen.getByText("2026")).toBeTruthy();
+    expect(screen.getByText("In submission")).toBeTruthy();
+    expect(screen.queryByText(/NeurIPS|NIPS/i)).toBeNull();
     expect(screen.getByText("Yuyun Chen*, Tianao Li*, TianQuan Feng, Cen Chen, Huiping Zhuang, Hao Peng, and Ziqian Zeng")).toBeTruthy();
     const links = screen.getAllByRole("link", { name: "Read ↗" });
     expect(links[0].getAttribute("href")).toBe("https://arxiv.org/abs/2607.26518");
@@ -151,6 +161,31 @@ describe("owner session restoration", () => {
 
     expect(document.querySelectorAll(".note-sheet")).toHaveLength(1);
     expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
+  });
+
+  it("defaults to the minimal academic edition and persists the VOL switch", () => {
+    render(<App />);
+
+    expect(document.documentElement.dataset.theme).toBe("minimal");
+    const switcher = screen.getByRole("button", { name: "Switch to the girl-band edition" });
+    expect(switcher.textContent).toBe("VOL. 01");
+
+    fireEvent.click(switcher);
+
+    expect(document.documentElement.dataset.theme).toBe("band");
+    expect(localStorage.getItem("yuyun-site-theme")).toBe("band");
+    expect(screen.getByRole("button", { name: "Switch to the minimal academic edition" }).textContent).toBe("VOL. 02");
+  });
+
+  it("adds a linked contents rail to editorial list pages", () => {
+    window.location.hash = "#/publications";
+
+    render(<App />);
+
+    const contents = screen.getAllByRole("navigation", { name: "Contents" });
+    expect(contents).toHaveLength(2);
+    expect(contents[0].querySelector('a[href="#publication-1"]')?.textContent).toContain("Sparse Attention");
+    expect(contents[0].querySelector('a[href="#publication-2"]')?.textContent).toContain("EgoSafe");
   });
 
   it("copies the Outlook address and shows a confirmation", async () => {
@@ -417,5 +452,67 @@ describe("owner session restoration", () => {
     expect(await screen.findByText("Writing · 2025-04-06")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2025-01-01" } });
     expect(screen.getByRole("heading", { name: "A saved fragment" })).toBeTruthy();
+  });
+
+  it("keeps the default playlist until a visitor explicitly starts an article soundtrack", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: {
+        name: "Visitor",
+        visitor_number: 2,
+        visit_count: 1,
+        is_owner: false,
+      },
+      playlist: [
+        {
+          id: "default-track",
+          title: "Default song",
+          artist: "Yuyun",
+          audio_url: "/audio/default.mp3",
+          cover_url: null,
+          external_url: null,
+          is_active: true,
+          sort_order: 0,
+        },
+        {
+          id: "entry-track",
+          title: "Entry song",
+          artist: "Yuyun",
+          audio_url: "/audio/entry.mp3",
+          cover_url: null,
+          external_url: null,
+          is_active: true,
+          sort_order: 1,
+        },
+      ],
+      entries: [{
+        id: "soundtracked-entry",
+        kind: "writing",
+        title: "A soundtracked note",
+        excerpt: "Listen while reading",
+        body: "A note.",
+        image_url: null,
+        external_url: null,
+        event_date: "2026-08-04",
+        display_date: "2026-08-04",
+        music_track_id: "entry-track",
+        is_published: true,
+      }],
+      messages: [],
+    });
+
+    const { container } = render(<App />);
+
+    await screen.findByRole("heading", { name: "A soundtracked note" });
+    const audio = container.querySelector("audio");
+    expect(audio?.getAttribute("src")).toBe("/audio/default.mp3");
+
+    fireEvent.click(screen.getByRole("button", { name: "Play this note's soundtrack: Entry song" }));
+    await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/entry.mp3"));
+    expect(screen.getByRole("button", { name: "Return to playlist" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Return to playlist" }));
+    await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/default.mp3"));
   });
 });

@@ -1,17 +1,30 @@
 import { mkdir, writeFile } from "node:fs/promises";
 
-const worker = `export default {
+const worker = `function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  headers.set("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://iwkxbwunjdktcoyoutjf.supabase.co; font-src 'self' data:; frame-src https://music.163.com; form-action 'self'; frame-ancestors 'none'");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("X-Content-Type-Options", "nosniff");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+export default {
   async fetch(request, env) {
-    const response = await env.ASSETS.fetch(request);
+    let response = await env.ASSETS.fetch(request);
     if (
       response.status === 404 &&
       request.method === "GET" &&
       request.headers.get("accept")?.includes("text/html")
     ) {
       const indexUrl = new URL("/index.html", request.url);
-      return env.ASSETS.fetch(new Request(indexUrl, request));
+      response = await env.ASSETS.fetch(new Request(indexUrl, request));
     }
-    return response;
+    return withSecurityHeaders(response);
   },
 };
 `;

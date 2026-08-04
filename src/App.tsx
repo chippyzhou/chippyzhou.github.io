@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { PrivateMusicLibraryEditor } from "./PrivateMusicLibraryEditor";
+import { PrivateMusicPlayer, type MusicPlayRequest } from "./PrivateMusicPlayer";
 import {
   createVisitorInvite,
   deletePrivateEntry,
@@ -15,6 +17,7 @@ import {
   unlockPrivateSpace,
   type AdminDashboard,
   type PrivateEntry,
+  type PrivateMusicTrack,
   type PrivateSpaceContent,
 } from "./privateSpaceApi";
 import {
@@ -31,6 +34,7 @@ const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`
 
 type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "space" | "admin";
 type Language = "en" | "zh";
+type SiteTheme = "minimal" | "band";
 
 const copy = {
   en: {
@@ -46,6 +50,8 @@ const copy = {
     closeNavigation: "Close navigation",
     openNavigation: "Open navigation",
     contents: "Contents",
+    switchToBandStyle: "Switch to the girl-band edition",
+    switchToMinimalStyle: "Switch to the minimal academic edition",
     researchLog: "陈彧赟 / research log",
     role: "Software engineering · Applied AI · Research notes",
     intro: "I work at the intersection of software engineering, data-driven systems, and applied research. This is my living log of models, competitions, experiments, and the notes behind each finished result.",
@@ -145,6 +151,9 @@ const copy = {
     newFragmentMarkdown: "# A new fragment\n\nWrite in **Markdown** here...",
     nothingWritten: "Nothing written yet.",
     eventDate: "Event date",
+    entrySoundtrack: "Entry soundtrack",
+    defaultPlaylist: "Use the default playlist",
+    playEntrySoundtrack: "Play this note's soundtrack",
     image: "Images",
     imageUploadHelp: "Select multiple images. Large files are resized and compressed automatically.",
     optimizingImage: "Optimizing images...",
@@ -250,6 +259,8 @@ const copy = {
     closeNavigation: "关闭导航",
     openNavigation: "打开导航",
     contents: "目录",
+    switchToBandStyle: "切换到少女乐队版",
+    switchToMinimalStyle: "切换到简约学术版",
     researchLog: "陈彧赟 / 研究记录",
     role: "软件工程 · 应用 AI · 研究笔记",
     intro: "我关注软件工程、数据驱动系统与应用研究的交汇处。这里记录模型、竞赛、实验，以及每个结果背后的思考过程。",
@@ -349,6 +360,9 @@ const copy = {
     newFragmentMarkdown: "# 一段新的记录\n\n在这里用 **Markdown** 写下内容...",
     nothingWritten: "还没有写下内容。",
     eventDate: "记录日期",
+    entrySoundtrack: "文章配乐",
+    defaultPlaylist: "使用默认歌单",
+    playEntrySoundtrack: "播放这篇文章的配乐",
     image: "图片",
     imageUploadHelp: "可以一次选择多张图片，大尺寸文件会自动缩放和压缩。",
     optimizingImage: "正在优化图片...",
@@ -503,10 +517,10 @@ const publications = [
     title: "Sparse Attention for Video Generation Acceleration via Growing Sparsity and Reduced Search",
     titleZh: "基于渐进稀疏与缩减搜索的视频生成稀疏注意力加速",
     authors: null,
-    venue: "Submitted to NeurIPS 2026",
-    venueZh: "投稿至 NeurIPS 2026",
-    status: "Under review",
-    statusZh: "审稿中",
+    venue: "2026",
+    venueZh: "2026",
+    status: "In submission",
+    statusZh: "在投",
     summary:
       "Proposes Growing Sparsity and Reduced Search (GSRS), a training-free sparse-attention framework that progressively increases sparsity during denoising and reuses an early sparse mask to reduce later search. On HunyuanVideo and Wan 2.1, GSRS delivers 1.78x-2.21x acceleration while preserving generation quality.",
     summaryZh: "提出无需训练的稀疏注意力框架 GSRS：随去噪过程逐步提高稀疏率，并复用早期稀疏掩码以缩减后续搜索空间。在 HunyuanVideo 与 Wan 2.1 上实现 1.78x-2.21x 加速，同时保持生成质量。",
@@ -790,6 +804,7 @@ function PageShell({
   kicker,
   title,
   description,
+  toc = [],
   children,
 }: {
   language: Language;
@@ -797,6 +812,7 @@ function PageShell({
   kicker: string;
   title: string;
   description: string;
+  toc?: Array<{ id: string; label: string }>;
   children: React.ReactNode;
 }) {
   return (
@@ -810,7 +826,31 @@ function PageShell({
           </div>
           <p className="editorial-heading__description">{description}</p>
         </header>
-        {children}
+        {toc.length > 0 && (
+          <>
+            <nav className="page-toc" aria-label={tr(language, "contents")}>
+              <span>{tr(language, "contents")}</span>
+              {toc.map((item, tocIndex) => (
+                <a href={`#${item.id}`} key={item.id}>
+                  <small>{String(tocIndex + 1).padStart(2, "0")}</small>
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+            <details className="page-toc-mobile">
+              <summary>{tr(language, "contents")}</summary>
+              <nav aria-label={tr(language, "contents")}>
+                {toc.map((item, tocIndex) => (
+                  <a href={`#${item.id}`} key={item.id}>
+                    <small>{String(tocIndex + 1).padStart(2, "0")}</small>
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+            </details>
+          </>
+        )}
+        <div className="page-shell__body">{children}</div>
       </div>
     </section>
   );
@@ -925,10 +965,14 @@ function ProjectsPage({ language }: { language: Language }) {
       kicker={tr(language, "projectsKicker")}
       title={tr(language, "projectsTitle")}
       description={tr(language, "projectsDescription")}
+      toc={projects.map((project, index) => ({
+        id: `project-${index + 1}`,
+        label: localized(language, project.title, project.titleZh),
+      }))}
     >
       <div className="project-list">
         {projects.map((project, index) => (
-          <article key={project.title} className="project-entry">
+          <article id={`project-${index + 1}`} key={project.title} className="project-entry">
             <div className="entry-index project-entry__index">{String(index + 1).padStart(2, "0")}</div>
             <div className="project-entry__body">
               <p className="entry-meta">{localized(language, project.type, project.typeZh)} / {project.period}</p>
@@ -956,10 +1000,14 @@ function PublicationsPage({ language }: { language: Language }) {
       kicker={tr(language, "publicationsKicker")}
       title={tr(language, "publicationsTitle")}
       description={tr(language, "publicationsDescription")}
+      toc={publications.map((paper, index) => ({
+        id: `publication-${index + 1}`,
+        label: paper.title.split(":")[0],
+      }))}
     >
       <div className="publication-list">
         {publications.map((paper, index) => (
-          <article key={paper.title} className="publication-entry">
+          <article id={`publication-${index + 1}`} key={paper.title} className="publication-entry">
             <div className="entry-index publication-entry__index">{String(index + 1).padStart(2, "0")}</div>
             <div className="publication-entry__citation">
               <p className="entry-meta">{localized(language, paper.venue, paper.venueZh)}</p>
@@ -986,10 +1034,14 @@ function TechnicalNotesPage({ language }: { language: Language }) {
       kicker={tr(language, "notesKicker")}
       title={tr(language, "notesTitle")}
       description={tr(language, "notesDescription")}
+      toc={technicalNotes.map((note, index) => ({
+        id: `note-${index + 1}`,
+        label: localized(language, note.title, note.titleZh),
+      }))}
     >
       <div className="notes-index">
         {technicalNotes.map((note, index) => (
-          <article className="note-sheet" key={note.title}>
+          <article id={`note-${index + 1}`} className="note-sheet" key={note.title}>
             <div className="note-sheet__rail">
               <span>{String(index + 1).padStart(2, "0")}</span>
               {note.date && <time>{note.date}</time>}
@@ -1018,10 +1070,11 @@ function AwardsPage({ language }: { language: Language }) {
       kicker={tr(language, "awardsKicker")}
       title={tr(language, "awardsTitle")}
       description={tr(language, "awardsDescription")}
+      toc={awards.map((award, index) => ({ id: `award-${index + 1}`, label: award.title }))}
     >
       <div className="award-list">
         {awards.map((award, index) => (
-          <article key={award.title} className="award-entry">
+          <article id={`award-${index + 1}`} key={award.title} className="award-entry">
             <div className="award-number">{String(index + 1).padStart(2, "0")}</div>
             <div className="award-entry__result">
               <p className="entry-meta">{award.year}</p>
@@ -1044,11 +1097,13 @@ function GalleryPage({ language }: { language: Language }) {
       kicker={tr(language, "galleryKicker")}
       title={tr(language, "galleryTitle")}
       description={tr(language, "galleryDescription")}
+      toc={gallery.map((item, index) => ({ id: `gallery-${index + 1}`, label: item.title }))}
     >
       <div className="gallery-wall">
         {gallery.map((item, index) => (
           <a
             key={`${item.title}-${index}`}
+            id={`gallery-${index + 1}`}
             className={`gallery-photo gallery-photo--${item.layout} gallery-photo--${index + 1}`}
             href={item.source}
             target="_blank"
@@ -1084,6 +1139,7 @@ const visitorSessionKey = "yuyun-private-space-session";
 const ownerSessionKey = "yuyun-owner-console-session";
 const ownerPreviewKey = "yuyun-owner-space-preview";
 const languageStorageKey = "yuyun-site-language";
+const themeStorageKey = "yuyun-site-theme";
 
 function takeInitialPrivateSpaceSession() {
   const ownerPreviewToken = sessionStorage.getItem(ownerPreviewKey);
@@ -1214,6 +1270,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const [entryKindFilter, setEntryKindFilter] = useState<"all" | PrivateEntry["kind"]>("all");
   const [entryStartDate, setEntryStartDate] = useState("");
   const [entryEndDate, setEntryEndDate] = useState("");
+  const [musicPlayRequest, setMusicPlayRequest] = useState<MusicPlayRequest | null>(null);
 
   const filteredEntries = useMemo(() => (content?.entries || []).filter((entry) => {
     const entryDate = privateEntryDisplayDate(entry);
@@ -1236,7 +1293,14 @@ function PersonalSpacePage({ language }: { language: Language }) {
     loadPrivateSpace(sessionToken)
       .then((payload) => {
         if (!isCurrentRequest) return;
-        setContent(payload);
+        setContent({
+          ...payload,
+          playlist: payload.playlist || [],
+          entries: payload.entries.map((entry) => ({
+            ...entry,
+            music_track_id: entry.music_track_id || null,
+          })),
+        });
         if (payload.visitor.is_owner) {
           localStorage.setItem(ownerSessionKey, sessionToken);
           sessionStorage.removeItem(visitorSessionKey);
@@ -1333,6 +1397,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
     setEntryKindFilter("all");
     setEntryStartDate("");
     setEntryEndDate("");
+    setMusicPlayRequest(null);
     setError("");
   };
 
@@ -1401,12 +1466,21 @@ function PersonalSpacePage({ language }: { language: Language }) {
         </header>
 
         {content.visitor.is_owner && (
-          <OwnerSpaceEditor
-            sessionToken={sessionToken}
-            entries={content.entries}
-            language={language}
-            onEntriesChange={(entries) => setContent({ ...content, entries })}
-          />
+          <>
+            <PrivateMusicLibraryEditor
+              sessionToken={sessionToken}
+              tracks={content.playlist}
+              language={language}
+              onTracksChange={(playlist) => setContent((current) => current ? { ...current, playlist } : current)}
+            />
+            <OwnerSpaceEditor
+              sessionToken={sessionToken}
+              entries={content.entries}
+              playlist={content.playlist}
+              language={language}
+              onEntriesChange={(entries) => setContent((current) => current ? { ...current, entries } : current)}
+            />
+          </>
         )}
 
         {content.entries.length > 0 && (
@@ -1460,6 +1534,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
               : images.filter((image) => !inlineMediaIds.has(image.id));
             const isExpanded = expandedEntryIds.has(entry.id);
             const displayDate = privateEntryDisplayDate(entry);
+            const soundtrack = content.playlist.find((track) => track.id === entry.music_track_id && track.is_active);
             return (
               <article
                 className={`archive-entry archive-entry--${entry.kind}${isExpanded ? " is-expanded" : ""}${cover ? "" : " archive-entry--no-cover"}`}
@@ -1490,6 +1565,20 @@ function PersonalSpacePage({ language }: { language: Language }) {
                   <h2>{entry.title}</h2>
                   {entry.excerpt && <strong>{entry.excerpt}</strong>}
                   {!isExpanded && <p className="archive-entry__preview-text">{markdownPreview(entry.body)}</p>}
+                  {soundtrack && (
+                    <button
+                      className="archive-entry__soundtrack"
+                      type="button"
+                      aria-label={`${tr(language, "playEntrySoundtrack")}: ${soundtrack.title}`}
+                      onClick={() => setMusicPlayRequest({ id: crypto.randomUUID(), trackId: soundtrack.id })}
+                    >
+                      <span aria-hidden="true">▶</span>
+                      <span>
+                        <small>{tr(language, "entrySoundtrack")}</small>
+                        <strong>{soundtrack.title}{soundtrack.artist ? ` · ${soundtrack.artist}` : ""}</strong>
+                      </span>
+                    </button>
+                  )}
                   {entry.kind === "film" && entry.external_url && (
                     <a className="archive-entry__external" href={entry.external_url} target="_blank" rel="noreferrer">
                       {tr(language, "viewDouban")} <span aria-hidden="true">↗</span>
@@ -1569,6 +1658,11 @@ function PersonalSpacePage({ language }: { language: Language }) {
           </div>
         </section>
       </div>
+      <PrivateMusicPlayer
+        tracks={content.playlist}
+        language={language}
+        playRequest={musicPlayRequest}
+      />
     </section>
   );
 }
@@ -1583,6 +1677,7 @@ type EntryDraft = {
   imagesDirty: boolean;
   external_url: string | null;
   event_date: string | null;
+  music_track_id: string | null;
   is_published: boolean;
 };
 
@@ -1597,6 +1692,7 @@ function blankEntryDraft(language: Language): EntryDraft {
     imagesDirty: false,
     external_url: null,
     event_date: null,
+    music_track_id: null,
     is_published: false,
   };
 }
@@ -1612,6 +1708,7 @@ function entryToDraft(entry: PrivateEntry): EntryDraft {
     imagesDirty: false,
     external_url: entry.external_url || null,
     event_date: entry.event_date,
+    music_track_id: entry.music_track_id || null,
     is_published: entry.is_published,
   };
 }
@@ -1687,11 +1784,13 @@ async function optimizeImageForStorage(file: File, maxCharacters = maxSingleImag
 function OwnerSpaceEditor({
   sessionToken,
   entries,
+  playlist,
   language,
   onEntriesChange,
 }: {
   sessionToken: string;
   entries: PrivateEntry[];
+  playlist: PrivateMusicTrack[];
   language: Language;
   onEntriesChange: (entries: PrivateEntry[]) => void;
 }) {
@@ -1745,6 +1844,7 @@ function OwnerSpaceEditor({
       external_url: draft.kind === "film" ? draft.external_url?.trim() || null : null,
       replace_image: draft.imagesDirty || !draft.id,
       event_date: draft.event_date,
+      music_track_id: draft.music_track_id,
       is_published: draft.is_published,
     };
     try {
@@ -1991,6 +2091,22 @@ function OwnerSpaceEditor({
                 placeholder={tr(language, "markdownPlaceholder")}
               />
             </label>
+            <label>
+              {tr(language, "entrySoundtrack")}
+              <select
+                value={draft.music_track_id || ""}
+                onChange={(event) => updateDraft("music_track_id", event.target.value || null)}
+              >
+                <option value="">{tr(language, "defaultPlaylist")}</option>
+                {[...playlist]
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map((track) => (
+                    <option key={track.id} value={track.id}>
+                      {track.title}{track.artist ? ` · ${track.artist}` : ""}{track.is_active ? "" : ` (${language === "zh" ? "已隐藏" : "hidden"})`}
+                    </option>
+                  ))}
+              </select>
+            </label>
             <div className="space-editor__form-row">
               <label>{tr(language, "eventDate")}<input type="date" value={draft.event_date || ""} onChange={(event) => updateDraft("event_date", event.target.value || null)} /></label>
               <label>{tr(language, "image")}<input type="file" accept="image/*" multiple onChange={handleImageUpload} /><small>{tr(language, "imageUploadHelp")}</small></label>
@@ -2125,7 +2241,13 @@ function OwnerSpaceEditor({
                 />
               )}
               <div>
-                <p>{entryKindLabel(language, draft.kind)}{draft.event_date ? ` · ${draft.event_date}` : ""}</p>
+                <p>
+                  {entryKindLabel(language, draft.kind)}
+                  {draft.event_date ? ` · ${draft.event_date}` : ""}
+                  {draft.music_track_id
+                    ? ` · ♫ ${playlist.find((track) => track.id === draft.music_track_id)?.title || tr(language, "entrySoundtrack")}`
+                    : ""}
+                </p>
                 <h3>{draft.title || tr(language, "untitledFragment")}</h3>
                 {draft.excerpt && <strong>{draft.excerpt}</strong>}
                 {draft.kind === "film" && draft.external_url && (
@@ -2516,10 +2638,16 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>(() => getPageFromHash());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem(languageStorageKey) === "zh" ? "zh" : "en");
+  const [theme, setTheme] = useState<SiteTheme>(() => localStorage.getItem(themeStorageKey) === "band" ? "band" : "minimal");
 
   useEffect(() => {
     localStorage.setItem(languageStorageKey, language);
   }, [language]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(themeStorageKey, theme);
+  }, [theme]);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -2577,7 +2705,7 @@ export default function App() {
 
   return (
     <>
-      <main className="site">
+      <main className={`site site--${theme}`}>
         <header className={`site-header${currentPage === "space" ? " site-header--dark" : ""}`}>
           <nav>
           <a
@@ -2600,7 +2728,15 @@ export default function App() {
             >
               {tr(language, "languageToggle")}
             </button>
-            <span className="volume-mark">VOL. 01</span>
+            <button
+              className="volume-mark theme-toggle"
+              type="button"
+              aria-label={tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
+              title={tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
+              onClick={() => setTheme((current) => current === "minimal" ? "band" : "minimal")}
+            >
+              {theme === "minimal" ? "VOL. 01" : "VOL. 02"}
+            </button>
           </div>
           <button
             className="nav-toggle"
@@ -2632,6 +2768,14 @@ export default function App() {
               <span>{tr(language, "contents")}</span>
               <button type="button" aria-label={tr(language, "closeNavigation")} onClick={() => setIsMenuOpen(false)}>×</button>
             </div>
+            <button
+              className="mobile-theme-toggle"
+              type="button"
+              onClick={() => setTheme((current) => current === "minimal" ? "band" : "minimal")}
+            >
+              <span>{theme === "minimal" ? "VOL. 01" : "VOL. 02"}</span>
+              {tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
+            </button>
             {navigationItems}
           </div>
         </div>,
