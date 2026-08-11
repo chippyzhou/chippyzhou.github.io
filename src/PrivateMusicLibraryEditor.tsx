@@ -4,6 +4,7 @@ import {
   isTransientPrivateSpaceError,
   reorderPrivateMusicTracks,
   savePrivateMusicTrack,
+  uploadPrivateMedia,
   type PrivateMusicTrack,
 } from "./privateSpaceApi";
 
@@ -14,7 +15,9 @@ type TrackDraft = {
   title: string;
   artist: string;
   audio_url: string;
+  audio_storage_url: string;
   cover_url: string;
+  cover_storage_url: string;
   external_url: string;
   is_active: boolean;
 };
@@ -30,6 +33,10 @@ const labels = {
     artist: "Artist",
     audioSource: "Audio file address",
     coverSource: "Cover image address",
+    uploadAudio: "Upload audio file",
+    uploadCover: "Upload cover image",
+    uploading: "Uploading...",
+    uploaded: "File uploaded.",
     externalSource: "NetEase / music-service link (optional)",
     active: "Include in the visitor playlist",
     save: "Save track",
@@ -59,6 +66,10 @@ const labels = {
     artist: "歌手 / 乐队",
     audioSource: "音频文件地址",
     coverSource: "封面图片地址",
+    uploadAudio: "上传音频文件",
+    uploadCover: "上传封面图片",
+    uploading: "上传中...",
+    uploaded: "文件已上传。",
     externalSource: "网易云 / 音乐服务链接（可选）",
     active: "加入访客默认歌单",
     save: "保存歌曲",
@@ -86,7 +97,9 @@ function blankTrack(): TrackDraft {
     title: "",
     artist: "",
     audio_url: "",
+    audio_storage_url: "",
     cover_url: "",
+    cover_storage_url: "",
     external_url: "",
     is_active: true,
   };
@@ -98,7 +111,9 @@ function trackToDraft(track: PrivateMusicTrack): TrackDraft {
     title: track.title,
     artist: track.artist,
     audio_url: track.audio_url,
+    audio_storage_url: track.audio_storage_url || "",
     cover_url: track.cover_url || "",
+    cover_storage_url: track.cover_storage_url || "",
     external_url: track.external_url || "",
     is_active: track.is_active,
   };
@@ -123,11 +138,17 @@ export function PrivateMusicLibraryEditor({
   const [draft, setDraft] = useState<TrackDraft>(blankTrack);
   const [isOpen, setIsOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
   const updateDraft = <Key extends keyof TrackDraft>(key: Key, value: TrackDraft[Key]) => {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "audio_url" ? { audio_storage_url: "" } : {}),
+      ...(key === "cover_url" ? { cover_storage_url: "" } : {}),
+    }));
     setError("");
     setNotice("");
   };
@@ -145,8 +166,8 @@ export function PrivateMusicLibraryEditor({
       id: draft.id || crypto.randomUUID(),
       title: draft.title.trim(),
       artist: draft.artist.trim(),
-      audio_url: draft.audio_url.trim(),
-      cover_url: draft.cover_url.trim() || null,
+      audio_url: draft.audio_storage_url || draft.audio_url.trim(),
+      cover_url: draft.cover_storage_url || draft.cover_url.trim() || null,
       external_url: draft.external_url.trim() || null,
       is_active: draft.is_active,
     };
@@ -168,6 +189,31 @@ export function PrivateMusicLibraryEditor({
       setError(requestError instanceof Error ? requestError.message : copy.required);
     } finally {
       setIsBusy(false);
+    }
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    kind: "audio" | "image",
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    setError("");
+    setNotice(copy.uploading);
+    try {
+      const uploaded = await uploadPrivateMedia(sessionToken, file, kind);
+      setDraft((current) => kind === "audio"
+        ? { ...current, audio_url: uploaded.url, audio_storage_url: uploaded.storage_url }
+        : { ...current, cover_url: uploaded.url, cover_storage_url: uploaded.storage_url });
+      setError("");
+      setNotice(copy.uploaded);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : copy.required);
+      setNotice("");
+    } finally {
+      setIsUploading(false);
+      event.target.value = "";
     }
   };
 
@@ -275,9 +321,17 @@ export function PrivateMusicLibraryEditor({
               {copy.audioSource}
               <input inputMode="url" value={draft.audio_url} onChange={(event) => updateDraft("audio_url", event.target.value)} placeholder={copy.audioPlaceholder} />
             </label>
+            <label className="music-library-editor__upload">
+              {copy.uploadAudio}
+              <input type="file" accept="audio/*" disabled={isUploading} onChange={(event) => void handleFileUpload(event, "audio")} />
+            </label>
             <label>
               {copy.coverSource}
               <input inputMode="url" value={draft.cover_url} onChange={(event) => updateDraft("cover_url", event.target.value)} placeholder={copy.coverPlaceholder} />
+            </label>
+            <label className="music-library-editor__upload">
+              {copy.uploadCover}
+              <input type="file" accept="image/*" disabled={isUploading} onChange={(event) => void handleFileUpload(event, "image")} />
             </label>
             <label>
               {copy.externalSource}
@@ -290,7 +344,7 @@ export function PrivateMusicLibraryEditor({
             {error && <p className="space-editor__error" role="alert">{error}</p>}
             {notice && <p className="space-editor__notice" role="status">{notice}</p>}
             <div className="music-library-editor__actions">
-              <button type="submit" disabled={isBusy}>{isBusy ? copy.saving : copy.save}</button>
+              <button type="submit" disabled={isBusy || isUploading}>{isBusy ? copy.saving : copy.save}</button>
               {draft.id && <button type="button" className="is-delete" disabled={isBusy} onClick={handleDelete}>{copy.delete}</button>}
             </div>
           </form>

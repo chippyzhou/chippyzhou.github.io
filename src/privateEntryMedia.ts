@@ -4,6 +4,7 @@ export type EntryImageAlign = "left" | "center" | "right";
 export type EntryImage = {
   id: string;
   src: string;
+  storageSrc?: string;
   size: EntryImageSize;
   align: EntryImageAlign;
   caption: string;
@@ -36,6 +37,7 @@ function normalizeEntryImage(image: Partial<EntryImage> & Pick<EntryImage, "id" 
   return {
     id: image.id,
     src: image.src,
+    storageSrc: typeof image.storageSrc === "string" ? image.storageSrc : undefined,
     size: image.size,
     align: imageAlignments.has(image.align as EntryImageAlign) ? image.align as EntryImageAlign : "center",
     caption: typeof image.caption === "string" ? image.caption : "",
@@ -74,7 +76,13 @@ export function serializeEntryImages(images: EntryImage[]): string | null {
   if (images.length === 0) return null;
   const firstCover = images.findIndex((image) => image.isCover);
   const normalized = images.map((image, index) => ({
-    ...image,
+    id: image.id,
+    src: image.storageSrc || image.src,
+    size: image.size,
+    align: image.align,
+    caption: image.caption,
+    focusX: image.focusX,
+    focusY: image.focusY,
     isCover: firstCover >= 0 && index === firstCover,
   }));
   return `${mediaEnvelopePrefix}${JSON.stringify(normalized)}`;

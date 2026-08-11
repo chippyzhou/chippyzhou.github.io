@@ -28,30 +28,10 @@ npm run build
 
 Push to the `main` branch of `chippyzhou/chippyzhou.github.io`. GitHub Actions will build the site and publish it with GitHub Pages.
 
-## Private Space Setup
+## Private Space Backend
 
-The public site stays on GitHub Pages. Private entries, visitor invitations, sessions, and guestbook messages use Supabase so invitation codes are never embedded in the frontend.
+The public site stays on GitHub Pages. The invitation-only space uses Tencent CloudBase PostgreSQL, a small owner-validated cloud function, and CloudBase storage for images and audio. Invitation codes and session tokens are stored only as SHA-256 hashes.
 
-1. Create a Supabase project.
-2. Run `supabase/migrations/202607110001_private_space.sql` in the Supabase SQL editor.
-3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the GitHub repository's Actions variables.
-4. Add visitors and private entries from the Supabase table editor or SQL editor.
+The PostgreSQL migrations live in `supabase/migrations/` because the schema remains PostgREST-compatible. The media function lives in `cloudbase/functions/private-media-upload/`.
 
-Create a visitor with a strong, unique invitation code:
-
-```sql
-insert into public.visitor_invites (label, code_hash)
-values ('Visitor name', encode(extensions.digest(lower(trim('A-LONG-UNIQUE-CODE')), 'sha256'), 'hex'));
-```
-
-Temporarily ban a visitor without deleting their saved sessions or history:
-
-```sql
-update public.visitor_invites set is_active = false where label = 'Visitor name';
-```
-
-Restore access later:
-
-```sql
-update public.visitor_invites set is_active = true where label = 'Visitor name';
-```
+GitHub Pages reads its CloudBase client settings from `.env.production`. The publishable access key in that file is intentionally public and is bundled into the browser application; it cannot replace an owner session or bypass the database and media-function authorization checks. Update `.env.production` when rotating the client key or moving the site to another CloudBase environment.

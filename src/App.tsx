@@ -15,6 +15,7 @@ import {
   setGuestbookMessageStatus,
   setVisitorInviteStatus,
   unlockPrivateSpace,
+  uploadPrivateMedia,
   type AdminDashboard,
   type PrivateEntry,
   type PrivateMusicTrack,
@@ -155,9 +156,9 @@ const copy = {
     defaultPlaylist: "Use the default playlist",
     playEntrySoundtrack: "Play this note's soundtrack",
     image: "Images",
-    imageUploadHelp: "Select multiple images. Large files are resized and compressed automatically.",
-    optimizingImage: "Optimizing images...",
-    imageReady: "Images optimized and ready.",
+    imageUploadHelp: "Select multiple images. Original files are stored without compression.",
+    optimizingImage: "Uploading original images...",
+    imageReady: "Images uploaded and ready.",
     removeImage: "Remove image",
     setAsCover: "Use as cover",
     coverImage: "Cover",
@@ -364,9 +365,9 @@ const copy = {
     defaultPlaylist: "使用默认歌单",
     playEntrySoundtrack: "播放这篇文章的配乐",
     image: "图片",
-    imageUploadHelp: "可以一次选择多张图片，大尺寸文件会自动缩放和压缩。",
-    optimizingImage: "正在优化图片...",
-    imageReady: "图片已优化，可以保存。",
+    imageUploadHelp: "可以一次选择多张图片，原图会直接保存，不再压缩。",
+    optimizingImage: "正在上传原图...",
+    imageReady: "图片已上传，可以保存。",
     removeImage: "移除图片",
     setAsCover: "设为封面",
     coverImage: "封面",
@@ -1717,70 +1718,6 @@ function renderMarkdown(markdown: string, language: Language) {
   return <MarkdownRenderer source={markdown} emptyLabel={tr(language, "nothingWritten")} />;
 }
 
-const maxSingleImageCharacters = 10_500_000;
-const maxMediaEnvelopeCharacters = 11_500_000;
-const maxImageDimension = 4_096;
-
-function loadImageFile(url: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.decoding = "async";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("The image could not be read."));
-    image.src = url;
-  });
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => typeof reader.result === "string"
-      ? resolve(reader.result)
-      : reject(new Error("The image could not be read."));
-    reader.onerror = () => reject(new Error("The image could not be read."));
-    reader.readAsDataURL(file);
-  });
-}
-
-async function optimizeImageForStorage(file: File, maxCharacters = maxSingleImageCharacters) {
-  if (!file.type.startsWith("image/")) {
-    throw new Error("Please choose an image file.");
-  }
-
-  const objectUrl = URL.createObjectURL(file);
-  try {
-    const image = await loadImageFile(objectUrl);
-    const estimatedDataUrlLength = Math.ceil(file.size * 4 / 3) + 128;
-    if (
-      estimatedDataUrlLength <= maxCharacters
-      && Math.max(image.naturalWidth, image.naturalHeight) <= maxImageDimension
-    ) {
-      return readFileAsDataUrl(file);
-    }
-
-    let scale = Math.min(1, maxImageDimension / Math.max(image.naturalWidth, image.naturalHeight));
-
-    while (scale >= 0.08) {
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("The image editor is unavailable in this browser.");
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-      for (const quality of [0.96, 0.9, 0.84, 0.76, 0.68, 0.58, 0.48, 0.4]) {
-        const dataUrl = canvas.toDataURL("image/webp", quality);
-        if (dataUrl.length <= maxCharacters) return dataUrl;
-      }
-      scale *= 0.78;
-    }
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-
-  throw new Error("The image is too complex to optimize. Please choose a different image.");
-}
-
 function OwnerSpaceEditor({
   sessionToken,
   entries,
@@ -1892,19 +1829,12 @@ function OwnerSpaceEditor({
     setIsOptimizingImage(true);
     try {
       const uploaded: EntryImage[] = [];
-      let remainingBudget = maxMediaEnvelopeCharacters
-        - (serializeEntryImages(draft.images)?.length || 0)
-        - 1_000;
-      for (const [index, file] of files.entries()) {
-        const remainingFiles = files.length - index;
-        const imageBudget = Math.min(
-          maxSingleImageCharacters,
-          Math.max(70_000, Math.floor(remainingBudget / remainingFiles)),
-        );
-        const src = await optimizeImageForStorage(file, imageBudget);
+      for (const file of files) {
+        const result = await uploadPrivateMedia(sessionToken, file, "image");
         uploaded.push({
           id: crypto.randomUUID(),
-          src,
+          src: result.url,
+          storageSrc: result.storage_url,
           size: "medium",
           align: "center",
           caption: "",
@@ -1912,7 +1842,6 @@ function OwnerSpaceEditor({
           focusY: 50,
           isCover: false,
         });
-        remainingBudget -= src.length;
       }
       const combined = [...draft.images, ...uploaded];
       const hasCover = combined.some((image) => image.isCover);
@@ -1920,9 +1849,6 @@ function OwnerSpaceEditor({
         ...image,
         isCover: hasCover ? image.isCover : index === 0,
       }));
-      if ((serializeEntryImages(nextImages)?.length || 0) > maxMediaEnvelopeCharacters) {
-        throw new Error("These images could not fit in one article after optimization.");
-      }
       setDraft((current) => ({ ...current, images: nextImages, imagesDirty: true }));
       setEditorNotice(tr(language, "imageReady"));
     } catch (uploadError) {

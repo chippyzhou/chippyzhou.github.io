@@ -17,7 +17,9 @@ export type PrivateMusicTrack = {
   title: string;
   artist: string;
   audio_url: string;
+  audio_storage_url?: string;
   cover_url: string | null;
+  cover_storage_url?: string | null;
   external_url: string | null;
   is_active: boolean;
   sort_order: number;
@@ -79,12 +81,85 @@ export type AdminDashboard = {
   messages: AdminMessage[];
 };
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+type PostgrestResponse<T> = {
+  data: T | null;
+  error: { message?: string; details?: string; code?: string } | null;
+  status?: number;
+};
+
+type CloudbaseFunctionResponse = {
+  result?: unknown;
+};
+
+type CloudbaseClient = {
+  rdb: () => {
+    rpc: (functionName: string, args: Record<string, unknown>) => Promise<PostgrestResponse<unknown>>;
+  };
+  callFunction: (options: {
+    name: string;
+    data: Record<string, unknown>;
+  }) => Promise<CloudbaseFunctionResponse>;
+};
+
+type CloudbaseMediaResponse = {
+  ok: boolean;
+  error?: string;
+  status?: number;
+  files?: Record<string, string>;
+  upload?: {
+    url: string;
+    token: string;
+    authorization: string;
+    fileId: string;
+    cosFileId: string;
+    downloadUrl?: string;
+    cloudPath: string;
+  };
+};
+
+const cloudbaseEnvId = import.meta.env.VITE_CLOUDBASE_ENV_ID;
+const cloudbaseRegion = import.meta.env.VITE_CLOUDBASE_REGION || "ap-shanghai";
+const cloudbaseAccessKey = import.meta.env.VITE_CLOUDBASE_ACCESS_KEY;
+const cloudbaseMediaEndpoint = import.meta.env.VITE_CLOUDBASE_MEDIA_ENDPOINT
+  || "https://yuyun-portfolio-d2fw66i84b7160d0-1321999291.ap-shanghai.app.tcloudbase.com/private-media-upload";
 const requestTimeoutMs = 12_000;
 const saveRequestTimeoutMs = 20_000;
+const mediaEnvelopePrefix = "yuyun-media-v1:";
+const privateMediaReferencePrefix = "/__private_media__/";
+let cloudbaseAppPromise: Promise<CloudbaseClient> | null = null;
 
-export const isPrivateSpaceConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const isPrivateSpaceConfigured = Boolean(cloudbaseEnvId && cloudbaseAccessKey);
+
+export function encodePrivateMediaReference(value: string) {
+  return value.startsWith("cloud://")
+    ? `${privateMediaReferencePrefix}${encodeURIComponent(value)}`
+    : value;
+}
+
+export function decodePrivateMediaReference(value: string | null | undefined) {
+  if (!value) return null;
+  if (value.startsWith("cloud://")) return value;
+  if (!value.startsWith(privateMediaReferencePrefix)) return null;
+  try {
+    const decoded = decodeURIComponent(value.slice(privateMediaReferencePrefix.length));
+    return decoded.startsWith("cloud://") ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+function getCloudbaseApp() {
+  if (!isPrivateSpaceConfigured) throw new Error("The private space is not connected yet.");
+  if (!cloudbaseAppPromise) {
+    cloudbaseAppPromise = import("@cloudbase/js-sdk").then(({ default: cloudbase }) => cloudbase.init({
+      env: cloudbaseEnvId,
+      region: cloudbaseRegion,
+      accessKey: cloudbaseAccessKey,
+      timeout: saveRequestTimeoutMs,
+    }) as unknown as CloudbaseClient);
+  }
+  return cloudbaseAppPromise;
+}
 
 export class PrivateSpaceRequestError extends Error {
   status: number;
@@ -108,43 +183,202 @@ async function rpc<T>(
   body: Record<string, unknown>,
   timeoutMs = requestTimeoutMs,
 ): Promise<T> {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("The private space is not connected yet.");
+  const app = await getCloudbaseApp();
+  const response = await withTimeout(app.rdb().rpc(name, body), timeoutMs) as PostgrestResponse<T>;
+  if (response.error) {
+    throw new PrivateSpaceRequestError(
+      response.error.message || response.error.details || "The request could not be completed.",
+      response.status || 500,
+    );
   }
+  return response.data as T;
+}
 
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-  let response: Response;
-
-  try {
-    response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
-      method: "POST",
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-        "Content-Type": "application/json",
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(
+      () => reject(new DOMException("The request timed out.", "AbortError")),
+      timeoutMs,
+    );
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeout);
+        resolve(value);
       },
-      body: JSON.stringify(body),
+      (error) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
+function parseFunctionResult(response: CloudbaseFunctionResponse): CloudbaseMediaResponse {
+  const result = typeof response.result === "string"
+    ? JSON.parse(response.result) as unknown
+    : response.result;
+  if (!result || typeof result !== "object") {
+    throw new PrivateSpaceRequestError("The media service returned an invalid response.", 502);
+  }
+  return result as CloudbaseMediaResponse;
+}
+
+async function callPrivateMedia(
+  data: Record<string, unknown>,
+  timeoutMs = requestTimeoutMs,
+) {
+  const requestData = { ...data, accessKey: cloudbaseAccessKey };
+  let payload: CloudbaseMediaResponse;
+  if (cloudbaseMediaEndpoint) {
+    const response = await withTimeout(fetch(cloudbaseMediaEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestData),
+    }), timeoutMs);
+    try {
+      payload = await response.json() as CloudbaseMediaResponse;
+    } catch {
+      throw new PrivateSpaceRequestError("The media service returned an invalid response.", 502);
+    }
+  } else {
+    const app = await getCloudbaseApp();
+    const response = await withTimeout(
+      app.callFunction({ name: "private-media-upload", data: requestData }),
+      timeoutMs,
+    );
+    payload = parseFunctionResult(response);
+  }
+  if (!payload.ok) throw new PrivateSpaceRequestError(payload.error || "The media request failed.", payload.status || 500);
+  return payload;
+}
+
+async function resolvePrivateMedia(sessionToken: string, fileIds: string[]) {
+  const uniqueIds = [...new Set(fileIds
+    .map((value) => decodePrivateMediaReference(value))
+    .filter((value): value is string => Boolean(value)))];
+  if (!uniqueIds.length) return {};
+  const response = await callPrivateMedia({
+    action: "resolve",
+    sessionToken,
+    fileIds: uniqueIds,
+  });
+  return response.files || {};
+}
+
+function entryMediaIds(value: string | null) {
+  if (!value) return [];
+  if (value.startsWith("cloud://")) return [value];
+  if (!value.startsWith(mediaEnvelopePrefix)) return [];
+  try {
+    const images = JSON.parse(value.slice(mediaEnvelopePrefix.length));
+    return Array.isArray(images)
+      ? images.flatMap((image) => [image?.storageSrc, image?.src]).filter((item): item is string => typeof item === "string" && item.startsWith("cloud://"))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function hydrateEntryMedia(value: string | null, files: Record<string, string>) {
+  if (!value) return value;
+  if (value.startsWith("cloud://")) {
+    const resolved = files[value];
+    if (!resolved) return value;
+    return `${mediaEnvelopePrefix}${JSON.stringify([{
+      id: "cloud-cover",
+      src: resolved,
+      storageSrc: value,
+      size: "large",
+      align: "center",
+      caption: "",
+      focusX: 50,
+      focusY: 50,
+      isCover: true,
+    }])}`;
+  }
+  if (!value.startsWith(mediaEnvelopePrefix)) return value;
+  try {
+    const images = JSON.parse(value.slice(mediaEnvelopePrefix.length));
+    if (!Array.isArray(images)) return value;
+    return `${mediaEnvelopePrefix}${JSON.stringify(images.map((image) => {
+      const storageSrc = typeof image?.storageSrc === "string" && image.storageSrc.startsWith("cloud://")
+        ? image.storageSrc
+        : typeof image?.src === "string" && image.src.startsWith("cloud://") ? image.src : null;
+      return storageSrc && files[storageSrc]
+        ? { ...image, storageSrc, src: files[storageSrc] }
+        : image;
+    }))}`;
+  } catch {
+    return value;
+  }
+}
+
+function hydratePlaylist(playlist: PrivateMusicTrack[], files: Record<string, string>) {
+  return playlist.map((track) => {
+    const audioStorageUrl = decodePrivateMediaReference(track.audio_url)
+      || decodePrivateMediaReference(track.audio_storage_url);
+    const coverStorageUrl = decodePrivateMediaReference(track.cover_url)
+      || decodePrivateMediaReference(track.cover_storage_url);
+    return {
+      ...track,
+      audio_storage_url: audioStorageUrl || track.audio_storage_url,
+      audio_url: audioStorageUrl ? files[audioStorageUrl] || track.audio_url : track.audio_url,
+      cover_storage_url: coverStorageUrl || track.cover_storage_url,
+      cover_url: coverStorageUrl ? files[coverStorageUrl] || track.cover_url : track.cover_url,
+    };
+  });
+}
+
+export async function uploadPrivateMedia(
+  sessionToken: string,
+  file: File | Blob,
+  kind: "image" | "audio",
+  filename = file instanceof File ? file.name : `${kind}-upload`,
+) {
+  if (!isPrivateSpaceConfigured) throw new Error("File uploads are not connected yet.");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), kind === "audio" ? 20 * 60_000 : 5 * 60_000);
+  try {
+    const metadata = await callPrivateMedia({
+      action: "upload",
+      sessionToken,
+      mediaKind: kind,
+      filename,
+      contentType: file.type || "application/octet-stream",
+      byteSize: file.size,
+    });
+    if (!metadata.upload) throw new PrivateSpaceRequestError("Upload metadata is missing.", 502);
+    const upload = metadata.upload;
+    // An empty Blob type avoids an unsigned Content-Type header without copying
+    // large audio files into memory before the upload starts.
+    const uploadBody = file.slice(0, file.size, "");
+    const response = await fetch(upload.url, {
+      method: "PUT",
+      headers: {
+        Signature: upload.authorization,
+        authorization: upload.authorization,
+        "x-cos-security-token": upload.token,
+        "x-cos-meta-fileid": upload.cosFileId,
+        key: encodeURIComponent(upload.cloudPath),
+      },
+      body: uploadBody,
       signal: controller.signal,
     });
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new DOMException("The request timed out.", "AbortError");
+    if (!response.ok) {
+      throw new PrivateSpaceRequestError(`The file could not be uploaded (${response.status}).`, response.status);
     }
+    const resolved = await resolvePrivateMedia(sessionToken, [upload.fileId]);
+    return {
+      storage_url: upload.fileId,
+      url: resolved[upload.fileId] || upload.downloadUrl || upload.fileId,
+      media_kind: kind,
+    };
+  } catch (error) {
+    if (controller.signal.aborted) throw new DOMException("The request timed out.", "AbortError");
     throw error;
   } finally {
     window.clearTimeout(timeout);
   }
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    throw new PrivateSpaceRequestError(
-      payload?.message || "The request could not be completed.",
-      response.status,
-    );
-  }
-
-  return response.json() as Promise<T>;
 }
 
 export async function unlockPrivateSpace(code: string) {
@@ -158,8 +392,21 @@ export async function unlockPrivateSpace(code: string) {
   return response;
 }
 
-export function loadPrivateSpace(sessionToken: string) {
-  return rpc<PrivateSpaceContent>("get_private_space", { session_token: sessionToken });
+export async function loadPrivateSpace(sessionToken: string) {
+  const content = await rpc<PrivateSpaceContent>("get_private_space", { session_token: sessionToken });
+  const fileIds = [
+    ...content.entries.flatMap((entry) => entryMediaIds(entry.image_url)),
+    ...content.playlist.flatMap((track) => [track.audio_url, track.cover_url || ""]),
+  ];
+  const files = await resolvePrivateMedia(sessionToken, fileIds);
+  return {
+    ...content,
+    entries: content.entries.map((entry) => ({
+      ...entry,
+      image_url: hydrateEntryMedia(entry.image_url, files),
+    })),
+    playlist: hydratePlaylist(content.playlist, files),
+  };
 }
 
 export function postGuestbookMessage(sessionToken: string, message: string, requestId: string) {
@@ -253,7 +500,7 @@ export function deletePrivateEntry(sessionToken: string, entryId: string) {
   });
 }
 
-export function savePrivateMusicTrack(
+export async function savePrivateMusicTrack(
   sessionToken: string,
   track: {
     id: string | null;
@@ -265,16 +512,18 @@ export function savePrivateMusicTrack(
     is_active: boolean;
   },
 ) {
-  return rpc<PrivateMusicTrack>("owner_upsert_private_music_track", {
+  const saved = await rpc<PrivateMusicTrack>("owner_upsert_private_music_track", {
     session_token: sessionToken,
     track_id: track.id,
     track_title: track.title,
     track_artist: track.artist,
-    track_audio_url: track.audio_url,
-    track_cover_url: track.cover_url,
+    track_audio_url: encodePrivateMediaReference(track.audio_url),
+    track_cover_url: track.cover_url ? encodePrivateMediaReference(track.cover_url) : null,
     track_external_url: track.external_url,
     track_active: track.is_active,
   }, saveRequestTimeoutMs);
+  const files = await resolvePrivateMedia(sessionToken, [saved.audio_url, saved.cover_url || ""]);
+  return hydratePlaylist([saved], files)[0];
 }
 
 export function deletePrivateMusicTrack(sessionToken: string, trackId: string) {
@@ -284,9 +533,11 @@ export function deletePrivateMusicTrack(sessionToken: string, trackId: string) {
   });
 }
 
-export function reorderPrivateMusicTracks(sessionToken: string, trackIds: string[]) {
-  return rpc<PrivateMusicTrack[]>("owner_reorder_private_music_tracks", {
+export async function reorderPrivateMusicTracks(sessionToken: string, trackIds: string[]) {
+  const tracks = await rpc<PrivateMusicTrack[]>("owner_reorder_private_music_tracks", {
     session_token: sessionToken,
     track_ids: trackIds,
   }, saveRequestTimeoutMs);
+  const files = await resolvePrivateMedia(sessionToken, tracks.flatMap((track) => [track.audio_url, track.cover_url || ""]));
+  return hydratePlaylist(tracks, files);
 }

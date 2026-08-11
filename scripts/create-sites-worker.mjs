@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 
 const worker = `function withSecurityHeaders(response) {
   const headers = new Headers(response.headers);
-  headers.set("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://iwkxbwunjdktcoyoutjf.supabase.co; font-src 'self' data:; frame-src https://music.163.com; form-action 'self'; frame-ancestors 'none'");
+  headers.set("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.api.tcloudbasegateway.com https://*.tcb-api.tencentcloudapi.com https://*.tcb.qcloud.la https://*.cos.ap-shanghai.myqcloud.com; font-src 'self' data:; frame-src https://music.163.com; form-action 'self'; frame-ancestors 'none'");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("X-Content-Type-Options", "nosniff");

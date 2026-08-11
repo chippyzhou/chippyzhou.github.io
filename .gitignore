@@ -30,6 +30,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.production
 
 # vercel
 .vercel
@@ -50,6 +51,6 @@ tsconfig.tsbuildinfo
 /examples/
 /outputs/
 /work/
-/worker/
 drizzle.config.ts
+/worker/
 next.config.ts
