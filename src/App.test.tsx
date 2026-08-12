@@ -91,19 +91,28 @@ describe("owner session restoration", () => {
     expect(document.querySelector(".site-header")?.classList.contains("site-header--dark")).toBe(false);
   });
 
-  it("places academic work between the project and competition home actions", () => {
+  it("uses resume-focused home content without girl-band imagery in the minimal edition", () => {
     render(<App />);
 
     const actions = Array.from(document.querySelectorAll(".hero-actions a"), (link) => link.textContent);
-    expect(actions).toEqual(["Open field notes", "Academic work", "Read the setlist"]);
-    expect(document.querySelector(".research-polaroid img")?.getAttribute("src")).toContain("band-wall/mygo-banner.jpg");
+    expect(actions).toEqual(["View projects", "View publications", "View competition results"]);
+    expect(screen.getByRole("complementary", { name: "Resume profile" })).toBeTruthy();
+    expect(document.querySelector('.site img[src*="band-wall"]')).toBeNull();
+    expect(document.querySelector(".research-polaroid")).toBeNull();
   });
 
-  it("places technical notes directly before the gallery in the top navigation", () => {
+  it("keeps gallery and personal space exclusive to the girl-band edition", () => {
     render(<App />);
 
-    const navigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(navigation.indexOf("Tech Notes📓")).toBe(navigation.indexOf("Gallery🎹") - 1);
+    const minimalNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
+    expect(minimalNavigation).toEqual(["Home", "Projects", "Publications", "Awards", "Tech Notes"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Switch to the girl-band edition" }));
+
+    const bandNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
+    expect(bandNavigation.indexOf("Tech Notes📓")).toBe(bandNavigation.indexOf("Gallery🎹") - 1);
+    expect(bandNavigation.at(-1)).toBe("Personal Space🔐");
+    expect(document.querySelector('.site img[src*="band-wall"]')).toBeTruthy();
   });
 
   it("uses compact Chinese labels in the top navigation", () => {
@@ -112,7 +121,7 @@ describe("owner session restoration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
 
     const navigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(navigation).toEqual(["首页🎤", "项目🎸", "学术🎻", "竞赛🥁", "笔记📓", "图片墙🎹", "个人🔐"]);
+    expect(navigation).toEqual(["首页", "项目", "学术", "竞赛", "笔记"]);
   });
 
   it("keeps page chapter numbers aligned with the top navigation order", () => {
@@ -175,6 +184,22 @@ describe("owner session restoration", () => {
     expect(document.documentElement.dataset.theme).toBe("band");
     expect(localStorage.getItem("yuyun-site-theme")).toBe("band");
     expect(screen.getByRole("button", { name: "Switch to the minimal academic edition" }).textContent).toBe("VOL. 02");
+  });
+
+  it("opens legacy gallery and personal-space links in the girl-band edition", () => {
+    window.location.hash = "#/gallery";
+    const { unmount } = render(<App />);
+
+    expect(document.documentElement.dataset.theme).toBe("band");
+    expect(screen.getByRole("heading", { name: "Visual record" })).toBeTruthy();
+
+    unmount();
+    localStorage.clear();
+    window.location.hash = "#/space";
+    render(<App />);
+
+    expect(document.documentElement.dataset.theme).toBe("band");
+    expect(screen.getByPlaceholderText("Enter invitation code")).toBeTruthy();
   });
 
   it("adds a linked contents rail to editorial list pages", () => {

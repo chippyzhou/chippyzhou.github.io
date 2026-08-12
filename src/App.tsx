@@ -63,6 +63,12 @@ const copy = {
     competitionAwards: "Competition awards",
     publicationsPreprints: "Publications / preprints",
     researchDirections: "Research directions",
+    resumeSnapshot: "Profile / 2026",
+    resumeProfile: "Resume profile",
+    basedIn: "Based in",
+    currentFocus: "Current focus",
+    openTo: "Open to",
+    internshipRoles: "AI product management · Algorithm engineering internships",
     inspirationBoard: "Girl band inspiration board",
     bandResearchClub: "band-side research club / vol. 01",
     liveLog: "LIVE LOG",
@@ -272,6 +278,12 @@ const copy = {
     competitionAwards: "竞赛奖项",
     publicationsPreprints: "论文 / 预印本",
     researchDirections: "研究方向",
+    resumeSnapshot: "个人概览 / 2026",
+    resumeProfile: "简历概览",
+    basedIn: "所在地",
+    currentFocus: "当前方向",
+    openTo: "求职意向",
+    internshipRoles: "AI 产品经理 · 算法工程实习",
     inspirationBoard: "少女乐队灵感板",
     bandResearchClub: "乐队侧研究社 / 第 01 期",
     liveLog: "现场记录",
@@ -460,8 +472,55 @@ const copy = {
 
 type CopyKey = keyof typeof copy.en;
 
+const minimalCopy: Record<Language, Partial<Record<CopyKey, string>>> = {
+  en: {
+    openFieldNotes: "View projects",
+    academicWork: "View publications",
+    readSetlist: "View competition results",
+    aboutMargin: "Profile / approach",
+    aboutHeading: "Engineering grounded in research.",
+    aboutNote: "clear questions · reproducible work · readable results",
+    projectsKicker: "Projects / selected work",
+    projectsDescription: "Selected engineering and research projects with context, methods, implementation details, and public links.",
+    publicationsKicker: "Publications / research",
+    publicationsDescription: "Papers, preprints, posters, and technical reports presented as a concise academic record.",
+    notesKicker: "Technical notes / methods",
+    notesTitle: "Technical notes",
+    notesDescription: "Methods, implementation decisions, model experiments, and reproducible observations.",
+    awardsKicker: "Competitions / distinctions",
+    awardsTitle: "Competition results",
+    awardsDescription: "Selected modeling competitions with awards, methods, and quantitative outcomes.",
+    contactKicker: "Contact / opportunities",
+    connect: "Get in touch.",
+  },
+  zh: {
+    openFieldNotes: "查看项目",
+    academicWork: "查看学术成果",
+    readSetlist: "查看竞赛成果",
+    aboutMargin: "个人概览 / 方法",
+    aboutHeading: "以研究判断为基础的工程实践。",
+    aboutNote: "清晰问题 · 可复现实现 · 可读结果",
+    projectsKicker: "项目 / 精选工作",
+    projectsDescription: "精选工程与研究项目，集中呈现背景、方法、实现细节与公开链接。",
+    publicationsKicker: "学术成果 / 研究",
+    publicationsDescription: "以简洁的学术履历形式呈现论文、预印本、海报与技术报告。",
+    notesKicker: "技术笔记 / 方法",
+    notesTitle: "技术笔记",
+    notesDescription: "记录方法、实现决策、模型实验与可复现的观察结果。",
+    awardsKicker: "竞赛 / 荣誉",
+    awardsTitle: "竞赛成果",
+    awardsDescription: "集中呈现建模竞赛奖项、核心方法与量化结果。",
+    contactKicker: "联系 / 机会",
+    connect: "保持联系。",
+  },
+};
+
 function tr(language: Language, key: CopyKey) {
   return copy[language][key];
+}
+
+function themedTr(language: Language, theme: SiteTheme, key: CopyKey) {
+  return theme === "minimal" ? minimalCopy[language][key] || tr(language, key) : tr(language, key);
 }
 
 function localized(language: Language, english: string, chinese: string) {
@@ -857,7 +916,17 @@ function PageShell({
   );
 }
 
-function HomePage({ language, setPage }: { language: Language; setPage: (page: PageKey) => void }) {
+function HomePage({
+  language,
+  theme,
+  setPage,
+}: {
+  language: Language;
+  theme: SiteTheme;
+  setPage: (page: PageKey) => void;
+}) {
+  const isMinimal = theme === "minimal";
+
   return (
     <>
       <section className="home-hero">
@@ -871,13 +940,13 @@ function HomePage({ language, setPage }: { language: Language; setPage: (page: P
           <p className="hero-intro">{tr(language, "intro")}</p>
           <div className="hero-actions">
             <a href="#/projects" onClick={() => setPage("projects")} className="button button--project">
-              {tr(language, "openFieldNotes")}
+              {themedTr(language, theme, "openFieldNotes")}
             </a>
             <a href="#/publications" onClick={() => setPage("publications")} className="button button--academic">
-              {tr(language, "academicWork")}
+              {themedTr(language, theme, "academicWork")}
             </a>
             <a href="#/awards" onClick={() => setPage("awards")} className="button button--awards">
-              {tr(language, "readSetlist")}
+              {themedTr(language, theme, "readSetlist")}
             </a>
           </div>
           <dl className="metrics">
@@ -895,48 +964,75 @@ function HomePage({ language, setPage }: { language: Language; setPage: (page: P
           </dl>
         </div>
 
-        <aside className="character-board" aria-label={tr(language, "inspirationBoard")}>
-          <div className="tape" aria-hidden="true" />
-          <p className="hand-note">{tr(language, "bandResearchClub")}</p>
-          <div className="character-board__title">
-            <strong>{tr(language, "liveLog")}</strong>
-            <span>{tr(language, "characterStickers")}</span>
-          </div>
-          <div className="character-grid">
-            {bandCharacters.map((character, index) => (
-              <a
-                key={character.name}
-                className={`character-sticker character-sticker--${index + 1}`}
-                href={character.source}
-                target="_blank"
-                rel="noreferrer"
-                title={character.name}
-              >
-                <img src={character.image} alt={character.name} />
-                <span>
-                  {character.name}
-                  <small>{localized(language, character.role, {
-                    Keyboard: "键盘",
-                    Guitar: "吉他",
-                    "Guitar / Vocal": "吉他 / 主唱",
-                    Bass: "贝斯",
-                    Drums: "鼓手",
-                  }[character.role] || character.role)}</small>
-                </span>
-              </a>
-            ))}
-          </div>
-          <p className="asset-credit">
-            {tr(language, "characterReferences")}
-          </p>
-        </aside>
+        {isMinimal ? (
+          <aside className="resume-summary" aria-label={tr(language, "resumeProfile")}>
+            <div className="resume-summary__heading">
+              <span>{tr(language, "resumeSnapshot")}</span>
+              <strong>YC</strong>
+            </div>
+            <dl>
+              <div>
+                <dt>{tr(language, "basedIn")}</dt>
+                <dd>{localized(language, profile.location, "广州，中国")}</dd>
+              </div>
+              <div>
+                <dt>{tr(language, "currentFocus")}</dt>
+                <dd>{(language === "zh" ? profile.focusZh : profile.focus).join(" · ")}</dd>
+              </div>
+              <div>
+                <dt>{tr(language, "openTo")}</dt>
+                <dd>{tr(language, "internshipRoles")}</dd>
+              </div>
+            </dl>
+            <div className="resume-summary__links">
+              <a href={profile.github} target="_blank" rel="noreferrer">GitHub ↗</a>
+              <a href={`mailto:${profile.email}`}>{profile.email}</a>
+            </div>
+          </aside>
+        ) : (
+          <aside className="character-board" aria-label={tr(language, "inspirationBoard")}>
+            <div className="tape" aria-hidden="true" />
+            <p className="hand-note">{tr(language, "bandResearchClub")}</p>
+            <div className="character-board__title">
+              <strong>{tr(language, "liveLog")}</strong>
+              <span>{tr(language, "characterStickers")}</span>
+            </div>
+            <div className="character-grid">
+              {bandCharacters.map((character, index) => (
+                <a
+                  key={character.name}
+                  className={`character-sticker character-sticker--${index + 1}`}
+                  href={character.source}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={character.name}
+                >
+                  <img src={character.image} alt={character.name} />
+                  <span>
+                    {character.name}
+                    <small>{localized(language, character.role, {
+                      Keyboard: "键盘",
+                      Guitar: "吉他",
+                      "Guitar / Vocal": "吉他 / 主唱",
+                      Bass: "贝斯",
+                      Drums: "鼓手",
+                    }[character.role] || character.role)}</small>
+                  </span>
+                </a>
+              ))}
+            </div>
+            <p className="asset-credit">
+              {tr(language, "characterReferences")}
+            </p>
+          </aside>
+        )}
       </section>
 
       <section className="about-band">
         <div className="about-band__label">
-          <p className="kicker">{tr(language, "aboutMargin")}</p>
-          <h2>{tr(language, "aboutHeading")}</h2>
-          <p className="hand-note">{tr(language, "aboutNote")}</p>
+          <p className="kicker">{themedTr(language, theme, "aboutMargin")}</p>
+          <h2>{themedTr(language, theme, "aboutHeading")}</h2>
+          <p className="hand-note">{themedTr(language, theme, "aboutNote")}</p>
         </div>
         <div className="about-band__copy">
           <p>
@@ -945,27 +1041,29 @@ function HomePage({ language, setPage }: { language: Language; setPage: (page: P
           <p>
             {tr(language, "aboutParagraphTwo")}
           </p>
-          <figure className="research-polaroid">
-            <img
-              src={assetPath("band-wall/mygo-banner.jpg")}
-              alt={localized(language, "It's MyGO!!!!! group portrait", "It's MyGO!!!!! 乐队合照")}
-            />
-            <figcaption>{(language === "zh" ? profile.focusZh : profile.focus).join(" / ")}</figcaption>
-          </figure>
+          {!isMinimal && (
+            <figure className="research-polaroid">
+              <img
+                src={assetPath("band-wall/mygo-banner.jpg")}
+                alt={localized(language, "It's MyGO!!!!! group portrait", "It's MyGO!!!!! 乐队合照")}
+              />
+              <figcaption>{(language === "zh" ? profile.focusZh : profile.focus).join(" / ")}</figcaption>
+            </figure>
+          )}
         </div>
       </section>
     </>
   );
 }
 
-function ProjectsPage({ language }: { language: Language }) {
+function ProjectsPage({ language, theme }: { language: Language; theme: SiteTheme }) {
   return (
     <PageShell
       language={language}
       index="01"
-      kicker={tr(language, "projectsKicker")}
+      kicker={themedTr(language, theme, "projectsKicker")}
       title={tr(language, "projectsTitle")}
-      description={tr(language, "projectsDescription")}
+      description={themedTr(language, theme, "projectsDescription")}
       toc={projects.map((project, index) => ({
         id: `project-${index + 1}`,
         label: localized(language, project.title, project.titleZh),
@@ -993,14 +1091,14 @@ function ProjectsPage({ language }: { language: Language }) {
   );
 }
 
-function PublicationsPage({ language }: { language: Language }) {
+function PublicationsPage({ language, theme }: { language: Language; theme: SiteTheme }) {
   return (
     <PageShell
       language={language}
       index="02"
-      kicker={tr(language, "publicationsKicker")}
+      kicker={themedTr(language, theme, "publicationsKicker")}
       title={tr(language, "publicationsTitle")}
-      description={tr(language, "publicationsDescription")}
+      description={themedTr(language, theme, "publicationsDescription")}
       toc={publications.map((paper, index) => ({
         id: `publication-${index + 1}`,
         label: paper.title.split(":")[0],
@@ -1027,14 +1125,14 @@ function PublicationsPage({ language }: { language: Language }) {
   );
 }
 
-function TechnicalNotesPage({ language }: { language: Language }) {
+function TechnicalNotesPage({ language, theme }: { language: Language; theme: SiteTheme }) {
   return (
     <PageShell
       language={language}
       index="04"
-      kicker={tr(language, "notesKicker")}
-      title={tr(language, "notesTitle")}
-      description={tr(language, "notesDescription")}
+      kicker={themedTr(language, theme, "notesKicker")}
+      title={themedTr(language, theme, "notesTitle")}
+      description={themedTr(language, theme, "notesDescription")}
       toc={technicalNotes.map((note, index) => ({
         id: `note-${index + 1}`,
         label: localized(language, note.title, note.titleZh),
@@ -1063,14 +1161,14 @@ function TechnicalNotesPage({ language }: { language: Language }) {
   );
 }
 
-function AwardsPage({ language }: { language: Language }) {
+function AwardsPage({ language, theme }: { language: Language; theme: SiteTheme }) {
   return (
     <PageShell
       language={language}
       index="03"
-      kicker={tr(language, "awardsKicker")}
-      title={tr(language, "awardsTitle")}
-      description={tr(language, "awardsDescription")}
+      kicker={themedTr(language, theme, "awardsKicker")}
+      title={themedTr(language, theme, "awardsTitle")}
+      description={themedTr(language, theme, "awardsDescription")}
       toc={awards.map((award, index) => ({ id: `award-${index + 1}`, label: award.title }))}
     >
       <div className="award-list">
@@ -2521,7 +2619,7 @@ async function copyToClipboard(value: string) {
   input.remove();
 }
 
-function Footer({ language }: { language: Language }) {
+function Footer({ language, theme }: { language: Language; theme: SiteTheme }) {
   const [emailCopied, setEmailCopied] = useState(false);
 
   useEffect(() => {
@@ -2538,8 +2636,8 @@ function Footer({ language }: { language: Language }) {
   return (
     <footer className="contact-footer">
       <div>
-        <p className="kicker">{tr(language, "contactKicker")}</p>
-        <h2>{tr(language, "connect")}</h2>
+        <p className="kicker">{themedTr(language, theme, "contactKicker")}</p>
+        <h2>{themedTr(language, theme, "connect")}</h2>
         <p>{tr(language, "lookingFor")}</p>
       </div>
       <div className="contact-links">
@@ -2564,7 +2662,12 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>(() => getPageFromHash());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem(languageStorageKey) === "zh" ? "zh" : "en");
-  const [theme, setTheme] = useState<SiteTheme>(() => localStorage.getItem(themeStorageKey) === "band" ? "band" : "minimal");
+  const [theme, setTheme] = useState<SiteTheme>(() => {
+    const initialPage = getPageFromHash();
+    return initialPage === "gallery" || initialPage === "space" || localStorage.getItem(themeStorageKey) === "band"
+      ? "band"
+      : "minimal";
+  });
 
   useEffect(() => {
     localStorage.setItem(languageStorageKey, language);
@@ -2577,13 +2680,26 @@ export default function App() {
 
   useEffect(() => {
     const onHashChange = () => {
-      setCurrentPage(getPageFromHash());
+      const nextPage = getPageFromHash();
+      if (nextPage === "gallery" || nextPage === "space") setTheme("band");
+      setCurrentPage(nextPage);
       setIsMenuOpen(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  const handleThemeToggle = () => {
+    setTheme((current) => {
+      const nextTheme = current === "minimal" ? "band" : "minimal";
+      if (nextTheme === "minimal" && (currentPage === "gallery" || currentPage === "space")) {
+        window.location.hash = "#/";
+        setCurrentPage("home");
+      }
+      return nextTheme;
+    });
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2596,13 +2712,13 @@ export default function App() {
   const pageContent = useMemo(() => {
     switch (currentPage) {
       case "projects":
-        return <ProjectsPage language={language} />;
+        return <ProjectsPage language={language} theme={theme} />;
       case "publications":
-        return <PublicationsPage language={language} />;
+        return <PublicationsPage language={language} theme={theme} />;
       case "notes":
-        return <TechnicalNotesPage language={language} />;
+        return <TechnicalNotesPage language={language} theme={theme} />;
       case "awards":
-        return <AwardsPage language={language} />;
+        return <AwardsPage language={language} theme={theme} />;
       case "gallery":
         return <GalleryPage language={language} />;
       case "space":
@@ -2610,11 +2726,14 @@ export default function App() {
       case "admin":
         return <AdminPage language={language} />;
       default:
-        return <HomePage language={language} setPage={setCurrentPage} />;
+        return <HomePage language={language} theme={theme} setPage={setCurrentPage} />;
     }
-  }, [currentPage, language]);
+  }, [currentPage, language, theme]);
 
-  const navigationItems = pages.map((page) => (
+  const visiblePages = theme === "minimal"
+    ? pages.filter((page) => page.key !== "gallery" && page.key !== "space")
+    : pages;
+  const navigationItems = visiblePages.map((page) => (
     <a
       key={page.key}
       href={page.key === "home" ? "#/" : `#/${page.key}`}
@@ -2625,7 +2744,7 @@ export default function App() {
       aria-current={currentPage === page.key ? "page" : undefined}
     >
       <span>{tr(language, navLabelKeys[page.key])}</span>
-      <span className="nav-instrument" aria-hidden="true">{page.icon}</span>
+      {theme === "band" && <span className="nav-instrument" aria-hidden="true">{page.icon}</span>}
     </a>
   ));
 
@@ -2659,7 +2778,7 @@ export default function App() {
               type="button"
               aria-label={tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
               title={tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
-              onClick={() => setTheme((current) => current === "minimal" ? "band" : "minimal")}
+              onClick={handleThemeToggle}
             >
               {theme === "minimal" ? "VOL. 01" : "VOL. 02"}
             </button>
@@ -2679,7 +2798,7 @@ export default function App() {
           </nav>
         </header>
         {pageContent}
-        {currentPage === "home" && <Footer language={language} />}
+        {currentPage === "home" && <Footer language={language} theme={theme} />}
       </main>
       {isMenuOpen && createPortal(
         <div className="mobile-nav-layer">
@@ -2697,7 +2816,7 @@ export default function App() {
             <button
               className="mobile-theme-toggle"
               type="button"
-              onClick={() => setTheme((current) => current === "minimal" ? "band" : "minimal")}
+              onClick={handleThemeToggle}
             >
               <span>{theme === "minimal" ? "VOL. 01" : "VOL. 02"}</span>
               {tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
