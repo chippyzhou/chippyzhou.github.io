@@ -30,7 +30,7 @@ Push to the `main` branch of `chippyzhou/chippyzhou.github.io`. GitHub Actions w
 
 ## Private Space Backend
 
-The public site stays on GitHub Pages. The invitation-only space uses Tencent CloudBase PostgreSQL, a small owner-validated cloud function, and CloudBase storage for images and audio. Invitation codes and session tokens are stored only as SHA-256 hashes.
+The public site stays on GitHub Pages. The invitation-only space uses Tencent CloudBase PostgreSQL, a small allowlisted API function, and CloudBase storage for images and audio. Browser requests go through that function so the PostgreSQL gateway is never exposed cross-origin. Invitation codes and session tokens are stored only as SHA-256 hashes.
 
 The PostgreSQL migrations live in `supabase/migrations/` because the schema remains PostgREST-compatible. The media function lives in `cloudbase/functions/private-media-upload/`.
 

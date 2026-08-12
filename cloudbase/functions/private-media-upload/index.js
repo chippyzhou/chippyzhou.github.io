@@ -8,6 +8,21 @@ const postgresUrl = `https://${envId}.api.tcloudbasegateway.com/v1/rdb/rest`;
 const productionOrigin = "https://chippyzhou.github.io";
 const maxImageBytes = 50 * 1024 * 1024;
 const maxAudioBytes = 500 * 1024 * 1024;
+const allowedRpcFunctions = new Set([
+  "unlock_private_space",
+  "get_private_space",
+  "post_guestbook_message_v2",
+  "owner_get_dashboard",
+  "owner_create_visitor_invite",
+  "owner_set_visitor_active",
+  "owner_set_message_status",
+  "owner_upsert_private_entry_v2",
+  "owner_upsert_private_entry_v3",
+  "owner_delete_private_entry",
+  "owner_upsert_private_music_track",
+  "owner_delete_private_music_track",
+  "owner_reorder_private_music_tracks",
+]);
 const allowedTypes = {
   image: new Map([
     ["image/jpeg", ".jpg"],
@@ -117,6 +132,42 @@ async function validateSession(sessionToken, ownerOnly, accessKey) {
   return data.visitor || null;
 }
 
+async function proxyRpc(event) {
+  const functionName = String(event.rpcName || "");
+  const publicKey = String(event.accessKey || "");
+  const args = event.args;
+  if (!allowedRpcFunctions.has(functionName)) return fail("Unsupported database operation.", 403);
+  if (!publicKey || publicKey.length > 4096) return fail("The client access key is invalid.", 401);
+  if (!args || typeof args !== "object" || Array.isArray(args)) return fail("Invalid database arguments.");
+
+  const headers = {
+    Authorization: `Bearer ${publicKey}`,
+    "Content-Type": "application/json",
+    "Content-Profile": "public",
+    "Accept-Profile": "public",
+  };
+  const forwardedFor = requestHeader(event, "x-forwarded-for").split(",")[0].trim();
+  const userAgent = requestHeader(event, "user-agent").slice(0, 512);
+  if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
+  if (userAgent) headers["User-Agent"] = userAgent;
+
+  const response = await fetch(`${postgresUrl}/rpc/${functionName}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(args),
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    return fail(data?.message || data?.error || "The database request failed.", response.status);
+  }
+  return { ok: true, data };
+}
+
 function extensionFor(mediaKind, filename, contentType) {
   const typeMap = allowedTypes[mediaKind];
   if (!typeMap) return null;
@@ -205,7 +256,13 @@ exports.main = async (rawEvent = {}) => {
 
   try {
     const event = requestPayload(rawEvent);
-    const result = event.action === "resolve" ? await resolveFiles(event) : await createUpload(event);
+    const result = event.action === "rpc"
+      ? await proxyRpc(event)
+      : event.action === "resolve"
+        ? await resolveFiles(event)
+        : event.action === "upload"
+          ? await createUpload(event)
+          : fail("Unsupported action.");
     return httpRequest ? httpResponse(rawEvent, result) : result;
   } catch (error) {
     console.error("private-media-upload failed", error);

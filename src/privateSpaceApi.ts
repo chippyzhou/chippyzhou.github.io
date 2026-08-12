@@ -81,30 +81,11 @@ export type AdminDashboard = {
   messages: AdminMessage[];
 };
 
-type PostgrestResponse<T> = {
-  data: T | null;
-  error: { message?: string; details?: string; code?: string } | null;
-  status?: number;
-};
-
-type CloudbaseFunctionResponse = {
-  result?: unknown;
-};
-
-type CloudbaseClient = {
-  rdb: () => {
-    rpc: (functionName: string, args: Record<string, unknown>) => Promise<PostgrestResponse<unknown>>;
-  };
-  callFunction: (options: {
-    name: string;
-    data: Record<string, unknown>;
-  }) => Promise<CloudbaseFunctionResponse>;
-};
-
 type CloudbaseMediaResponse = {
   ok: boolean;
   error?: string;
   status?: number;
+  data?: unknown;
   files?: Record<string, string>;
   upload?: {
     url: string;
@@ -117,8 +98,6 @@ type CloudbaseMediaResponse = {
   };
 };
 
-const cloudbaseEnvId = import.meta.env.VITE_CLOUDBASE_ENV_ID;
-const cloudbaseRegion = import.meta.env.VITE_CLOUDBASE_REGION || "ap-shanghai";
 const cloudbaseAccessKey = import.meta.env.VITE_CLOUDBASE_ACCESS_KEY;
 const cloudbaseMediaEndpoint = import.meta.env.VITE_CLOUDBASE_MEDIA_ENDPOINT
   || "https://yuyun-portfolio-d2fw66i84b7160d0-1321999291.ap-shanghai.app.tcloudbase.com/private-media-upload";
@@ -126,9 +105,7 @@ const requestTimeoutMs = 12_000;
 const saveRequestTimeoutMs = 20_000;
 const mediaEnvelopePrefix = "yuyun-media-v1:";
 const privateMediaReferencePrefix = "/__private_media__/";
-let cloudbaseAppPromise: Promise<CloudbaseClient> | null = null;
-
-export const isPrivateSpaceConfigured = Boolean(cloudbaseEnvId && cloudbaseAccessKey);
+export const isPrivateSpaceConfigured = Boolean(cloudbaseMediaEndpoint && cloudbaseAccessKey);
 
 export function encodePrivateMediaReference(value: string) {
   return value.startsWith("cloud://")
@@ -146,19 +123,6 @@ export function decodePrivateMediaReference(value: string | null | undefined) {
   } catch {
     return null;
   }
-}
-
-function getCloudbaseApp() {
-  if (!isPrivateSpaceConfigured) throw new Error("The private space is not connected yet.");
-  if (!cloudbaseAppPromise) {
-    cloudbaseAppPromise = import("@cloudbase/js-sdk").then(({ default: cloudbase }) => cloudbase.init({
-      env: cloudbaseEnvId,
-      region: cloudbaseRegion,
-      accessKey: cloudbaseAccessKey,
-      timeout: saveRequestTimeoutMs,
-    }) as unknown as CloudbaseClient);
-  }
-  return cloudbaseAppPromise;
 }
 
 export class PrivateSpaceRequestError extends Error {
@@ -183,14 +147,11 @@ async function rpc<T>(
   body: Record<string, unknown>,
   timeoutMs = requestTimeoutMs,
 ): Promise<T> {
-  const app = await getCloudbaseApp();
-  const response = await withTimeout(app.rdb().rpc(name, body), timeoutMs) as PostgrestResponse<T>;
-  if (response.error) {
-    throw new PrivateSpaceRequestError(
-      response.error.message || response.error.details || "The request could not be completed.",
-      response.status || 500,
-    );
-  }
+  const response = await callPrivateMedia({
+    action: "rpc",
+    rpcName: name,
+    args: body,
+  }, timeoutMs);
   return response.data as T;
 }
 
@@ -213,42 +174,23 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-function parseFunctionResult(response: CloudbaseFunctionResponse): CloudbaseMediaResponse {
-  const result = typeof response.result === "string"
-    ? JSON.parse(response.result) as unknown
-    : response.result;
-  if (!result || typeof result !== "object") {
-    throw new PrivateSpaceRequestError("The media service returned an invalid response.", 502);
-  }
-  return result as CloudbaseMediaResponse;
-}
-
 async function callPrivateMedia(
   data: Record<string, unknown>,
   timeoutMs = requestTimeoutMs,
 ) {
   const requestData = { ...data, accessKey: cloudbaseAccessKey };
+  const response = await withTimeout(fetch(cloudbaseMediaEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestData),
+  }), timeoutMs);
   let payload: CloudbaseMediaResponse;
-  if (cloudbaseMediaEndpoint) {
-    const response = await withTimeout(fetch(cloudbaseMediaEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    }), timeoutMs);
-    try {
-      payload = await response.json() as CloudbaseMediaResponse;
-    } catch {
-      throw new PrivateSpaceRequestError("The media service returned an invalid response.", 502);
-    }
-  } else {
-    const app = await getCloudbaseApp();
-    const response = await withTimeout(
-      app.callFunction({ name: "private-media-upload", data: requestData }),
-      timeoutMs,
-    );
-    payload = parseFunctionResult(response);
+  try {
+    payload = await response.json() as CloudbaseMediaResponse;
+  } catch {
+    throw new PrivateSpaceRequestError("The private service returned an invalid response.", 502);
   }
-  if (!payload.ok) throw new PrivateSpaceRequestError(payload.error || "The media request failed.", payload.status || 500);
+  if (!payload.ok) throw new PrivateSpaceRequestError(payload.error || "The private request failed.", payload.status || response.status || 500);
   return payload;
 }
 
