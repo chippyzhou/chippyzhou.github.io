@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { PrivateMusicLibraryEditor } from "./PrivateMusicLibraryEditor";
@@ -129,6 +129,7 @@ const copy = {
     filterByType: "Filter by type",
     filterStartDate: "Start date",
     filterEndDate: "End date",
+    filterDatePlaceholder: "yyyymmdd",
     allTypes: "All types",
     entriesShown: "entries shown",
     noFilteredEntries: "No entries match these filters.",
@@ -344,6 +345,7 @@ const copy = {
     filterByType: "按类型筛选",
     filterStartDate: "起始日期",
     filterEndDate: "终止日期",
+    filterDatePlaceholder: "年月日",
     allTypes: "全部类型",
     entriesShown: "篇记录",
     noFilteredEntries: "没有符合当前筛选条件的记录。",
@@ -1285,6 +1287,35 @@ function privateEntryDisplayDate(entry: PrivateEntry) {
   return entry.display_date || entry.event_date || "";
 }
 
+function normalizeDateFilter(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const compactMatch = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/u);
+  const separatedMatch = trimmed.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})\D*$/u);
+  const match = compactMatch || separatedMatch;
+  if (!match) return "";
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    candidate.getUTCFullYear() !== year
+    || candidate.getUTCMonth() !== month - 1
+    || candidate.getUTCDate() !== day
+  ) return "";
+
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function formatDateFilter(value: string, language: Language) {
+  const normalized = normalizeDateFilter(value);
+  if (!normalized) return value;
+  const [year, month, day] = normalized.split("-");
+  return language === "zh" ? `${year}年${month}月${day}日` : `${year}${month}${day}`;
+}
+
 function formatPrivateDate(value: string, language: Language) {
   return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
     year: "numeric",
@@ -1371,12 +1402,19 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const [entryEndDate, setEntryEndDate] = useState("");
   const [musicPlayRequest, setMusicPlayRequest] = useState<MusicPlayRequest | null>(null);
 
+  const normalizedStartDate = normalizeDateFilter(entryStartDate);
+  const normalizedEndDate = normalizeDateFilter(entryEndDate);
   const filteredEntries = useMemo(() => (content?.entries || []).filter((entry) => {
     const entryDate = privateEntryDisplayDate(entry);
     return (entryKindFilter === "all" || entry.kind === entryKindFilter)
-      && (!entryStartDate || (entryDate && entryDate >= entryStartDate))
-      && (!entryEndDate || (entryDate && entryDate <= entryEndDate));
-  }), [content?.entries, entryEndDate, entryKindFilter, entryStartDate]);
+      && (!normalizedStartDate || (entryDate && entryDate >= normalizedStartDate))
+      && (!normalizedEndDate || (entryDate && entryDate <= normalizedEndDate));
+  }), [content?.entries, entryKindFilter, normalizedEndDate, normalizedStartDate]);
+
+  useEffect(() => {
+    setEntryStartDate((value) => formatDateFilter(value, language));
+    setEntryEndDate((value) => formatDateFilter(value, language));
+  }, [language]);
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -1601,21 +1639,29 @@ function PersonalSpacePage({ language }: { language: Language }) {
             <label>
               <span>{tr(language, "filterStartDate")}</span>
               <input
-                type="date"
+                type="text"
                 aria-label={tr(language, "filterStartDate")}
+                placeholder={tr(language, "filterDatePlaceholder")}
                 value={entryStartDate}
-                max={entryEndDate || undefined}
                 onChange={(event) => setEntryStartDate(event.target.value)}
+                onBlur={() => setEntryStartDate((value) => formatDateFilter(value, language))}
+                inputMode="numeric"
+                autoComplete="off"
+                spellCheck={false}
               />
             </label>
             <label>
               <span>{tr(language, "filterEndDate")}</span>
               <input
-                type="date"
+                type="text"
                 aria-label={tr(language, "filterEndDate")}
+                placeholder={tr(language, "filterDatePlaceholder")}
                 value={entryEndDate}
-                min={entryStartDate || undefined}
                 onChange={(event) => setEntryEndDate(event.target.value)}
+                onBlur={() => setEntryEndDate((value) => formatDateFilter(value, language))}
+                inputMode="numeric"
+                autoComplete="off"
+                spellCheck={false}
               />
             </label>
           </div>
@@ -2673,8 +2719,11 @@ export default function App() {
     localStorage.setItem(languageStorageKey, language);
   }, [language]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  useEffect(() => {
     localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
 
@@ -2750,7 +2799,7 @@ export default function App() {
 
   return (
     <>
-      <main className={`site site--${theme}`}>
+      <main className={`site site--${theme}`} data-theme={theme}>
         <header className={`site-header${currentPage === "space" ? " site-header--dark" : ""}`}>
           <nav>
           <a

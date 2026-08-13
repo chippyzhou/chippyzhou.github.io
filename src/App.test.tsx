@@ -173,15 +173,18 @@ describe("owner session restoration", () => {
   });
 
   it("defaults to the minimal academic edition and persists the VOL switch", () => {
+    document.documentElement.dataset.theme = "band";
     render(<App />);
 
     expect(document.documentElement.dataset.theme).toBe("minimal");
+    expect(document.querySelector("main.site")?.getAttribute("data-theme")).toBe("minimal");
     const switcher = screen.getByRole("button", { name: "Switch to the girl-band edition" });
     expect(switcher.textContent).toBe("VOL. 01");
 
     fireEvent.click(switcher);
 
     expect(document.documentElement.dataset.theme).toBe("band");
+    expect(document.querySelector("main.site")?.getAttribute("data-theme")).toBe("band");
     expect(localStorage.getItem("yuyun-site-theme")).toBe("band");
     expect(screen.getByRole("button", { name: "Switch to the minimal academic edition" }).textContent).toBe("VOL. 02");
   });
@@ -428,23 +431,36 @@ describe("owner session restoration", () => {
     });
 
     render(<App />);
-    expect((await screen.findByRole("link", { name: "View on Douban" })).getAttribute("href"))
+    const doubanLink = await screen.findByRole("link", { name: "View on Douban" });
+    expect(doubanLink.getAttribute("href"))
       .toBe("https://movie.douban.com/subject/1295644/");
+    expect(doubanLink.classList.contains("archive-entry__external")).toBe(true);
+
+    const startDateInput = screen.getByLabelText("Start date");
+    const endDateInput = screen.getByLabelText("End date");
+    expect(startDateInput.getAttribute("type")).toBe("text");
+    expect(startDateInput.getAttribute("placeholder")).toBe("yyyymmdd");
+    expect(endDateInput.getAttribute("placeholder")).toBe("yyyymmdd");
 
     fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "writing" } });
     expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
     expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-01-01" } });
+    fireEvent.change(startDateInput, { target: { value: "20260101" } });
     expect(screen.queryByRole("heading", { name: "A notebook page" })).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "all" } });
     expect(screen.getByRole("heading", { name: "A film note" })).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "" } });
-    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2025-12-31" } });
+    fireEvent.change(startDateInput, { target: { value: "" } });
+    fireEvent.change(endDateInput, { target: { value: "2025-12-31" } });
     expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
     expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
+    expect(screen.getByLabelText("起始日期").getAttribute("placeholder")).toBe("年月日");
+    expect(screen.getByLabelText("终止日期").getAttribute("placeholder")).toBe("年月日");
+    expect((screen.getByLabelText("终止日期") as HTMLInputElement).value).toBe("2025年12月31日");
   });
 
   it("uses the creation date for undated visitor entries and keeps them filterable", async () => {
