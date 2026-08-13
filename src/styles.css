@@ -134,13 +134,8 @@ img { display: block; max-width: 100%; }
 }
 .language-toggle:hover { transform: translate(-1px, -1px); background: var(--blue); color: white; }
 .nav-toggle, .nav-backdrop, .nav-drawer-heading { display: none; }
-.mobile-theme-selector { display: none; }
-.theme-selector {
-  display: inline-flex;
-  align-items: stretch;
-}
+.mobile-theme-toggle { display: none; }
 .volume-mark {
-  min-height: 32px;
   padding: 5px 8px;
   border: 1.5px solid var(--ink);
   background: var(--white);
@@ -149,9 +144,6 @@ img { display: block; max-width: 100%; }
   font-weight: 900;
   cursor: pointer;
 }
-.volume-mark + .volume-mark { margin-left: -1.5px; }
-.volume-mark[aria-pressed="true"] { position: relative; z-index: 1; background: var(--ink); color: var(--white); }
-.site-header--dark .volume-mark[aria-pressed="true"] { background: #efd08b; color: #19171e; }
 
 .kicker {
   margin: 0;
@@ -1651,7 +1643,6 @@ img { display: block; max-width: 100%; }
 }
 [data-theme="minimal"] .language-toggle:hover,
 [data-theme="minimal"] .volume-mark:hover { background: #171717; color: #fff; transform: none; }
-[data-theme="minimal"] .volume-mark[aria-pressed="true"] { background: #171717; color: #fff; }
 
 [data-theme="minimal"] .home-hero {
   max-width: 1080px;
@@ -2025,7 +2016,7 @@ img { display: block; max-width: 100%; }
     padding: 0;
   }
   .site-name__yuyun, .site-name__chen { font-size: 20px; }
-  .theme-selector { display: none; }
+  .volume-mark { display: none; }
   .header-tools { grid-column: 2; grid-row: 1; }
   .nav-toggle {
     position: relative;
@@ -2110,26 +2101,23 @@ img { display: block; max-width: 100%; }
     font: 400 30px/1 Arial, sans-serif;
     cursor: pointer;
   }
-  .mobile-theme-selector {
+  .mobile-theme-toggle {
     width: 100%;
+    min-height: 44px;
     margin-bottom: 8px;
-    padding: 8px 4px 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
+    padding: 9px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
     border-bottom: 1px solid var(--line);
-  }
-  .mobile-theme-selector button {
-    min-height: 38px;
-    border: 1px solid var(--line);
     background: transparent;
     color: var(--muted);
-    font-size: 10px;
-    font-weight: 900;
+    font-size: 12px;
+    font-weight: 700;
     cursor: pointer;
   }
-  .mobile-theme-selector button + button { margin-left: -1px; }
-  .mobile-theme-selector button[aria-pressed="true"] { position: relative; z-index: 1; border-color: var(--ink); background: var(--ink); color: var(--white); }
+  .mobile-theme-toggle span { color: var(--blue); font-size: 10px; letter-spacing: .06em; }
   .nav-links--mobile a {
     width: 100%;
     min-height: 54px;

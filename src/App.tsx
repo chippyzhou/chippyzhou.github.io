@@ -51,7 +51,6 @@ const copy = {
     closeNavigation: "Close navigation",
     openNavigation: "Open navigation",
     contents: "Contents",
-    editionSelector: "Choose website edition",
     switchToBandStyle: "Switch to the girl-band edition",
     switchToMinimalStyle: "Switch to the minimal academic edition",
     researchLog: "陈彧赟 / research log",
@@ -268,7 +267,6 @@ const copy = {
     closeNavigation: "关闭导航",
     openNavigation: "打开导航",
     contents: "目录",
-    editionSelector: "选择网站版本",
     switchToBandStyle: "切换到少女乐队版",
     switchToMinimalStyle: "切换到简约学术版",
     researchLog: "陈彧赟 / 研究记录",
@@ -1242,7 +1240,6 @@ const visitorSessionKey = "yuyun-private-space-session";
 const ownerSessionKey = "yuyun-owner-console-session";
 const ownerPreviewKey = "yuyun-owner-space-preview";
 const languageStorageKey = "yuyun-site-language";
-const themeStorageKey = "yuyun-site-theme";
 
 function takeInitialPrivateSpaceSession() {
   const ownerPreviewToken = sessionStorage.getItem(ownerPreviewKey);
@@ -2712,9 +2709,7 @@ export default function App() {
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem(languageStorageKey) === "zh" ? "zh" : "en");
   const [theme, setTheme] = useState<SiteTheme>(() => {
     const initialPage = getPageFromHash();
-    return initialPage === "gallery" || initialPage === "space" || localStorage.getItem(themeStorageKey) === "band"
-      ? "band"
-      : "minimal";
+    return initialPage === "gallery" || initialPage === "space" ? "band" : "minimal";
   });
 
   useEffect(() => {
@@ -2723,10 +2718,6 @@ export default function App() {
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
 
   useEffect(() => {
@@ -2741,13 +2732,15 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  const handleThemeSelect = (nextTheme: SiteTheme) => {
-    if (nextTheme === theme) return;
-    if (nextTheme === "minimal" && (currentPage === "gallery" || currentPage === "space")) {
-      window.location.hash = "#/";
-      setCurrentPage("home");
-    }
-    setTheme(nextTheme);
+  const handleThemeToggle = () => {
+    setTheme((current) => {
+      const nextTheme = current === "minimal" ? "band" : "minimal";
+      if (nextTheme === "minimal" && (currentPage === "gallery" || currentPage === "space")) {
+        window.location.hash = "#/";
+        setCurrentPage("home");
+      }
+      return nextTheme;
+    });
   };
 
   useEffect(() => {
@@ -2822,28 +2815,15 @@ export default function App() {
             >
               {tr(language, "languageToggle")}
             </button>
-            <div className="theme-selector" role="group" aria-label={tr(language, "editionSelector")}>
-              <button
-                className="volume-mark"
-                type="button"
-                aria-label={tr(language, "switchToMinimalStyle")}
-                aria-pressed={theme === "minimal"}
-                title={tr(language, "switchToMinimalStyle")}
-                onClick={() => handleThemeSelect("minimal")}
-              >
-                VOL. 01
-              </button>
-              <button
-                className="volume-mark"
-                type="button"
-                aria-label={tr(language, "switchToBandStyle")}
-                aria-pressed={theme === "band"}
-                title={tr(language, "switchToBandStyle")}
-                onClick={() => handleThemeSelect("band")}
-              >
-                VOL. 02
-              </button>
-            </div>
+            <button
+              className="volume-mark theme-toggle"
+              type="button"
+              aria-label={tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
+              title={tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
+              onClick={handleThemeToggle}
+            >
+              {theme === "minimal" ? "VOL. 01" : "VOL. 02"}
+            </button>
           </div>
           <button
             className="nav-toggle"
@@ -2875,24 +2855,14 @@ export default function App() {
               <span>{tr(language, "contents")}</span>
               <button type="button" aria-label={tr(language, "closeNavigation")} onClick={() => setIsMenuOpen(false)}>×</button>
             </div>
-            <div className="mobile-theme-selector" role="group" aria-label={tr(language, "editionSelector")}>
-              <button
-                type="button"
-                aria-label={tr(language, "switchToMinimalStyle")}
-                aria-pressed={theme === "minimal"}
-                onClick={() => handleThemeSelect("minimal")}
-              >
-                VOL. 01
-              </button>
-              <button
-                type="button"
-                aria-label={tr(language, "switchToBandStyle")}
-                aria-pressed={theme === "band"}
-                onClick={() => handleThemeSelect("band")}
-              >
-                VOL. 02
-              </button>
-            </div>
+            <button
+              className="mobile-theme-toggle"
+              type="button"
+              onClick={handleThemeToggle}
+            >
+              <span>{theme === "minimal" ? "VOL. 01" : "VOL. 02"}</span>
+              {tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
+            </button>
             {navigationItems}
           </div>
         </div>,

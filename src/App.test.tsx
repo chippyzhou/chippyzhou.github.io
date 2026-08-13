@@ -172,31 +172,26 @@ describe("owner session restoration", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
   });
 
-  it("maps VOL. 01 to the minimal edition and VOL. 02 to the girl-band edition", () => {
+  it("defaults to VOL. 01 minimal and uses one button to switch editions", () => {
     document.documentElement.dataset.theme = "band";
+    localStorage.setItem("yuyun-site-theme", "band");
     render(<App />);
 
     expect(document.documentElement.dataset.theme).toBe("minimal");
     expect(document.querySelector("main.site")?.getAttribute("data-theme")).toBe("minimal");
-    const minimalEdition = screen.getByRole("button", { name: "Switch to the minimal academic edition" });
-    const bandEdition = screen.getByRole("button", { name: "Switch to the girl-band edition" });
-    expect(minimalEdition.textContent).toBe("VOL. 01");
-    expect(minimalEdition.getAttribute("aria-pressed")).toBe("true");
-    expect(bandEdition.textContent).toBe("VOL. 02");
-    expect(bandEdition.getAttribute("aria-pressed")).toBe("false");
+    const switcher = screen.getByRole("button", { name: "Switch to the girl-band edition" });
+    expect(switcher.textContent).toBe("VOL. 01");
 
-    fireEvent.click(bandEdition);
+    fireEvent.click(switcher);
 
     expect(document.documentElement.dataset.theme).toBe("band");
     expect(document.querySelector("main.site")?.getAttribute("data-theme")).toBe("band");
-    expect(localStorage.getItem("yuyun-site-theme")).toBe("band");
-    expect(minimalEdition.getAttribute("aria-pressed")).toBe("false");
-    expect(bandEdition.getAttribute("aria-pressed")).toBe("true");
+    const returnSwitcher = screen.getByRole("button", { name: "Switch to the minimal academic edition" });
+    expect(returnSwitcher.textContent).toBe("VOL. 02");
 
-    fireEvent.click(minimalEdition);
+    fireEvent.click(returnSwitcher);
 
     expect(document.documentElement.dataset.theme).toBe("minimal");
-    expect(localStorage.getItem("yuyun-site-theme")).toBe("minimal");
   });
 
   it("opens legacy gallery and personal-space links in the girl-band edition", () => {
