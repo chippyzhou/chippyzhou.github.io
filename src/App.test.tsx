@@ -172,21 +172,31 @@ describe("owner session restoration", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
   });
 
-  it("defaults to the minimal academic edition and persists the VOL switch", () => {
+  it("maps VOL. 01 to the minimal edition and VOL. 02 to the girl-band edition", () => {
     document.documentElement.dataset.theme = "band";
     render(<App />);
 
     expect(document.documentElement.dataset.theme).toBe("minimal");
     expect(document.querySelector("main.site")?.getAttribute("data-theme")).toBe("minimal");
-    const switcher = screen.getByRole("button", { name: "Switch to the girl-band edition" });
-    expect(switcher.textContent).toBe("VOL. 01");
+    const minimalEdition = screen.getByRole("button", { name: "Switch to the minimal academic edition" });
+    const bandEdition = screen.getByRole("button", { name: "Switch to the girl-band edition" });
+    expect(minimalEdition.textContent).toBe("VOL. 01");
+    expect(minimalEdition.getAttribute("aria-pressed")).toBe("true");
+    expect(bandEdition.textContent).toBe("VOL. 02");
+    expect(bandEdition.getAttribute("aria-pressed")).toBe("false");
 
-    fireEvent.click(switcher);
+    fireEvent.click(bandEdition);
 
     expect(document.documentElement.dataset.theme).toBe("band");
     expect(document.querySelector("main.site")?.getAttribute("data-theme")).toBe("band");
     expect(localStorage.getItem("yuyun-site-theme")).toBe("band");
-    expect(screen.getByRole("button", { name: "Switch to the minimal academic edition" }).textContent).toBe("VOL. 02");
+    expect(minimalEdition.getAttribute("aria-pressed")).toBe("false");
+    expect(bandEdition.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(minimalEdition);
+
+    expect(document.documentElement.dataset.theme).toBe("minimal");
+    expect(localStorage.getItem("yuyun-site-theme")).toBe("minimal");
   });
 
   it("opens legacy gallery and personal-space links in the girl-band edition", () => {
