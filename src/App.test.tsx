@@ -68,6 +68,21 @@ describe("owner session restoration", () => {
     expect(screen.getByTestId("private-session-loading")).toBeTruthy();
   });
 
+  it("keeps the Android private-space key field editable and keyboard-friendly", () => {
+    window.location.hash = "#/space";
+
+    render(<App />);
+
+    const invitation = screen.getByLabelText("Your personal invitation") as HTMLInputElement;
+    expect(invitation.type).toBe("password");
+    expect(invitation.readOnly).toBe(false);
+    expect(invitation.getAttribute("autocapitalize")).toBe("none");
+    expect(invitation.getAttribute("autocorrect")).toBe("off");
+    expect(invitation.getAttribute("spellcheck")).toBe("false");
+    fireEvent.change(invitation, { target: { value: "Android-check" } });
+    expect(invitation.value).toBe("Android-check");
+  });
+
   it("uses the award result as the competition heading and the competition name as its result line", () => {
     window.location.hash = "#/awards";
 
@@ -101,7 +116,7 @@ describe("owner session restoration", () => {
     expect(document.querySelector(".research-polaroid")).toBeNull();
   });
 
-  it("keeps gallery and personal space exclusive to the girl-band edition", () => {
+  it("keeps every girl-band page behind the VOL password gate", () => {
     render(<App />);
 
     const minimalNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
@@ -109,10 +124,40 @@ describe("owner session restoration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Switch to the girl-band edition" }));
 
+    expect(window.location.hash).toBe("#/space");
+    expect(document.documentElement.dataset.theme).toBe("minimal");
+    expect(screen.getByPlaceholderText("Enter invitation code")).toBeTruthy();
+    expect(document.querySelector('.site img[src*="band-wall"]')).toBeNull();
+  });
+
+  it("reveals only the girl-band navigation after a valid VOL invitation", async () => {
+    api.unlockPrivateSpace.mockResolvedValue({
+      name: "Visitor",
+      visitor_number: 2,
+      is_owner: false,
+      session_token: "visitor-token",
+    });
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: {
+        name: "Visitor",
+        visitor_number: 2,
+        visit_count: 1,
+        is_owner: false,
+      },
+      entries: [],
+      messages: [],
+      playlist: [],
+    });
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Switch to the girl-band edition" }));
+    fireEvent.change(screen.getByPlaceholderText("Enter invitation code"), { target: { value: "Visitor-example" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enter ↗" }));
+
+    await screen.findByText("VISITOR PASS");
+    expect(document.documentElement.dataset.theme).toBe("band");
     const bandNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(bandNavigation.indexOf("Tech Notes📓")).toBe(bandNavigation.indexOf("Gallery🎹") - 1);
-    expect(bandNavigation.at(-1)).toBe("Personal Space🔐");
-    expect(document.querySelector('.site img[src*="band-wall"]')).toBeTruthy();
+    expect(bandNavigation).toEqual(["Home🎤", "Gallery🎹", "Writing✒️", "Photography📷", "Film note🎬"]);
   });
 
   it("uses compact Chinese labels in the top navigation", () => {
@@ -172,7 +217,7 @@ describe("owner session restoration", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
   });
 
-  it("defaults to VOL. 01 minimal and uses one button to switch editions", () => {
+  it("defaults to VOL. 01 minimal and routes VOL through the private password gate", () => {
     document.documentElement.dataset.theme = "band";
     localStorage.setItem("yuyun-site-theme", "band");
     render(<App />);
@@ -184,29 +229,25 @@ describe("owner session restoration", () => {
 
     fireEvent.click(switcher);
 
-    expect(document.documentElement.dataset.theme).toBe("band");
-    expect(document.querySelector("main.site")?.getAttribute("data-theme")).toBe("band");
-    const returnSwitcher = screen.getByRole("button", { name: "Switch to the minimal academic edition" });
-    expect(returnSwitcher.textContent).toBe("VOL. 02");
-
-    fireEvent.click(returnSwitcher);
-
     expect(document.documentElement.dataset.theme).toBe("minimal");
+    expect(window.location.hash).toBe("#/space");
+    expect(screen.getByPlaceholderText("Enter invitation code")).toBeTruthy();
   });
 
-  it("opens legacy gallery and personal-space links in the girl-band edition", () => {
+  it("routes direct girl-band links through the private password gate", () => {
     window.location.hash = "#/gallery";
     const { unmount } = render(<App />);
 
-    expect(document.documentElement.dataset.theme).toBe("band");
-    expect(screen.getByRole("heading", { name: "Visual record" })).toBeTruthy();
+    expect(document.documentElement.dataset.theme).toBe("minimal");
+    expect(screen.getByPlaceholderText("Enter invitation code")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Visual record" })).toBeNull();
 
     unmount();
     localStorage.clear();
     window.location.hash = "#/space";
     render(<App />);
 
-    expect(document.documentElement.dataset.theme).toBe("band");
+    expect(document.documentElement.dataset.theme).toBe("minimal");
     expect(screen.getByPlaceholderText("Enter invitation code")).toBeTruthy();
   });
 

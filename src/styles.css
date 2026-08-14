@@ -121,9 +121,11 @@ img { display: block; max-width: 100%; }
   gap: 8px;
 }
 .language-toggle {
-  min-width: 48px;
-  min-height: 32px;
-  padding: 6px 9px;
+  width: 42px;
+  height: 36px;
+  padding: 6px;
+  display: inline-grid;
+  place-items: center;
   border: 1.5px solid var(--ink);
   background: var(--white);
   color: var(--blue);
@@ -136,6 +138,8 @@ img { display: block; max-width: 100%; }
 .nav-toggle, .nav-backdrop, .nav-drawer-heading { display: none; }
 .mobile-theme-toggle { display: none; }
 .volume-mark {
+  min-width: 54px;
+  height: 36px;
   padding: 5px 8px;
   border: 1.5px solid var(--ink);
   background: var(--white);
@@ -514,6 +518,7 @@ img { display: block; max-width: 100%; }
   overflow: hidden;
   background: #111018;
   color: #f5f0e8;
+  color-scheme: dark;
   isolation: isolate;
 }
 .space-noise {
@@ -543,6 +548,7 @@ img { display: block; max-width: 100%; }
   padding: 48px 24px;
   background: #111018;
   color: #f5f0e8;
+  color-scheme: dark;
 }
 .session-loading__inner { display: grid; justify-items: center; gap: 16px; }
 .session-loading__inner span {
@@ -569,9 +575,25 @@ img { display: block; max-width: 100%; }
   border: 1px solid #827887;
   background: #17151d;
   color: #f5f0e8;
+  color-scheme: dark;
   font: 700 14px Georgia, serif;
 }
-.space-unlock input { min-width: 0; padding: 0 15px; outline: 0; cursor: text; }
+.space-unlock input {
+  min-width: 0;
+  padding: 0 15px;
+  position: relative;
+  z-index: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-text-fill-color: #f5f0e8;
+  opacity: 1;
+  outline: 0;
+  cursor: text;
+  font-size: 16px;
+  touch-action: manipulation;
+  user-select: text;
+  -webkit-user-select: text;
+}
 .space-unlock input:focus { border-color: #d7af68; box-shadow: 0 0 0 2px rgba(215,175,104,.15); }
 .space-unlock button { padding: 0 18px; border-color: #d2314a; color: #d2314a; cursor: pointer; }
 .space-unlock button:disabled, .space-unlock input:disabled { cursor: not-allowed; opacity: .55; }
@@ -1982,6 +2004,79 @@ img { display: block; max-width: 100%; }
   [data-theme="minimal"] .award-detail { grid-column: 2; }
 }
 
+/* The resume edition follows the operating system while the band edition keeps its own art direction. */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="minimal"],
+  .site[data-theme="minimal"] {
+    --paper: #171817;
+    --white: #20211f;
+    --ink: #f0eee7;
+    --muted: #b4b4ae;
+    --blue: #91c1ed;
+    --blue-dark: #bfdcf5;
+    --red: #f0eee7;
+    --yellow: #292a27;
+    --cyan: #2a3945;
+    --line: #52534e;
+  }
+
+  [data-theme="minimal"] body,
+  [data-theme="minimal"] .site,
+  .site[data-theme="minimal"] { background: #171817; color: #f0eee7; }
+  [data-theme="minimal"] .site-header:not(.site-header--dark) {
+    background: rgba(23, 24, 23, .97);
+    border-bottom-color: #f0eee7;
+  }
+  [data-theme="minimal"] .site-name__yuyun,
+  [data-theme="minimal"] .site-name__chen { color: #f0eee7; }
+  [data-theme="minimal"] .site-name small { color: #b4b4ae; }
+  [data-theme="minimal"] .nav-links a { color: #cacac3; }
+  [data-theme="minimal"] .nav-links a:hover,
+  [data-theme="minimal"] .nav-links a[aria-current="page"] { color: #91c1ed; border-color: #91c1ed; }
+  [data-theme="minimal"] .language-toggle,
+  [data-theme="minimal"] .volume-mark,
+  [data-theme="minimal"] .nav-toggle {
+    border-color: #f0eee7;
+    background: #171817;
+    color: #f0eee7;
+  }
+  [data-theme="minimal"] .language-toggle:hover,
+  [data-theme="minimal"] .volume-mark:hover { background: #f0eee7; color: #171817; }
+  [data-theme="minimal"] .home-copy h1 em,
+  [data-theme="minimal"] .metrics dt,
+  [data-theme="minimal"] .resume-summary__heading strong,
+  [data-theme="minimal"] .about-band h2 { color: #f0eee7; }
+  [data-theme="minimal"] .hero-intro,
+  [data-theme="minimal"] .about-band__copy > p,
+  [data-theme="minimal"] .project-entry p,
+  [data-theme="minimal"] .publication-entry p,
+  [data-theme="minimal"] .note-sheet__body > p:not(.entry-meta),
+  [data-theme="minimal"] .award-detail,
+  [data-theme="minimal"] .publication-authors { color: #d8d7d0 !important; }
+  [data-theme="minimal"] .resume-summary,
+  [data-theme="minimal"] .about-band,
+  [data-theme="minimal"] .project-entry,
+  [data-theme="minimal"] .publication-entry,
+  [data-theme="minimal"] .award-entry,
+  [data-theme="minimal"] .note-sheet,
+  [data-theme="minimal"] .contact-footer { border-color: #f0eee7; }
+  [data-theme="minimal"] .button,
+  [data-theme="minimal"] .button--project,
+  [data-theme="minimal"] .button--academic,
+  [data-theme="minimal"] .button--awards { color: #f0eee7; border-color: #f0eee7; }
+  [data-theme="minimal"] .button:hover { color: #f0eee7; }
+  [data-theme="minimal"] .button--project { background: #23486b; }
+  [data-theme="minimal"] .button--academic { background: #3a4f61; }
+  [data-theme="minimal"] .button--awards { background: #41433e; }
+  [data-theme="minimal"] .page-toc-mobile,
+  [data-theme="minimal"] .page-toc-mobile a { border-color: #70716a; }
+  [data-theme="minimal"] .page-toc-mobile a { color: #e0ded7; }
+  [data-theme="minimal"] .mobile-nav-layer .nav-links--mobile {
+    background: #171817;
+    border-left-color: #f0eee7;
+  }
+}
+
 @media (max-width: 920px) {
   .site-header nav { grid-template-columns: 1fr auto; padding: 10px 0; }
   .site-header nav > .nav-links { grid-column: 1 / -1; order: 3; overflow-x: auto; }
@@ -2018,6 +2113,12 @@ img { display: block; max-width: 100%; }
   .site-name__yuyun, .site-name__chen { font-size: 20px; }
   .volume-mark { display: none; }
   .header-tools { grid-column: 2; grid-row: 1; }
+  .language-toggle {
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+  }
   .nav-toggle {
     position: relative;
     z-index: 43;
@@ -2102,22 +2203,20 @@ img { display: block; max-width: 100%; }
     cursor: pointer;
   }
   .mobile-theme-toggle {
-    width: 100%;
-    min-height: 44px;
-    margin-bottom: 8px;
-    padding: 9px 4px;
+    width: max-content;
+    min-height: 32px;
+    margin: 0 0 12px;
+    padding: 6px 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     border: 0;
     border-bottom: 1px solid var(--line);
     background: transparent;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--blue);
     cursor: pointer;
   }
-  .mobile-theme-toggle span { color: var(--blue); font-size: 10px; letter-spacing: .06em; }
+  .mobile-theme-toggle span { color: currentColor; font-size: 10px; font-weight: 900; letter-spacing: .08em; }
   .nav-links--mobile a {
     width: 100%;
     min-height: 54px;

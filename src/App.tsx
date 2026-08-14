@@ -33,7 +33,7 @@ import {
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
 
-type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "space" | "admin";
+type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "writing" | "photography" | "film" | "space" | "admin";
 type Language = "en" | "zh";
 type SiteTheme = "minimal" | "band";
 
@@ -536,6 +536,9 @@ const navLabelKeys: Record<Exclude<PageKey, "admin">, CopyKey> = {
   notes: "notes",
   awards: "awards",
   gallery: "gallery",
+  writing: "writing",
+  photography: "photography",
+  film: "filmNote",
   space: "space",
 };
 
@@ -827,6 +830,9 @@ const pages: Array<{ key: Exclude<PageKey, "admin">; label: string; icon: string
   { key: "awards", label: "Awards", icon: "🥁" },
   { key: "notes", label: "Tech Notes", icon: "📓" },
   { key: "gallery", label: "Gallery", icon: "🎹" },
+  { key: "writing", label: "Writing", icon: "✒️" },
+  { key: "photography", label: "Photography", icon: "📷" },
+  { key: "film", label: "Film Notes", icon: "🎬" },
   { key: "space", label: "Personal Space", icon: "🔐" },
 ];
 
@@ -1386,7 +1392,17 @@ function renderRichEntryBody(markdown: string, images: EntryImage[], language: L
   return sections;
 }
 
-function PersonalSpacePage({ language }: { language: Language }) {
+function PersonalSpacePage({
+  language,
+  fixedEntryKind = "all",
+  onAccessGranted,
+  onSignedOut,
+}: {
+  language: Language;
+  fixedEntryKind?: "all" | PrivateEntry["kind"];
+  onAccessGranted?: () => void;
+  onSignedOut?: () => void;
+}) {
   const [inviteCode, setInviteCode] = useState("");
   const [sessionToken, setSessionToken] = useState(takeInitialPrivateSpaceSession);
   const [content, setContent] = useState<PrivateSpaceContent | null>(null);
@@ -1396,7 +1412,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(() => new Set());
-  const [entryKindFilter, setEntryKindFilter] = useState<"all" | PrivateEntry["kind"]>("all");
+  const [entryKindFilter, setEntryKindFilter] = useState<"all" | PrivateEntry["kind"]>(fixedEntryKind);
   const [entryStartDate, setEntryStartDate] = useState("");
   const [entryEndDate, setEntryEndDate] = useState("");
   const [musicPlayRequest, setMusicPlayRequest] = useState<MusicPlayRequest | null>(null);
@@ -1414,6 +1430,10 @@ function PersonalSpacePage({ language }: { language: Language }) {
     setEntryStartDate((value) => formatDateFilter(value, language));
     setEntryEndDate((value) => formatDateFilter(value, language));
   }, [language]);
+
+  useEffect(() => {
+    setEntryKindFilter(fixedEntryKind);
+  }, [fixedEntryKind]);
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -1444,6 +1464,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
           localStorage.removeItem(ownerSessionKey);
         }
         setError("");
+        onAccessGranted?.();
       })
       .catch((requestError: Error) => {
         if (!isCurrentRequest) return;
@@ -1535,6 +1556,7 @@ function PersonalSpacePage({ language }: { language: Language }) {
     setEntryEndDate("");
     setMusicPlayRequest(null);
     setError("");
+    onSignedOut?.();
   };
 
   const toggleEntry = (entryId: string) => {
@@ -1569,6 +1591,11 @@ function PersonalSpacePage({ language }: { language: Language }) {
                 onChange={(event) => setInviteCode(event.target.value)}
                 placeholder={tr(language, "invitationPlaceholder")}
                 autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
+                enterKeyHint="go"
                 autoFocus
               />
               <button type="submit" disabled={!inviteCode.trim() || isUnlocking}>
@@ -1622,19 +1649,21 @@ function PersonalSpacePage({ language }: { language: Language }) {
         {content.entries.length > 0 && (
           <div className="archive-filters">
             <p><strong>{filteredEntries.length}</strong> {tr(language, "entriesShown")}</p>
-            <label>
-              <span>{tr(language, "filterByType")}</span>
-              <select
-                aria-label={tr(language, "filterByType")}
-                value={entryKindFilter}
-                onChange={(event) => setEntryKindFilter(event.target.value as "all" | PrivateEntry["kind"])}
-              >
-                <option value="all">{tr(language, "allTypes")}</option>
-                <option value="writing">{tr(language, "writing")}</option>
-                <option value="photography">{tr(language, "photography")}</option>
-                <option value="film">{tr(language, "filmNote")}</option>
-              </select>
-            </label>
+            {fixedEntryKind === "all" && (
+              <label>
+                <span>{tr(language, "filterByType")}</span>
+                <select
+                  aria-label={tr(language, "filterByType")}
+                  value={entryKindFilter}
+                  onChange={(event) => setEntryKindFilter(event.target.value as "all" | PrivateEntry["kind"])}
+                >
+                  <option value="all">{tr(language, "allTypes")}</option>
+                  <option value="writing">{tr(language, "writing")}</option>
+                  <option value="photography">{tr(language, "photography")}</option>
+                  <option value="film">{tr(language, "filmNote")}</option>
+                </select>
+              </label>
+            )}
             <label>
               <span>{tr(language, "filterStartDate")}</span>
               <input
@@ -2707,10 +2736,8 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>(() => getPageFromHash());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem(languageStorageKey) === "zh" ? "zh" : "en");
-  const [theme, setTheme] = useState<SiteTheme>(() => {
-    const initialPage = getPageFromHash();
-    return initialPage === "gallery" || initialPage === "space" ? "band" : "minimal";
-  });
+  const [theme, setTheme] = useState<SiteTheme>("minimal");
+  const [hasPrivateAccess, setHasPrivateAccess] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(languageStorageKey, language);
@@ -2723,7 +2750,6 @@ export default function App() {
   useEffect(() => {
     const onHashChange = () => {
       const nextPage = getPageFromHash();
-      if (nextPage === "gallery" || nextPage === "space") setTheme("band");
       setCurrentPage(nextPage);
       setIsMenuOpen(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2733,14 +2759,32 @@ export default function App() {
   }, []);
 
   const handleThemeToggle = () => {
-    setTheme((current) => {
-      const nextTheme = current === "minimal" ? "band" : "minimal";
-      if (nextTheme === "minimal" && (currentPage === "gallery" || currentPage === "space")) {
-        window.location.hash = "#/";
-        setCurrentPage("home");
-      }
-      return nextTheme;
-    });
+    if (theme === "minimal") {
+      window.location.hash = "#/space";
+      setCurrentPage("space");
+      setIsMenuOpen(false);
+      return;
+    }
+    sessionStorage.removeItem(visitorSessionKey);
+    sessionStorage.removeItem(ownerPreviewKey);
+    localStorage.removeItem(ownerSessionKey);
+    setHasPrivateAccess(false);
+    setTheme("minimal");
+    window.location.hash = "#/";
+    setCurrentPage("home");
+    setIsMenuOpen(false);
+  };
+
+  const grantPrivateAccess = () => {
+    setHasPrivateAccess(true);
+    setTheme("band");
+  };
+
+  const revokePrivateAccess = () => {
+    setHasPrivateAccess(false);
+    setTheme("minimal");
+    window.location.hash = "#/";
+    setCurrentPage("home");
   };
 
   useEffect(() => {
@@ -2752,6 +2796,22 @@ export default function App() {
   }, []);
 
   const pageContent = useMemo(() => {
+    const entryKindForPage: Partial<Record<PageKey, PrivateEntry["kind"]>> = {
+      writing: "writing",
+      photography: "photography",
+      film: "film",
+    };
+    const isPrivatePage = currentPage === "gallery" || Boolean(entryKindForPage[currentPage]);
+    if (currentPage === "space" || (isPrivatePage && !hasPrivateAccess)) {
+      return (
+        <PersonalSpacePage
+          language={language}
+          fixedEntryKind={entryKindForPage[currentPage] || "all"}
+          onAccessGranted={grantPrivateAccess}
+          onSignedOut={revokePrivateAccess}
+        />
+      );
+    }
     switch (currentPage) {
       case "projects":
         return <ProjectsPage language={language} theme={theme} />;
@@ -2763,18 +2823,27 @@ export default function App() {
         return <AwardsPage language={language} theme={theme} />;
       case "gallery":
         return <GalleryPage language={language} />;
-      case "space":
-        return <PersonalSpacePage language={language} />;
+      case "writing":
+      case "photography":
+      case "film":
+        return (
+          <PersonalSpacePage
+            language={language}
+            fixedEntryKind={entryKindForPage[currentPage]}
+            onAccessGranted={grantPrivateAccess}
+            onSignedOut={revokePrivateAccess}
+          />
+        );
       case "admin":
         return <AdminPage language={language} />;
       default:
         return <HomePage language={language} theme={theme} setPage={setCurrentPage} />;
     }
-  }, [currentPage, language, theme]);
+  }, [currentPage, hasPrivateAccess, language, theme]);
 
   const visiblePages = theme === "minimal"
-    ? pages.filter((page) => page.key !== "gallery" && page.key !== "space")
-    : pages;
+    ? pages.filter((page) => ["home", "projects", "publications", "awards", "notes"].includes(page.key))
+    : pages.filter((page) => ["home", "gallery", "writing", "photography", "film"].includes(page.key));
   const navigationItems = visiblePages.map((page) => (
     <a
       key={page.key}
@@ -2793,7 +2862,7 @@ export default function App() {
   return (
     <>
       <main className={`site site--${theme}`} data-theme={theme}>
-        <header className={`site-header${currentPage === "space" ? " site-header--dark" : ""}`}>
+        <header className={`site-header${(theme === "band" || currentPage === "space") ? " site-header--dark" : ""}`}>
           <nav>
           <a
             href="#/"
@@ -2858,10 +2927,10 @@ export default function App() {
             <button
               className="mobile-theme-toggle"
               type="button"
+              aria-label={tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
               onClick={handleThemeToggle}
             >
               <span>{theme === "minimal" ? "VOL. 01" : "VOL. 02"}</span>
-              {tr(language, theme === "minimal" ? "switchToBandStyle" : "switchToMinimalStyle")}
             </button>
             {navigationItems}
           </div>
