@@ -30,6 +30,8 @@ export type GuestbookMessage = {
   visitor_name: string;
   body: string;
   created_at: string;
+  owner_reply?: string | null;
+  owner_replied_at?: string | null;
 };
 
 export type VisitorIdentity = {
@@ -55,6 +57,7 @@ export type AdminInvite = {
   visit_count: number;
   last_seen_at: string | null;
   created_at: string;
+  code_display?: string | null;
 };
 
 export type AdminEvent = {
@@ -385,6 +388,13 @@ export function setVisitorInviteStatus(sessionToken: string, inviteId: string, i
   });
 }
 
+export function deleteVisitorInvite(sessionToken: string, inviteId: string) {
+  return rpc<{ id: string }>("owner_delete_visitor", {
+    session_token: sessionToken,
+    visitor_id: inviteId,
+  });
+}
+
 export function setGuestbookMessageStatus(
   sessionToken: string,
   messageId: string,
@@ -394,6 +404,14 @@ export function setGuestbookMessageStatus(
     session_token: sessionToken,
     message_id: messageId,
     new_status: status,
+  });
+}
+
+export function setGuestbookMessageReply(sessionToken: string, messageId: string, reply: string) {
+  return rpc<AdminMessage>("owner_set_guestbook_reply", {
+    session_token: sessionToken,
+    message_id: messageId,
+    reply_body: reply,
   });
 }
 

@@ -722,6 +722,7 @@ img { display: block; max-width: 100%; }
 .archive-entry p { color: #d7af68; font-size: 9px; font-weight: 900; text-transform: uppercase; }
 .archive-entry h2 { margin: 7px 0 10px; font: 700 25px/1.05 Georgia, serif; }
 .archive-entry strong {
+  margin: 0 0 6px;
   overflow: hidden;
   display: -webkit-box;
   color: #b4adb7;
@@ -758,7 +759,7 @@ img { display: block; max-width: 100%; }
 }
 .archive-entry__external {
   width: fit-content;
-  margin: 16px 0 9px;
+  margin: 14px 0 9px;
   padding: 5px 7px;
   display: inline-flex;
   align-items: center;
@@ -1040,7 +1041,7 @@ img { display: block; max-width: 100%; }
 .guestbook { padding-top: 64px; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 70px; border-top: 1px solid #524b58; }
 .guestbook__intro h2 { margin: 0; font: 700 47px/.95 Georgia, serif; }
 .guestbook__intro > p:last-child { color: #aaa2ad; font: italic 15px/1.7 Georgia, serif; }
-.guestbook-form textarea { width: 100%; min-height: 160px; resize: vertical; padding: 22px; border: 1px solid #6e6372; border-radius: 0; outline: 0; background: #17151d; color: #f5f0e8; font: 18px/1.8 "Comic Sans MS", "Bradley Hand", cursive; }
+.guestbook-form textarea { width: 100%; min-height: 160px; resize: vertical; padding: 22px; border: 1px solid #6e6372; border-radius: 0; outline: 0; background: #17151d; color: #f5f0e8; font: 700 17px/1.75 "Chalkboard SE", "Arial Rounded MT Bold", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif; }
 .guestbook-form textarea:focus { border-color: #d7af68; }
 .guestbook-form > div { margin-top: 9px; display: flex; justify-content: space-between; align-items: center; color: #77717b; font-size: 10px; }
 .guestbook-form button { padding: 9px 13px; border: 1px solid #d7af68; border-radius: 0; background: transparent; color: #d7af68; font-weight: 900; cursor: pointer; }
@@ -1065,11 +1066,14 @@ img { display: block; max-width: 100%; }
   margin: 0;
   overflow: hidden;
   display: -webkit-box;
-  font: 17px/1.55 "Comic Sans MS", "Bradley Hand", cursive;
+  font: 700 16px/1.55 "Chalkboard SE", "Arial Rounded MT Bold", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif;
   white-space: pre-wrap;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 5;
 }
+.guestbook-note__reply { margin-top: 10px; padding-top: 9px; border-top: 1px dashed rgba(41, 36, 45, .3); }
+.guestbook-note__reply strong { display: block; color: #a23852; font: 800 9px/1.3 Arial, Helvetica, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.guestbook-note__reply p { margin-top: 4px; font-size: 13px; -webkit-line-clamp: 2; }
 .guestbook-note time {
   margin-top: auto;
   padding-top: 11px;
@@ -1221,6 +1225,13 @@ img { display: block; max-width: 100%; }
 .visitor-table dt { color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; }
 .visitor-table dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 11px; font-weight: 800; }
 .visitor-table button { min-height: 34px; padding: 7px 10px; color: var(--red); border-color: var(--red); }
+.visitor-code { margin: 0 0 12px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.visitor-code > span { color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; }
+.visitor-code code { min-width: 0; padding: 7px 8px; overflow-wrap: anywhere; background: #f2f5ff; border: 1px solid var(--line); color: var(--blue-dark); font: 700 10px/1.4 "SFMono-Regular", Consolas, monospace; }
+.visitor-code small { grid-column: 2 / -1; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.visitor-code button { min-height: 29px; color: var(--ink); border-color: var(--ink); }
+.visitor-table__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.visitor-table__actions .is-delete { color: #b03045; border-color: #b03045; }
 .activity-list { display: grid; }
 .activity-list > div { min-height: 48px; padding: 9px 0; display: grid; grid-template-columns: 66px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-top: 1px solid var(--line); }
 .activity-list > div:first-child { border-top: 0; }
@@ -1231,7 +1242,13 @@ img { display: block; max-width: 100%; }
 .moderation-list article { min-height: 132px; padding: 20px; background: #fff9df; border: 1px solid #d9c983; border-left: 4px solid var(--blue); box-shadow: 3px 4px 0 rgba(32, 38, 74, .1); transform: rotate(-.25deg); }
 .moderation-list article:nth-child(even) { transform: rotate(.25deg); }
 .moderation-list article.is-hidden { opacity: .62; border-left-color: var(--red); }
-.moderation-list p { margin: 0; color: #353958; font: 18px/1.7 "Comic Sans MS", "Bradley Hand", cursive; white-space: pre-wrap; }
+.moderation-list p { margin: 0; color: #353958; font: 700 16px/1.65 "Chalkboard SE", "Arial Rounded MT Bold", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif; white-space: pre-wrap; }
+.moderation-list__reply { margin-top: 14px; padding: 10px 12px; background: rgba(255, 255, 255, .6); border-left: 3px solid #d2314a; }
+.moderation-list__reply strong, .moderation-list__reply-editor > span { color: #9a2d43; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.moderation-list__reply p { margin-top: 5px; font-size: 14px; }
+.moderation-list__reply-editor { margin-top: 14px; display: grid; gap: 7px; }
+.moderation-list__reply-editor textarea { min-height: 78px; padding: 9px; resize: vertical; border: 1px solid #c9bb7f; border-radius: 0; background: rgba(255,255,255,.76); color: #353958; font: 700 14px/1.55 "Chalkboard SE", "Arial Rounded MT Bold", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif; }
+.moderation-list__reply-editor button { justify-self: start; }
 .moderation-list footer { margin-top: 20px; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); border-top: 1px dashed #c9bb7f; font-size: 10px; }
 .moderation-list button { min-height: 30px; padding: 5px 9px; }
 .admin-empty { margin: 0; padding: 32px 8px; color: var(--muted); font: italic 14px Georgia, serif; text-align: center; }
@@ -1592,6 +1609,71 @@ img { display: block; max-width: 100%; }
   .private-music-player__tools > label { width: 76px; }
   .private-music-player__error { max-width: 100%; }
   .private-music-player__queue { right: -1px; width: calc(100vw - 16px); }
+}
+
+/* Keep the resume edition legible after the mobile rules above. */
+@media (prefers-color-scheme: dark) {
+  [data-theme="minimal"] {
+    background: #171817;
+    color: #f0eee7;
+  }
+  [data-theme="minimal"] .home-hero,
+  [data-theme="minimal"] .about-band,
+  [data-theme="minimal"] .page-shell,
+  [data-theme="minimal"] .page-shell__inner,
+  [data-theme="minimal"] .page-shell__body,
+  [data-theme="minimal"] .contact-footer { background-color: #171817; }
+  [data-theme="minimal"] h1,
+  [data-theme="minimal"] h2,
+  [data-theme="minimal"] h3,
+  [data-theme="minimal"] strong,
+  [data-theme="minimal"] .home-copy h1,
+  [data-theme="minimal"] .editorial-heading__title,
+  [data-theme="minimal"] .editorial-heading__description,
+  [data-theme="minimal"] .resume-summary dd,
+  [data-theme="minimal"] .project-entry h2,
+  [data-theme="minimal"] .publication-entry h2,
+  [data-theme="minimal"] .award-entry h2,
+  [data-theme="minimal"] .note-sheet__body h2,
+  [data-theme="minimal"] .award-result { color: #f0eee7 !important; }
+  [data-theme="minimal"] p,
+  [data-theme="minimal"] li,
+  [data-theme="minimal"] .resume-summary dt,
+  [data-theme="minimal"] .entry-meta,
+  [data-theme="minimal"] .publication-authors,
+  [data-theme="minimal"] .award-detail,
+  [data-theme="minimal"] .project-entry__index,
+  [data-theme="minimal"] .publication-entry__index,
+  [data-theme="minimal"] .award-number,
+  [data-theme="minimal"] .note-sheet__rail,
+  [data-theme="minimal"] .page-toc a,
+  [data-theme="minimal"] .page-toc-mobile a { color: #d8d7d0 !important; }
+  [data-theme="minimal"] a,
+  [data-theme="minimal"] .entry-link,
+  [data-theme="minimal"] .publication-status a,
+  [data-theme="minimal"] .tag-list span,
+  [data-theme="minimal"] .page-toc a:hover,
+  [data-theme="minimal"] .page-toc-mobile summary { color: #9bc9f2 !important; }
+  [data-theme="minimal"] .site-header:not(.site-header--dark),
+  [data-theme="minimal"] .mobile-nav-layer .nav-links--mobile { background: #171817 !important; border-color: #777870 !important; }
+  [data-theme="minimal"] .site-header:not(.site-header--dark) .site-name__yuyun,
+  [data-theme="minimal"] .site-header:not(.site-header--dark) .site-name__chen,
+  [data-theme="minimal"] .site-header:not(.site-header--dark) .nav-links a,
+  [data-theme="minimal"] .site-header:not(.site-header--dark) .language-toggle,
+  [data-theme="minimal"] .site-header:not(.site-header--dark) .volume-mark,
+  [data-theme="minimal"] .site-header:not(.site-header--dark) .nav-toggle { color: #f0eee7 !important; }
+  [data-theme="minimal"] .language-toggle,
+  [data-theme="minimal"] .volume-mark,
+  [data-theme="minimal"] .nav-toggle { background: #171817 !important; border-color: #f0eee7 !important; }
+  [data-theme="minimal"] .resume-summary,
+  [data-theme="minimal"] .about-band,
+  [data-theme="minimal"] .project-entry,
+  [data-theme="minimal"] .publication-entry,
+  [data-theme="minimal"] .award-entry,
+  [data-theme="minimal"] .note-sheet,
+  [data-theme="minimal"] .contact-footer,
+  [data-theme="minimal"] .page-toc,
+  [data-theme="minimal"] .page-toc-mobile { border-color: #6e6f69 !important; }
 }
 
 .page-toc, .page-toc-mobile { display: none; }
@@ -2317,4 +2399,71 @@ img { display: block; max-width: 100%; }
   .moderation-list footer { align-items: flex-start; flex-direction: column; }
   .contact-footer { margin: 34px 16px 82px; grid-template-columns: 1fr; }
   .copy-toast { right: 0; bottom: -64px; width: 100%; min-width: 0; }
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="minimal"] .home-copy h1,
+  [data-theme="minimal"] .home-copy h1 em,
+  [data-theme="minimal"] .resume-summary__heading strong,
+  [data-theme="minimal"] .resume-summary dd,
+  [data-theme="minimal"] .editorial-heading h1,
+  [data-theme="minimal"] .project-entry h2,
+  [data-theme="minimal"] .publication-entry h2,
+  [data-theme="minimal"] .award-entry h2,
+  [data-theme="minimal"] .note-sheet__body h2,
+  [data-theme="minimal"] .contact-footer h2,
+  [data-theme="minimal"] .chapter-no {
+    color: #f0eee7 !important;
+  }
+
+  [data-theme="minimal"] .hero-intro,
+  [data-theme="minimal"] .about-band__copy > p,
+  [data-theme="minimal"] .resume-summary dt,
+  [data-theme="minimal"] .metrics dd,
+  [data-theme="minimal"] .entry-meta,
+  [data-theme="minimal"] .project-entry p,
+  [data-theme="minimal"] .publication-entry p,
+  [data-theme="minimal"] .note-sheet__body > p:not(.entry-meta),
+  [data-theme="minimal"] .award-detail,
+  [data-theme="minimal"] .publication-authors,
+  [data-theme="minimal"] .contact-footer p:last-child,
+  [data-theme="minimal"] .site-name small,
+  [data-theme="minimal"] .page-toc > span,
+  [data-theme="minimal"] .page-toc small,
+  [data-theme="minimal"] .page-toc-mobile small,
+  [data-theme="minimal"] .note-sheet__rail,
+  [data-theme="minimal"] .publication-status span {
+    color: #cfcfc8 !important;
+  }
+
+  [data-theme="minimal"] .page-toc a,
+  [data-theme="minimal"] .page-toc-mobile a,
+  [data-theme="minimal"] .resume-summary__links a,
+  [data-theme="minimal"] .entry-link,
+  [data-theme="minimal"] .publication-status a,
+  [data-theme="minimal"] .tag-list span,
+  [data-theme="minimal"] .award-result {
+    color: #9bc9f2 !important;
+  }
+
+  [data-theme="minimal"] .resume-summary,
+  [data-theme="minimal"] .about-band,
+  [data-theme="minimal"] .project-entry,
+  [data-theme="minimal"] .publication-entry,
+  [data-theme="minimal"] .award-entry,
+  [data-theme="minimal"] .note-sheet,
+  [data-theme="minimal"] .contact-footer,
+  [data-theme="minimal"] .page-toc,
+  [data-theme="minimal"] .page-toc-mobile,
+  [data-theme="minimal"] .metrics,
+  [data-theme="minimal"] .note-sheet__rail {
+    border-color: #5c5d58 !important;
+  }
+
+  [data-theme="minimal"] .language-toggle:hover,
+  [data-theme="minimal"] .volume-mark:hover,
+  [data-theme="minimal"] .contact-links a:hover,
+  [data-theme="minimal"] .contact-links button:hover {
+    color: #171817 !important;
+  }
 }

@@ -4,15 +4,17 @@ import App from "./App";
 
 const api = vi.hoisted(() => ({
   createVisitorInvite: vi.fn(),
+  deleteVisitorInvite: vi.fn(),
   deletePrivateEntry: vi.fn(),
+  deletePrivateMusicTrack: vi.fn(),
   loadAdminDashboard: vi.fn(),
   loadPrivateSpace: vi.fn(),
   postGuestbookMessage: vi.fn(),
-  savePrivateMusicTrack: vi.fn(),
-  deletePrivateMusicTrack: vi.fn(),
   reorderPrivateMusicTracks: vi.fn(),
+  savePrivateMusicTrack: vi.fn(),
   savePrivateEntry: vi.fn(),
   setGuestbookMessageStatus: vi.fn(),
+  setGuestbookMessageReply: vi.fn(),
   setVisitorInviteStatus: vi.fn(),
   unlockPrivateSpace: vi.fn(),
 }));
@@ -154,10 +156,11 @@ describe("owner session restoration", () => {
     fireEvent.change(screen.getByPlaceholderText("Enter invitation code"), { target: { value: "Visitor-example" } });
     fireEvent.click(screen.getByRole("button", { name: "Enter ↗" }));
 
-    await screen.findByText("VISITOR PASS");
+    await waitFor(() => expect(window.location.hash).toBe("#/"));
     expect(document.documentElement.dataset.theme).toBe("band");
     const bandNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(bandNavigation).toEqual(["Home🎤", "Gallery🎹", "Writing✒️", "Photography📷", "Film note🎬"]);
+    expect(bandNavigation).toEqual(["Home🏠", "Gallery🖼️", "Writing✒️", "Photography📷", "Film note🎬"]);
+    expect(screen.queryByPlaceholderText("Enter invitation code")).toBeNull();
   });
 
   it("uses compact Chinese labels in the top navigation", () => {
@@ -484,15 +487,14 @@ describe("owner session restoration", () => {
 
     const startDateInput = screen.getByLabelText("Start date");
     const endDateInput = screen.getByLabelText("End date");
-    expect(startDateInput.getAttribute("type")).toBe("text");
-    expect(startDateInput.getAttribute("placeholder")).toBe("yyyymmdd");
-    expect(endDateInput.getAttribute("placeholder")).toBe("yyyymmdd");
+    expect(startDateInput.getAttribute("type")).toBe("date");
+    expect(endDateInput.getAttribute("type")).toBe("date");
 
     fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "writing" } });
     expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
     expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
 
-    fireEvent.change(startDateInput, { target: { value: "20260101" } });
+    fireEvent.change(startDateInput, { target: { value: "2026-01-01" } });
     expect(screen.queryByRole("heading", { name: "A notebook page" })).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "all" } });
@@ -504,9 +506,8 @@ describe("owner session restoration", () => {
     expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
-    expect(screen.getByLabelText("起始日期").getAttribute("placeholder")).toBe("年月日");
-    expect(screen.getByLabelText("终止日期").getAttribute("placeholder")).toBe("年月日");
-    expect((screen.getByLabelText("终止日期") as HTMLInputElement).value).toBe("2025年12月31日");
+    expect(screen.getByLabelText("起始日期").getAttribute("type")).toBe("date");
+    expect((screen.getByLabelText("终止日期") as HTMLInputElement).value).toBe("2025-12-31");
   });
 
   it("uses the creation date for undated visitor entries and keeps them filterable", async () => {
@@ -536,9 +537,113 @@ describe("owner session restoration", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Writing · 2025-04-06")).toBeTruthy();
+    expect(await screen.findByText("Writing · 2025/04/06")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2025-01-01" } });
     expect(screen.getByRole("heading", { name: "A saved fragment" })).toBeTruthy();
+  });
+
+  it("shows the visible invitation code and lets the owner delete a visitor", async () => {
+    localStorage.setItem("yuyun-owner-console-session", "owner-token");
+    window.location.hash = "#/admin";
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    api.loadAdminDashboard.mockResolvedValue({
+      owner_name: "Yuyun",
+      stats: {
+        total_visitors: 1,
+        active_visitors: 1,
+        total_visits: 2,
+        total_messages: 0,
+      },
+      invitations: [{
+        id: "invite-1",
+        label: "HuangRuiQi",
+        is_active: true,
+        expires_at: null,
+        visit_count: 2,
+        last_seen_at: "2026-08-13T09:12:00.000Z",
+        created_at: "2026-08-12T08:00:00.000Z",
+        code_display: "HuangRuiQi-AbCdEf1234567",
+      }],
+      events: [],
+      messages: [],
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("HuangRuiQi-AbCdEf1234567")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Delete visitor" }));
+
+    await waitFor(() => expect(api.deleteVisitorInvite).toHaveBeenCalledWith("owner-token", "invite-1"));
+  });
+
+  it("lets the owner save a guestbook reply and shows that reply to the visitor", async () => {
+    localStorage.setItem("yuyun-owner-console-session", "owner-token");
+    window.location.hash = "#/admin";
+    api.loadAdminDashboard.mockResolvedValue({
+      owner_name: "Yuyun",
+      stats: {
+        total_visitors: 1,
+        active_visitors: 1,
+        total_visits: 1,
+        total_messages: 1,
+      },
+      invitations: [],
+      events: [],
+      messages: [{
+        id: "message-1",
+        visitor_name: "Visitor",
+        body: "Hello there",
+        status: "visible",
+        created_at: "2026-08-13T09:12:00.000Z",
+        owner_reply: null,
+        owner_replied_at: null,
+      }],
+    });
+    api.setGuestbookMessageReply.mockResolvedValue({
+      id: "message-1",
+      visitor_name: "Visitor",
+      body: "Hello there",
+      status: "visible",
+      created_at: "2026-08-13T09:12:00.000Z",
+      owner_reply: "See you soon",
+      owner_replied_at: "2026-08-13T10:00:00.000Z",
+    });
+
+    render(<App />);
+    fireEvent.change(await screen.findByPlaceholderText("Write a reply to this visitor..."), {
+      target: { value: "See you soon" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save reply" }));
+
+    await waitFor(() => expect(api.setGuestbookMessageReply).toHaveBeenCalledWith("owner-token", "message-1", "See you soon"));
+  });
+
+  it("renders visitor replies beneath the original guestbook note", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: {
+        name: "Visitor",
+        visitor_number: 2,
+        visit_count: 1,
+        is_owner: false,
+      },
+      entries: [],
+      playlist: [],
+      messages: [{
+        id: "message-one",
+        visitor_name: "Visitor",
+        body: "I was here.",
+        created_at: "2026-08-13T05:00:00.000Z",
+        owner_reply: "Reply noted.",
+        owner_replied_at: "2026-08-13T06:00:00.000Z",
+      }],
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("Reply from Yuyun")).toBeTruthy();
+    expect(screen.getByText("Reply noted.")).toBeTruthy();
   });
 
   it("keeps the default playlist until a visitor explicitly starts an article soundtrack", async () => {

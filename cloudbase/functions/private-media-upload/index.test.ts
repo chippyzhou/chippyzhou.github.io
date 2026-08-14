@@ -75,6 +75,34 @@ describe("private media RPC proxy", () => {
     });
   });
 
+  it("allows the owner reply and visitor deletion RPC operations", async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ ok: true }),
+      ok: true,
+      status: 200,
+    })) as unknown as typeof fetch;
+    const main = loadFunction(fetchMock);
+
+    const deleteResult = await main({
+      action: "rpc",
+      accessKey: "public-client-key",
+      rpcName: "owner_delete_visitor",
+      args: { session_token: "owner-token", invite_id: "invite-1" },
+    });
+    const replyResult = await main({
+      action: "rpc",
+      accessKey: "public-client-key",
+      rpcName: "owner_set_guestbook_reply",
+      args: { session_token: "owner-token", message_id: "message-1", reply_body: "See you soon" },
+    });
+
+    expect(deleteResult).toMatchObject({ ok: true, data: { ok: true } });
+    expect(replyResult).toMatchObject({ ok: true, data: { ok: true } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rpc\/owner_delete_visitor$/);
+    expect(fetchMock.mock.calls[1][0]).toMatch(/\/rpc\/owner_set_guestbook_reply$/);
+  });
+
   it("rejects operations outside the explicit allowlist", async () => {
     const fetchMock = vi.fn() as unknown as typeof fetch;
     const main = loadFunction(fetchMock);

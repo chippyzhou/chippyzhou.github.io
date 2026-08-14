@@ -5,6 +5,7 @@ import { PrivateMusicLibraryEditor } from "./PrivateMusicLibraryEditor";
 import { PrivateMusicPlayer, type MusicPlayRequest } from "./PrivateMusicPlayer";
 import {
   createVisitorInvite,
+  deleteVisitorInvite,
   deletePrivateEntry,
   isTransientPrivateSpaceError,
   isPrivateSpaceConfigured,
@@ -13,6 +14,7 @@ import {
   postGuestbookMessage,
   savePrivateEntry,
   setGuestbookMessageStatus,
+  setGuestbookMessageReply,
   setVisitorInviteStatus,
   unlockPrivateSpace,
   uploadPrivateMedia,
@@ -129,7 +131,7 @@ const copy = {
     filterByType: "Filter by type",
     filterStartDate: "Start date",
     filterEndDate: "End date",
-    filterDatePlaceholder: "yyyymmdd",
+    filterDatePlaceholder: "yyyy/mm/dd",
     allTypes: "All types",
     entriesShown: "entries shown",
     noFilteredEntries: "No entries match these filters.",
@@ -230,7 +232,7 @@ const copy = {
     newInvitationReady: "New invitation ready",
     copy: "Copy",
     copied: "Copied",
-    invitationHelp: "Send this code to the visitor. It cannot be recovered from the database later.",
+    invitationHelp: "Send this code to the visitor. New invitations remain visible only in this owner console.",
     visitorAccess: "Visitor access",
     noVisitors: "No visitors yet.",
     visits: "Visits",
@@ -241,12 +243,20 @@ const copy = {
     paused: "Paused",
     pauseAccess: "Pause access",
     restoreAccess: "Restore access",
+    deleteVisitor: "Delete visitor",
+    deleteVisitorConfirm: "Delete this visitor and their private access history? This cannot be undone.",
+    visitorCode: "Invitation code",
+    codeUnavailable: "Unavailable for invitations created before password display was enabled.",
     recentActivity: "Recent activity",
     noActivity: "No activity yet.",
     guestbookModeration: "Guestbook moderation",
     noMessages: "No messages yet.",
     hide: "Hide",
     show: "Show",
+    reply: "Reply",
+    replyPlaceholder: "Write a reply to this visitor...",
+    saveReply: "Save reply",
+    replyFromYuyun: "Reply from Yuyun",
     never: "Never",
     contactKicker: "Backstage pass / contact",
     connect: "Let's connect.",
@@ -345,7 +355,7 @@ const copy = {
     filterByType: "按类型筛选",
     filterStartDate: "起始日期",
     filterEndDate: "终止日期",
-    filterDatePlaceholder: "年月日",
+    filterDatePlaceholder: "年/月/日",
     allTypes: "全部类型",
     entriesShown: "篇记录",
     noFilteredEntries: "没有符合当前筛选条件的记录。",
@@ -446,7 +456,7 @@ const copy = {
     newInvitationReady: "新邀请已生成",
     copy: "复制",
     copied: "已复制",
-    invitationHelp: "把这个密钥发送给访客，数据库不会保存可恢复的明文密钥。",
+    invitationHelp: "把这个密钥发送给访客。新建邀请会在本管理员控制台中保留可查看的副本。",
     visitorAccess: "访客访问",
     noVisitors: "还没有访客。",
     visits: "访问次数",
@@ -457,12 +467,20 @@ const copy = {
     paused: "已暂停",
     pauseAccess: "暂停访问",
     restoreAccess: "恢复访问",
+    deleteVisitor: "删除访客",
+    deleteVisitorConfirm: "删除该访客及其私人访问记录？此操作无法撤销。",
+    visitorCode: "邀请密钥",
+    codeUnavailable: "该邀请创建于密码显示功能启用前，无法恢复原密码。",
     recentActivity: "最近活动",
     noActivity: "还没有活动。",
     guestbookModeration: "留言审核",
     noMessages: "还没有留言。",
     hide: "隐藏",
     show: "显示",
+    reply: "回复",
+    replyPlaceholder: "回复这位访客...",
+    saveReply: "保存回复",
+    replyFromYuyun: "Yuyun 的回复",
     never: "从未",
     contactKicker: "后台通行证 / 联系方式",
     connect: "保持联系。",
@@ -824,12 +842,12 @@ const bandCharacters = [
 ];
 
 const pages: Array<{ key: Exclude<PageKey, "admin">; label: string; icon: string }> = [
-  { key: "home", label: "Home", icon: "🎤" },
+  { key: "home", label: "Home", icon: "🏠" },
   { key: "projects", label: "Projects", icon: "🎸" },
   { key: "publications", label: "Publications", icon: "🎻" },
   { key: "awards", label: "Awards", icon: "🥁" },
   { key: "notes", label: "Tech Notes", icon: "📓" },
-  { key: "gallery", label: "Gallery", icon: "🎹" },
+  { key: "gallery", label: "Gallery", icon: "🖼️" },
   { key: "writing", label: "Writing", icon: "✒️" },
   { key: "photography", label: "Photography", icon: "📷" },
   { key: "film", label: "Film Notes", icon: "🎬" },
@@ -1314,21 +1332,34 @@ function normalizeDateFilter(value: string) {
   return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function formatDateFilter(value: string, language: Language) {
-  const normalized = normalizeDateFilter(value);
-  if (!normalized) return value;
-  const [year, month, day] = normalized.split("-");
-  return language === "zh" ? `${year}年${month}月${day}日` : `${year}${month}${day}`;
+function parseValidDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDateParts(value: string) {
+  const date = parseValidDate(value);
+  if (!date) return null;
+  return {
+    year: date.getFullYear(),
+    month: String(date.getMonth() + 1).padStart(2, "0"),
+    day: String(date.getDate()).padStart(2, "0"),
+    hour: String(date.getHours()).padStart(2, "0"),
+    minute: String(date.getMinutes()).padStart(2, "0"),
+  };
+}
+
+function formatDisplayDate(value: string, language: Language, withTime = false) {
+  const parts = formatDateParts(value);
+  if (!parts) return value;
+  const dateText = language === "zh"
+    ? `${parts.year}年${parts.month}月${parts.day}日`
+    : `${parts.year}/${parts.month}/${parts.day}`;
+  return withTime ? `${dateText} ${parts.hour}:${parts.minute}` : dateText;
 }
 
 function formatPrivateDate(value: string, language: Language) {
-  return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatDisplayDate(value, language, true);
 }
 
 function getInlineMediaIds(markdown: string) {
@@ -1400,7 +1431,7 @@ function PersonalSpacePage({
 }: {
   language: Language;
   fixedEntryKind?: "all" | PrivateEntry["kind"];
-  onAccessGranted?: () => void;
+  onAccessGranted?: (options?: { redirectHome?: boolean }) => void;
   onSignedOut?: () => void;
 }) {
   const [inviteCode, setInviteCode] = useState("");
@@ -1416,6 +1447,7 @@ function PersonalSpacePage({
   const [entryStartDate, setEntryStartDate] = useState("");
   const [entryEndDate, setEntryEndDate] = useState("");
   const [musicPlayRequest, setMusicPlayRequest] = useState<MusicPlayRequest | null>(null);
+  const shouldRedirectAfterUnlockRef = useRef(false);
 
   const normalizedStartDate = normalizeDateFilter(entryStartDate);
   const normalizedEndDate = normalizeDateFilter(entryEndDate);
@@ -1425,11 +1457,6 @@ function PersonalSpacePage({
       && (!normalizedStartDate || (entryDate && entryDate >= normalizedStartDate))
       && (!normalizedEndDate || (entryDate && entryDate <= normalizedEndDate));
   }), [content?.entries, entryKindFilter, normalizedEndDate, normalizedStartDate]);
-
-  useEffect(() => {
-    setEntryStartDate((value) => formatDateFilter(value, language));
-    setEntryEndDate((value) => formatDateFilter(value, language));
-  }, [language]);
 
   useEffect(() => {
     setEntryKindFilter(fixedEntryKind);
@@ -1464,7 +1491,8 @@ function PersonalSpacePage({
           localStorage.removeItem(ownerSessionKey);
         }
         setError("");
-        onAccessGranted?.();
+        onAccessGranted?.({ redirectHome: shouldRedirectAfterUnlockRef.current });
+        shouldRedirectAfterUnlockRef.current = false;
       })
       .catch((requestError: Error) => {
         if (!isCurrentRequest) return;
@@ -1476,6 +1504,7 @@ function PersonalSpacePage({
           sessionStorage.removeItem(visitorSessionKey);
         }
         setSessionToken("");
+        shouldRedirectAfterUnlockRef.current = false;
         setError(requestErrorMessage(requestError, language, localized(language, "Unable to restore this session.", "无法恢复当前会话。")));
       })
       .finally(() => {
@@ -1501,6 +1530,7 @@ function PersonalSpacePage({
         sessionStorage.setItem(visitorSessionKey, visitor.session_token);
         localStorage.removeItem(ownerSessionKey);
       }
+      shouldRedirectAfterUnlockRef.current = true;
       setIsRestoring(true);
       setSessionToken(visitor.session_token);
       setInviteCode("");
@@ -1667,29 +1697,23 @@ function PersonalSpacePage({
             <label>
               <span>{tr(language, "filterStartDate")}</span>
               <input
-                type="text"
+                type="date"
+                lang="zh-CN"
                 aria-label={tr(language, "filterStartDate")}
                 placeholder={tr(language, "filterDatePlaceholder")}
                 value={entryStartDate}
                 onChange={(event) => setEntryStartDate(event.target.value)}
-                onBlur={() => setEntryStartDate((value) => formatDateFilter(value, language))}
-                inputMode="numeric"
-                autoComplete="off"
-                spellCheck={false}
               />
             </label>
             <label>
               <span>{tr(language, "filterEndDate")}</span>
               <input
-                type="text"
+                type="date"
+                lang="zh-CN"
                 aria-label={tr(language, "filterEndDate")}
                 placeholder={tr(language, "filterDatePlaceholder")}
                 value={entryEndDate}
                 onChange={(event) => setEntryEndDate(event.target.value)}
-                onBlur={() => setEntryEndDate((value) => formatDateFilter(value, language))}
-                inputMode="numeric"
-                autoComplete="off"
-                spellCheck={false}
               />
             </label>
           </div>
@@ -1707,6 +1731,7 @@ function PersonalSpacePage({
               : images.filter((image) => !inlineMediaIds.has(image.id));
             const isExpanded = expandedEntryIds.has(entry.id);
             const displayDate = privateEntryDisplayDate(entry);
+            const displayDateLabel = displayDate ? formatDisplayDate(displayDate, language) : "";
             const soundtrack = content.playlist.find((track) => track.id === entry.music_track_id && track.is_active);
             return (
               <article
@@ -1723,7 +1748,7 @@ function PersonalSpacePage({
                 )}
                 <div className="archive-entry__content">
                   <div className="archive-entry__meta-row">
-                    <p>{entryKindLabel(language, entry.kind)} {displayDate ? `· ${displayDate}` : ""}</p>
+                    <p>{entryKindLabel(language, entry.kind)} {displayDateLabel ? `· ${displayDateLabel}` : ""}</p>
                     {isExpanded && (
                       <button
                         className="archive-entry__collapse archive-entry__collapse--top"
@@ -1821,6 +1846,12 @@ function PersonalSpacePage({
                 {content.messages.map((item) => (
                   <article className="guestbook-note" key={item.id}>
                     <p>{item.body}</p>
+                    {item.owner_reply && (
+                      <div className="guestbook-note__reply">
+                        <strong>{tr(language, "replyFromYuyun")}</strong>
+                        <p>{item.owner_reply}</p>
+                      </div>
+                    )}
                     <time dateTime={item.created_at}>
                       {tr(language, "messageTime")} · {formatPrivateDate(item.created_at, language)}
                     </time>
@@ -2382,12 +2413,7 @@ function makeInviteSuffix() {
 
 function formatAdminDate(value: string | null, language: Language) {
   if (!value) return tr(language, "never");
-  return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatDisplayDate(value, language, true);
 }
 
 function AdminPage({ language }: { language: Language }) {
@@ -2400,6 +2426,8 @@ function AdminPage({ language }: { language: Language }) {
   const [expiresAt, setExpiresAt] = useState("");
   const [createdCode, setCreatedCode] = useState("");
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedVisitorId, setCopiedVisitorId] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [isRestoring, setIsRestoring] = useState(Boolean(sessionToken));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -2551,6 +2579,20 @@ function AdminPage({ language }: { language: Language }) {
     }
   };
 
+  const handleDeleteVisitor = async (visitorId: string) => {
+    if (!sessionToken || !window.confirm(tr(language, "deleteVisitorConfirm"))) return;
+    setBusyId(visitorId);
+    setError("");
+    try {
+      await deleteVisitorInvite(sessionToken, visitorId);
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : localized(language, "The visitor could not be deleted.", "访客删除失败。"));
+    } finally {
+      setBusyId("");
+    }
+  };
+
   const handleMessageStatus = async (messageId: string, status: "visible" | "hidden") => {
     if (!sessionToken) return;
     setBusyId(messageId);
@@ -2562,6 +2604,34 @@ function AdminPage({ language }: { language: Language }) {
       setError(requestError instanceof Error ? requestError.message : localized(language, "The message status could not be changed.", "留言状态修改失败。"));
     } finally {
       setBusyId("");
+    }
+  };
+
+  const handleMessageReply = async (messageId: string) => {
+    if (!sessionToken) return;
+    setBusyId(`reply-${messageId}`);
+    setError("");
+    try {
+      await setGuestbookMessageReply(sessionToken, messageId, replyDrafts[messageId] || "");
+      setReplyDrafts((current) => {
+        const next = { ...current };
+        delete next[messageId];
+        return next;
+      });
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : localized(language, "The reply could not be saved.", "回复保存失败。"));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const handleCopyVisitorCode = async (visitorId: string, code: string) => {
+    try {
+      await copyToClipboard(code);
+      setCopiedVisitorId(visitorId);
+    } catch {
+      setError(localized(language, "Copy failed. Select the invitation code and copy it manually.", "复制失败，请手动选择并复制邀请密钥。"));
     }
   };
 
@@ -2645,7 +2715,14 @@ function AdminPage({ language }: { language: Language }) {
                 <article key={visitor.id}>
                   <div><strong>{visitor.label}</strong><span className={visitor.is_active ? "status-active" : "status-paused"}>{visitor.is_active ? tr(language, "active") : tr(language, "paused")}</span></div>
                   <dl><div><dt>{tr(language, "visits")}</dt><dd>{visitor.visit_count}</dd></div><div><dt>{tr(language, "lastSeen")}</dt><dd>{formatAdminDate(visitor.last_seen_at, language)}</dd></div><div><dt>{tr(language, "expires")}</dt><dd>{visitor.expires_at ? formatAdminDate(visitor.expires_at, language) : tr(language, "noExpiry")}</dd></div></dl>
-                  <button disabled={busyId === visitor.id} onClick={() => handleVisitorStatus(visitor.id, !visitor.is_active)}>{visitor.is_active ? tr(language, "pauseAccess") : tr(language, "restoreAccess")}</button>
+                  <div className="visitor-code">
+                    <span>{tr(language, "visitorCode")}</span>
+                    {visitor.code_display ? <><code>{visitor.code_display}</code><button type="button" onClick={() => handleCopyVisitorCode(visitor.id, visitor.code_display!)}>{copiedVisitorId === visitor.id ? tr(language, "copied") : tr(language, "copy")}</button></> : <small>{tr(language, "codeUnavailable")}</small>}
+                  </div>
+                  <div className="visitor-table__actions">
+                    <button disabled={busyId === visitor.id} onClick={() => handleVisitorStatus(visitor.id, !visitor.is_active)}>{visitor.is_active ? tr(language, "pauseAccess") : tr(language, "restoreAccess")}</button>
+                    <button className="is-delete" disabled={busyId === visitor.id} onClick={() => handleDeleteVisitor(visitor.id)}>{tr(language, "deleteVisitor")}</button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -2666,6 +2743,12 @@ function AdminPage({ language }: { language: Language }) {
               {dashboard.messages.map((messageItem) => (
                 <article key={messageItem.id} className={messageItem.status === "hidden" ? "is-hidden" : ""}>
                   <p>{messageItem.body}</p>
+                  {messageItem.owner_reply && <div className="moderation-list__reply"><strong>{tr(language, "replyFromYuyun")}</strong><p>{messageItem.owner_reply}</p></div>}
+                  <label className="moderation-list__reply-editor">
+                    <span>{tr(language, "reply")}</span>
+                    <textarea value={replyDrafts[messageItem.id] ?? messageItem.owner_reply ?? ""} onChange={(event) => setReplyDrafts((current) => ({ ...current, [messageItem.id]: event.target.value }))} placeholder={tr(language, "replyPlaceholder")} maxLength={500} />
+                    <button type="button" disabled={busyId === `reply-${messageItem.id}`} onClick={() => handleMessageReply(messageItem.id)}>{busyId === `reply-${messageItem.id}` ? tr(language, "saving") : tr(language, "saveReply")}</button>
+                  </label>
                   <footer><span><strong>{messageItem.visitor_name}</strong> · {formatAdminDate(messageItem.created_at, language)}</span><button disabled={busyId === messageItem.id} onClick={() => handleMessageStatus(messageItem.id, messageItem.status === "visible" ? "hidden" : "visible")}>{messageItem.status === "visible" ? tr(language, "hide") : tr(language, "show")}</button></footer>
                 </article>
               ))}
@@ -2775,9 +2858,13 @@ export default function App() {
     setIsMenuOpen(false);
   };
 
-  const grantPrivateAccess = () => {
+  const grantPrivateAccess = (options?: { redirectHome?: boolean }) => {
     setHasPrivateAccess(true);
     setTheme("band");
+    if (options?.redirectHome) {
+      window.location.hash = "#/";
+      setCurrentPage("home");
+    }
   };
 
   const revokePrivateAccess = () => {
@@ -2862,7 +2949,7 @@ export default function App() {
   return (
     <>
       <main className={`site site--${theme}`} data-theme={theme}>
-        <header className={`site-header${(theme === "band" || currentPage === "space") ? " site-header--dark" : ""}`}>
+        <header className={`site-header${currentPage === "space" ? " site-header--dark" : ""}`}>
           <nav>
           <a
             href="#/"
