@@ -8,6 +8,41 @@ import "katex/dist/katex.min.css";
 
 const customProtocols = ["callout://", "highlight://", "wikilink://", "attachment://"];
 
+export type MarkdownOutlineItem = {
+  level: number;
+  label: string;
+};
+
+function plainHeadingLabel(value: string) {
+  return value
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target: string, label?: string) => label || target)
+    .replace(/[*_~`=]/g, "")
+    .trim();
+}
+
+export function extractMarkdownOutline(source: string): MarkdownOutlineItem[] {
+  const outline: MarkdownOutlineItem[] = [];
+  let fence = "";
+
+  for (const line of source.split(/\r?\n/u)) {
+    const fenceMatch = line.match(/^\s*(```+|~~~+)/u);
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      fence = fence === marker ? "" : fence || marker;
+      continue;
+    }
+    if (fence) continue;
+    const heading = line.match(/^\s*(#{1,6})\s+(.+?)\s*#*\s*$/u);
+    if (!heading) continue;
+    const label = plainHeadingLabel(heading[2]);
+    if (label) outline.push({ level: heading[1].length, label });
+  }
+
+  return outline;
+}
+
 function customUrlTransform(url: string) {
   return customProtocols.some((protocol) => url.startsWith(protocol))
     ? url

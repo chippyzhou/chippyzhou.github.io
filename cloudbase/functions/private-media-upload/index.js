@@ -16,11 +16,15 @@ const allowedRpcFunctions = new Set([
   "owner_create_visitor_invite",
   "owner_set_visitor_active",
   "owner_delete_visitor",
+  "owner_reset_visitor_invite_code",
   "owner_set_message_status",
   "owner_set_guestbook_reply",
   "owner_upsert_private_entry_v2",
   "owner_upsert_private_entry_v3",
+  "owner_upsert_private_entry_v4",
   "owner_delete_private_entry",
+  "toggle_private_entry_like",
+  "post_private_entry_comment",
   "owner_upsert_private_music_track",
   "owner_delete_private_music_track",
   "owner_reorder_private_music_tracks",
@@ -170,6 +174,55 @@ async function proxyRpc(event) {
   return { ok: true, data };
 }
 
+function privateFileIdsFromEntry(entry) {
+  const value = typeof entry?.image_url === "string" ? entry.image_url : "";
+  if (isPrivateFileId(value)) return [value];
+  if (!value.startsWith("yuyun-media-v1:")) return [];
+  try {
+    const images = JSON.parse(value.slice("yuyun-media-v1:".length));
+    if (!Array.isArray(images)) return [];
+    return images.flatMap((image) => [image?.storageSrc, image?.src]).filter(isPrivateFileId);
+  } catch {
+    return [];
+  }
+}
+
+async function publicContent(event) {
+  const publicKey = String(event.accessKey || "");
+  if (!publicKey || publicKey.length > 4096) return fail("The client access key is invalid.", 401);
+
+  const response = await fetch(`${postgresUrl}/rpc/get_public_technical_notes`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${publicKey}`,
+      "Content-Type": "application/json",
+      "Content-Profile": "public",
+      "Accept-Profile": "public",
+    },
+    body: "{}",
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  if (!response.ok) return fail(data?.message || data?.error || "The public notes could not be loaded.", response.status);
+
+  const entries = Array.isArray(data) ? data : [];
+  const fileIds = [...new Set(entries.flatMap(privateFileIdsFromEntry))].slice(0, 100);
+  const files = {};
+  if (fileIds.length) {
+    const resolved = await app.getTempFileURL({
+      fileList: fileIds.map((fileID) => ({ fileID, maxAge: 60 * 60 * 2 })),
+    });
+    for (const item of resolved?.fileList || []) {
+      if (item.code === "SUCCESS" && item.tempFileURL) files[item.fileID] = item.tempFileURL;
+    }
+  }
+  return { ok: true, data: entries, files };
+}
+
 function extensionFor(mediaKind, filename, contentType) {
   const typeMap = allowedTypes[mediaKind];
   if (!typeMap) return null;
@@ -260,6 +313,8 @@ exports.main = async (rawEvent = {}) => {
     const event = requestPayload(rawEvent);
     const result = event.action === "rpc"
       ? await proxyRpc(event)
+      : event.action === "public-content"
+        ? await publicContent(event)
       : event.action === "resolve"
         ? await resolveFiles(event)
         : event.action === "upload"

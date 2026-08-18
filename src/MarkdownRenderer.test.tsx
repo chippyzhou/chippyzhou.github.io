@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { MarkdownRenderer, transformObsidianMarkdown } from "./MarkdownRenderer";
+import { extractMarkdownOutline, MarkdownRenderer, transformObsidianMarkdown } from "./MarkdownRenderer";
 
 describe("Obsidian Markdown", () => {
   it("transforms Obsidian links, embeds, callouts, highlights, and comments", () => {
@@ -56,5 +56,24 @@ describe("Obsidian Markdown", () => {
     expect(container.querySelector("script")).toBeNull();
     expect(container.querySelector('a[href^="javascript:"]')).toBeNull();
     expect((window as Window & { __xss?: boolean }).__xss).toBeUndefined();
+  });
+
+  it("renders all six heading levels and exposes them for an article outline", () => {
+    const source = [
+      "# Level one",
+      "## Level two",
+      "### Level three",
+      "#### Level four",
+      "##### Level five",
+      "###### Level six",
+    ].join("\n\n");
+    const { container } = render(<MarkdownRenderer emptyLabel="Empty" source={source} />);
+
+    expect(Array.from(container.querySelectorAll("h1, h2, h3, h4, h5, h6"), (heading) => heading.textContent))
+      .toEqual(["Level one", "Level two", "Level three", "Level four", "Level five", "Level six"]);
+    expect(extractMarkdownOutline(source).map((item) => [item.level, item.label])).toEqual([
+      [1, "Level one"], [2, "Level two"], [3, "Level three"],
+      [4, "Level four"], [5, "Level five"], [6, "Level six"],
+    ]);
   });
 });

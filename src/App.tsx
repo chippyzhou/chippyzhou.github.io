@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MarkdownRenderer } from "./MarkdownRenderer";
+import { extractMarkdownOutline, MarkdownRenderer } from "./MarkdownRenderer";
 import { PrivateMusicLibraryEditor } from "./PrivateMusicLibraryEditor";
 import { PrivateMusicPlayer, type MusicPlayRequest } from "./PrivateMusicPlayer";
 import {
@@ -11,15 +11,21 @@ import {
   isPrivateSpaceConfigured,
   loadAdminDashboard,
   loadPrivateSpace,
+  loadPublicTechnicalNotes,
+  postPrivateEntryComment,
   postGuestbookMessage,
+  resetVisitorInviteCode,
   savePrivateEntry,
   setGuestbookMessageStatus,
   setGuestbookMessageReply,
   setVisitorInviteStatus,
+  togglePrivateEntryLike,
   unlockPrivateSpace,
   uploadPrivateMedia,
+  type AdminInvite,
   type AdminDashboard,
   type PrivateEntry,
+  type PrivateEntryComment,
   type PrivateMusicTrack,
   type PrivateSpaceContent,
 } from "./privateSpaceApi";
@@ -136,6 +142,8 @@ const copy = {
     entriesShown: "entries shown",
     noFilteredEntries: "No entries match these filters.",
     viewDouban: "View on Douban",
+    articleOutline: "Article outline",
+    noOutline: "No headings in this article yet.",
     doubanLink: "Douban movie link",
     doubanLinkPlaceholder: "https://movie.douban.com/subject/...",
     ownerStudio: "Owner studio / private editor",
@@ -154,6 +162,7 @@ const copy = {
     writing: "Writing",
     photography: "Photography",
     filmNote: "Film note",
+    techNote: "Tech Note",
     excerpt: "Excerpt",
     excerptPlaceholder: "The short line visitors see first",
     markdownBody: "Markdown body",
@@ -194,6 +203,15 @@ const copy = {
     expandEntry: "Expand",
     collapseEntry: "Close article",
     publishEntry: "Publish this entry to invited visitors",
+    publishToVolOne: "Publish this Tech Note to VOL.01",
+    publicTechNotes: "Published notes",
+    likeEntry: "Like",
+    unlikeEntry: "Unlike",
+    articleComments: "Comments",
+    noArticleComments: "No comments yet.",
+    commentPlaceholder: "Leave a comment on this article...",
+    postComment: "Post comment",
+    postingComment: "Posting...",
     saving: "Saving...",
     saveEntry: "Save entry",
     delete: "Delete",
@@ -246,6 +264,9 @@ const copy = {
     deleteVisitor: "Delete visitor",
     deleteVisitorConfirm: "Delete this visitor and their private access history? This cannot be undone.",
     visitorCode: "Invitation code",
+    resetVisitorCode: "Reset code",
+    resetVisitorCodeConfirm: "Reset this visitor's code? Their existing sessions will be signed out.",
+    resetVisitorCodeHelp: "A new code has been issued. The previous code and sessions no longer work.",
     codeUnavailable: "Unavailable for invitations created before password display was enabled.",
     recentActivity: "Recent activity",
     noActivity: "No activity yet.",
@@ -360,6 +381,8 @@ const copy = {
     entriesShown: "篇记录",
     noFilteredEntries: "没有符合当前筛选条件的记录。",
     viewDouban: "前往豆瓣",
+    articleOutline: "文章大纲",
+    noOutline: "这篇文章还没有标题层级。",
     doubanLink: "豆瓣电影链接",
     doubanLinkPlaceholder: "https://movie.douban.com/subject/...",
     ownerStudio: "管理员工作室 / 私人编辑器",
@@ -378,6 +401,7 @@ const copy = {
     writing: "写作",
     photography: "摄影",
     filmNote: "影评",
+    techNote: "技术笔记",
     excerpt: "摘要",
     excerptPlaceholder: "访客首先看到的短句",
     markdownBody: "Markdown 正文",
@@ -418,6 +442,15 @@ const copy = {
     expandEntry: "展开",
     collapseEntry: "收起文章",
     publishEntry: "向受邀访客发布这篇记录",
+    publishToVolOne: "将这篇技术笔记发布到 VOL.01",
+    publicTechNotes: "已发布笔记",
+    likeEntry: "点赞",
+    unlikeEntry: "取消点赞",
+    articleComments: "文章评论",
+    noArticleComments: "还没有评论。",
+    commentPlaceholder: "写下对这篇文章的评论...",
+    postComment: "发布评论",
+    postingComment: "发布中...",
     saving: "保存中...",
     saveEntry: "保存记录",
     delete: "删除",
@@ -470,6 +503,9 @@ const copy = {
     deleteVisitor: "删除访客",
     deleteVisitorConfirm: "删除该访客及其私人访问记录？此操作无法撤销。",
     visitorCode: "邀请密钥",
+    resetVisitorCode: "重置密钥",
+    resetVisitorCodeConfirm: "重置该访客的密钥？对方当前的登录会话将会失效。",
+    resetVisitorCodeHelp: "新密钥已生成，旧密钥和旧会话都无法再使用。",
     codeUnavailable: "该邀请创建于密码显示功能启用前，无法恢复原密码。",
     recentActivity: "最近活动",
     noActivity: "还没有活动。",
@@ -1151,7 +1187,82 @@ function PublicationsPage({ language, theme }: { language: Language; theme: Site
   );
 }
 
+function PublicTechnicalNoteCard({ entry, index, language }: { entry: PrivateEntry; index: number; language: Language }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const images = parseEntryImages(entry.image_url);
+  const cover = images.find((image) => image.isCover) || images[0];
+  const inlineMediaIds = getInlineMediaIds(entry.body);
+  const galleryImages = cover
+    ? images.filter((image) => image.id !== cover.id && !inlineMediaIds.has(image.id))
+    : images.filter((image) => !inlineMediaIds.has(image.id));
+  const displayDate = privateEntryDisplayDate(entry);
+
+  return (
+    <article
+      id={`public-note-${entry.id}`}
+      data-entry-id={`public-${entry.id}`}
+      className={`public-note-card${isExpanded ? " is-expanded" : ""}${cover ? "" : " public-note-card--no-cover"}`}
+    >
+      <aside className="public-note-card__visual">
+        {cover ? (
+          <img src={cover.src} alt={cover.caption} style={{ objectPosition: `${cover.focusX}% ${cover.focusY}%` }} />
+        ) : (
+          <div className="public-note-card__index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</div>
+        )}
+        {isExpanded && <ArticleOutline entryId={`public-${entry.id}`} markdown={entry.body} language={language} />}
+      </aside>
+      <div className="public-note-card__content">
+        <p className="entry-meta">
+          {tr(language, "techNote")}{displayDate ? ` · ${formatDisplayDate(displayDate, language)}` : ""}
+        </p>
+        <h2>{entry.title}</h2>
+        {entry.excerpt && <p className="public-note-card__excerpt">{entry.excerpt}</p>}
+        {!isExpanded && <p className="public-note-card__preview">{markdownPreview(entry.body)}</p>}
+        {isExpanded && (
+          <>
+            <div className="archive-entry__body public-note-card__body">
+              {renderRichEntryBody(entry.body, images, language)}
+            </div>
+            {galleryImages.length > 0 && (
+              <div className="archive-entry__gallery">
+                {galleryImages.map((image) => <EntryMediaFigure image={image} key={image.id} />)}
+              </div>
+            )}
+          </>
+        )}
+        <button className="public-note-card__toggle" type="button" onClick={() => setIsExpanded((expanded) => !expanded)}>
+          {tr(language, isExpanded ? "collapseEntry" : "expandEntry")}
+          <span aria-hidden="true">{isExpanded ? "↑" : "↓"}</span>
+        </button>
+      </div>
+    </article>
+  );
+}
+
 function TechnicalNotesPage({ language, theme }: { language: Language; theme: SiteTheme }) {
+  const [publishedNotes, setPublishedNotes] = useState<PrivateEntry[]>([]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    loadPublicTechnicalNotes()
+      .then((entries) => {
+        if (isCurrent) setPublishedNotes(entries);
+      })
+      .catch(() => {
+        if (isCurrent) setPublishedNotes([]);
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  const toc = publishedNotes.length > 0
+    ? publishedNotes.map((note) => ({ id: `public-note-${note.id}`, label: note.title }))
+    : technicalNotes.map((note, index) => ({
+      id: `note-${index + 1}`,
+      label: localized(language, note.title, note.titleZh),
+    }));
+
   return (
     <PageShell
       language={language}
@@ -1159,13 +1270,17 @@ function TechnicalNotesPage({ language, theme }: { language: Language; theme: Si
       kicker={themedTr(language, theme, "notesKicker")}
       title={themedTr(language, theme, "notesTitle")}
       description={themedTr(language, theme, "notesDescription")}
-      toc={technicalNotes.map((note, index) => ({
-        id: `note-${index + 1}`,
-        label: localized(language, note.title, note.titleZh),
-      }))}
+      toc={toc}
     >
-      <div className="notes-index">
-        {technicalNotes.map((note, index) => (
+      {publishedNotes.length > 0 ? (
+        <div className="public-notes-index">
+          {publishedNotes.map((note, index) => (
+            <PublicTechnicalNoteCard entry={note} index={index} language={language} key={note.id} />
+          ))}
+        </div>
+      ) : (
+        <div className="notes-index">
+          {technicalNotes.map((note, index) => (
           <article id={`note-${index + 1}`} className="note-sheet" key={note.title}>
             <div className="note-sheet__rail">
               <span>{String(index + 1).padStart(2, "0")}</span>
@@ -1181,8 +1296,9 @@ function TechnicalNotesPage({ language, theme }: { language: Language; theme: Si
             </div>
             <span className="note-sheet__mark" aria-hidden="true">∿</span>
           </article>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </PageShell>
   );
 }
@@ -1303,7 +1419,9 @@ function entryKindLabel(language: Language, kind: PrivateEntry["kind"]) {
     ? tr(language, "writing")
     : kind === "photography"
       ? tr(language, "photography")
-      : tr(language, "filmNote");
+      : kind === "film"
+        ? tr(language, "filmNote")
+        : tr(language, "techNote");
 }
 
 function privateEntryDisplayDate(entry: PrivateEntry) {
@@ -1360,6 +1478,63 @@ function formatDisplayDate(value: string, language: Language, withTime = false) 
 
 function formatPrivateDate(value: string, language: Language) {
   return formatDisplayDate(value, language, true);
+}
+
+function DatePickerInput({
+  value,
+  onChange,
+  label,
+  language,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  language: Language;
+}) {
+  const displayValue = value
+    ? formatDisplayDate(`${value}T12:00:00`, language)
+    : language === "zh" ? "年/月/日" : "yyyy/mm/dd";
+
+  return (
+    <span className="date-picker-input">
+      <span aria-hidden="true">{displayValue}</span>
+      <input
+        type="date"
+        lang="en-CA"
+        aria-label={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </span>
+  );
+}
+
+function ArticleOutline({ entryId, markdown, language }: { entryId: string; markdown: string; language: Language }) {
+  const items = extractMarkdownOutline(markdown);
+
+  const scrollToHeading = (index: number) => {
+    const article = document.querySelector(`[data-entry-id="${CSS.escape(entryId)}"]`);
+    const headings = article?.querySelectorAll(".archive-entry__body h1, .archive-entry__body h2, .archive-entry__body h3, .archive-entry__body h4, .archive-entry__body h5, .archive-entry__body h6");
+    headings?.item(index).scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <nav className="archive-entry__outline" aria-label={tr(language, "articleOutline")}>
+      <span>{tr(language, "articleOutline")}</span>
+      {items.length === 0 && <small>{tr(language, "noOutline")}</small>}
+      {items.map((item, index) => (
+        <button
+          key={`${item.level}-${item.label}-${index}`}
+          type="button"
+          style={{ "--outline-level": item.level } as React.CSSProperties}
+          onClick={() => scrollToHeading(index)}
+        >
+          <i aria-hidden="true" />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
 }
 
 function getInlineMediaIds(markdown: string) {
@@ -1423,6 +1598,80 @@ function renderRichEntryBody(markdown: string, images: EntryImage[], language: L
   return sections;
 }
 
+function ArticleEngagement({
+  entry,
+  language,
+  expanded,
+  commentDraft,
+  isLiking,
+  isCommenting,
+  error,
+  onLike,
+  onCommentDraftChange,
+  onComment,
+}: {
+  entry: PrivateEntry;
+  language: Language;
+  expanded: boolean;
+  commentDraft: string;
+  isLiking: boolean;
+  isCommenting: boolean;
+  error: string;
+  onLike: () => void;
+  onCommentDraftChange: (value: string) => void;
+  onComment: (event: React.FormEvent<HTMLFormElement>) => void;
+}) {
+  const comments = entry.comments || [];
+  return (
+    <section className={`entry-engagement${expanded ? " is-expanded" : ""}`} aria-label={tr(language, "articleComments")}>
+      <div className="entry-engagement__bar">
+        <button
+          type="button"
+          className={entry.liked_by_visitor ? "is-liked" : ""}
+          aria-pressed={Boolean(entry.liked_by_visitor)}
+          aria-label={`${tr(language, entry.liked_by_visitor ? "unlikeEntry" : "likeEntry")} · ${entry.like_count || 0}`}
+          disabled={isLiking}
+          onClick={onLike}
+        >
+          <span aria-hidden="true">{entry.liked_by_visitor ? "♥" : "♡"}</span>
+          {tr(language, entry.liked_by_visitor ? "unlikeEntry" : "likeEntry")}
+          <strong>{entry.like_count || 0}</strong>
+        </button>
+        <span>{tr(language, "articleComments")} <strong>{comments.length}</strong></span>
+      </div>
+      {expanded && (
+        <div className="entry-comments">
+          <div className="entry-comments__list">
+            {comments.length === 0 && <p className="entry-comments__empty">{tr(language, "noArticleComments")}</p>}
+            {comments.map((comment: PrivateEntryComment) => (
+              <article key={comment.id}>
+                <header><strong>{comment.visitor_name}</strong><time dateTime={comment.created_at}>{formatPrivateDate(comment.created_at, language)}</time></header>
+                <p>{comment.body}</p>
+              </article>
+            ))}
+          </div>
+          <form className="entry-comments__form" onSubmit={onComment}>
+            <textarea
+              value={commentDraft}
+              onChange={(event) => onCommentDraftChange(event.target.value)}
+              placeholder={tr(language, "commentPlaceholder")}
+              maxLength={1000}
+              rows={3}
+            />
+            <div>
+              <span>{commentDraft.length}/1000</span>
+              <button type="submit" disabled={isCommenting || !commentDraft.trim()}>
+                {tr(language, isCommenting ? "postingComment" : "postComment")}
+              </button>
+            </div>
+          </form>
+          {error && <p className="entry-comments__error" role="alert">{error}</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PersonalSpacePage({
   language,
   fixedEntryKind = "all",
@@ -1447,6 +1696,10 @@ function PersonalSpacePage({
   const [entryStartDate, setEntryStartDate] = useState("");
   const [entryEndDate, setEntryEndDate] = useState("");
   const [musicPlayRequest, setMusicPlayRequest] = useState<MusicPlayRequest | null>(null);
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [likingEntryId, setLikingEntryId] = useState("");
+  const [commentingEntryId, setCommentingEntryId] = useState("");
+  const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
   const shouldRedirectAfterUnlockRef = useRef(false);
 
   const normalizedStartDate = normalizeDateFilter(entryStartDate);
@@ -1482,6 +1735,10 @@ function PersonalSpacePage({
           entries: payload.entries.map((entry) => ({
             ...entry,
             music_track_id: entry.music_track_id || null,
+            is_public: Boolean(entry.is_public),
+            like_count: Number(entry.like_count || 0),
+            liked_by_visitor: Boolean(entry.liked_by_visitor),
+            comments: entry.comments || [],
           })),
         });
         if (payload.visitor.is_owner) {
@@ -1585,8 +1842,86 @@ function PersonalSpacePage({
     setEntryStartDate("");
     setEntryEndDate("");
     setMusicPlayRequest(null);
+    setCommentDrafts({});
+    setLikingEntryId("");
+    setCommentingEntryId("");
+    setInteractionErrors({});
     setError("");
     onSignedOut?.();
+  };
+
+  const handleEntryLike = async (entry: PrivateEntry) => {
+    if (!sessionToken || likingEntryId) return;
+    const wasLiked = Boolean(entry.liked_by_visitor);
+    setLikingEntryId(entry.id);
+    setInteractionErrors((current) => ({ ...current, [entry.id]: "" }));
+    setContent((current) => current ? {
+      ...current,
+      entries: current.entries.map((item) => item.id === entry.id ? {
+        ...item,
+        liked_by_visitor: !wasLiked,
+        like_count: Math.max(0, Number(item.like_count || 0) + (wasLiked ? -1 : 1)),
+      } : item),
+    } : current);
+    try {
+      const saved = await togglePrivateEntryLike(sessionToken, entry.id);
+      setContent((current) => current ? {
+        ...current,
+        entries: current.entries.map((item) => item.id === entry.id ? {
+          ...item,
+          liked_by_visitor: saved.liked_by_visitor,
+          like_count: saved.like_count,
+        } : item),
+      } : current);
+    } catch (requestError) {
+      setContent((current) => current ? {
+        ...current,
+        entries: current.entries.map((item) => item.id === entry.id ? {
+          ...item,
+          liked_by_visitor: wasLiked,
+          like_count: Number(entry.like_count || 0),
+        } : item),
+      } : current);
+      setInteractionErrors((current) => ({
+        ...current,
+        [entry.id]: requestErrorMessage(requestError, language, localized(language, "The like could not be saved.", "点赞保存失败。")),
+      }));
+    } finally {
+      setLikingEntryId("");
+    }
+  };
+
+  const handleEntryComment = async (event: React.FormEvent<HTMLFormElement>, entryId: string) => {
+    event.preventDefault();
+    const body = (commentDrafts[entryId] || "").trim();
+    if (!sessionToken || !body || commentingEntryId) return;
+    const requestId = crypto.randomUUID();
+    setCommentingEntryId(entryId);
+    setInteractionErrors((current) => ({ ...current, [entryId]: "" }));
+    try {
+      let savedComment: PrivateEntryComment;
+      try {
+        savedComment = await postPrivateEntryComment(sessionToken, entryId, body, requestId);
+      } catch (requestError) {
+        if (!isTransientPrivateSpaceError(requestError)) throw requestError;
+        savedComment = await postPrivateEntryComment(sessionToken, entryId, body, requestId);
+      }
+      setContent((current) => current ? {
+        ...current,
+        entries: current.entries.map((entry) => entry.id === entryId ? {
+          ...entry,
+          comments: [...(entry.comments || []).filter((comment) => comment.id !== savedComment.id), savedComment],
+        } : entry),
+      } : current);
+      setCommentDrafts((current) => ({ ...current, [entryId]: "" }));
+    } catch (requestError) {
+      setInteractionErrors((current) => ({
+        ...current,
+        [entryId]: requestErrorMessage(requestError, language, localized(language, "The comment could not be posted.", "评论发布失败。")),
+      }));
+    } finally {
+      setCommentingEntryId("");
+    }
   };
 
   const toggleEntry = (entryId: string) => {
@@ -1691,29 +2026,26 @@ function PersonalSpacePage({
                   <option value="writing">{tr(language, "writing")}</option>
                   <option value="photography">{tr(language, "photography")}</option>
                   <option value="film">{tr(language, "filmNote")}</option>
+                  <option value="tech">{tr(language, "techNote")}</option>
                 </select>
               </label>
             )}
             <label>
               <span>{tr(language, "filterStartDate")}</span>
-              <input
-                type="date"
-                lang="zh-CN"
-                aria-label={tr(language, "filterStartDate")}
-                placeholder={tr(language, "filterDatePlaceholder")}
+              <DatePickerInput
+                language={language}
+                label={tr(language, "filterStartDate")}
                 value={entryStartDate}
-                onChange={(event) => setEntryStartDate(event.target.value)}
+                onChange={setEntryStartDate}
               />
             </label>
             <label>
               <span>{tr(language, "filterEndDate")}</span>
-              <input
-                type="date"
-                lang="zh-CN"
-                aria-label={tr(language, "filterEndDate")}
-                placeholder={tr(language, "filterDatePlaceholder")}
+              <DatePickerInput
+                language={language}
+                label={tr(language, "filterEndDate")}
                 value={entryEndDate}
-                onChange={(event) => setEntryEndDate(event.target.value)}
+                onChange={setEntryEndDate}
               />
             </label>
           </div>
@@ -1736,16 +2068,20 @@ function PersonalSpacePage({
             return (
               <article
                 className={`archive-entry archive-entry--${entry.kind}${isExpanded ? " is-expanded" : ""}${cover ? "" : " archive-entry--no-cover"}`}
+                data-entry-id={entry.id}
                 key={entry.id}
               >
-                {cover && (
-                  <img
-                    className="archive-entry__cover"
-                    src={cover.src}
-                    alt={cover.caption}
-                    style={{ objectPosition: `${cover.focusX}% ${cover.focusY}%` }}
-                  />
-                )}
+                <aside className="archive-entry__visual">
+                  {cover ? (
+                    <img
+                      className="archive-entry__cover"
+                      src={cover.src}
+                      alt={cover.caption}
+                      style={{ objectPosition: `${cover.focusX}% ${cover.focusY}%` }}
+                    />
+                  ) : <div className="archive-entry__placeholder" aria-hidden="true" />}
+                  {isExpanded && <ArticleOutline entryId={entry.id} markdown={entry.body} language={language} />}
+                </aside>
                 <div className="archive-entry__content">
                   <div className="archive-entry__meta-row">
                     <p>{entryKindLabel(language, entry.kind)} {displayDateLabel ? `· ${displayDateLabel}` : ""}</p>
@@ -1761,7 +2097,14 @@ function PersonalSpacePage({
                     )}
                   </div>
                   <h2>{entry.title}</h2>
-                  {entry.excerpt && <strong>{entry.excerpt}</strong>}
+                  <div className="archive-entry__summary">
+                    {entry.excerpt && <strong className="archive-entry__excerpt">{entry.excerpt}</strong>}
+                    {entry.kind === "film" && entry.external_url && (
+                      <a className="archive-entry__external" href={entry.external_url} target="_blank" rel="noreferrer">
+                        {tr(language, "viewDouban")} <span aria-hidden="true">↗</span>
+                      </a>
+                    )}
+                  </div>
                   {!isExpanded && <p className="archive-entry__preview-text">{markdownPreview(entry.body)}</p>}
                   {soundtrack && (
                     <button
@@ -1777,11 +2120,6 @@ function PersonalSpacePage({
                       </span>
                     </button>
                   )}
-                  {entry.kind === "film" && entry.external_url && (
-                    <a className="archive-entry__external" href={entry.external_url} target="_blank" rel="noreferrer">
-                      {tr(language, "viewDouban")} <span aria-hidden="true">↗</span>
-                    </a>
-                  )}
                   {isExpanded && (
                     <>
                       <div className="archive-entry__body">
@@ -1792,6 +2130,18 @@ function PersonalSpacePage({
                           {galleryImages.map((image) => <EntryMediaFigure image={image} key={image.id} />)}
                         </div>
                       )}
+                      <ArticleEngagement
+                        entry={entry}
+                        language={language}
+                        expanded
+                        commentDraft={commentDrafts[entry.id] || ""}
+                        isLiking={likingEntryId === entry.id}
+                        isCommenting={commentingEntryId === entry.id}
+                        error={interactionErrors[entry.id] || ""}
+                        onLike={() => handleEntryLike(entry)}
+                        onCommentDraftChange={(value) => setCommentDrafts((current) => ({ ...current, [entry.id]: value }))}
+                        onComment={(event) => handleEntryComment(event, entry.id)}
+                      />
                       <button
                         className="archive-entry__toggle archive-entry__collapse--bottom"
                         type="button"
@@ -1803,15 +2153,29 @@ function PersonalSpacePage({
                     </>
                   )}
                   {!isExpanded && (
-                    <button
-                      className="archive-entry__toggle"
-                      type="button"
-                      aria-expanded={false}
-                      onClick={() => toggleEntry(entry.id)}
-                    >
-                      {tr(language, "expandEntry")}
-                      <span aria-hidden="true">↓</span>
-                    </button>
+                    <>
+                      <ArticleEngagement
+                        entry={entry}
+                        language={language}
+                        expanded={false}
+                        commentDraft=""
+                        isLiking={likingEntryId === entry.id}
+                        isCommenting={false}
+                        error=""
+                        onLike={() => handleEntryLike(entry)}
+                        onCommentDraftChange={() => undefined}
+                        onComment={(event) => event.preventDefault()}
+                      />
+                      <button
+                        className="archive-entry__toggle"
+                        type="button"
+                        aria-expanded={false}
+                        onClick={() => toggleEntry(entry.id)}
+                      >
+                        {tr(language, "expandEntry")}
+                        <span aria-hidden="true">↓</span>
+                      </button>
+                    </>
                   )}
                 </div>
               </article>
@@ -1883,6 +2247,7 @@ type EntryDraft = {
   event_date: string | null;
   music_track_id: string | null;
   is_published: boolean;
+  is_public: boolean;
 };
 
 function blankEntryDraft(language: Language): EntryDraft {
@@ -1898,6 +2263,7 @@ function blankEntryDraft(language: Language): EntryDraft {
     event_date: null,
     music_track_id: null,
     is_published: false,
+    is_public: false,
   };
 }
 
@@ -1914,6 +2280,7 @@ function entryToDraft(entry: PrivateEntry): EntryDraft {
     event_date: entry.event_date,
     music_track_id: entry.music_track_id || null,
     is_published: entry.is_published,
+    is_public: Boolean(entry.is_public),
   };
 }
 
@@ -1986,6 +2353,7 @@ function OwnerSpaceEditor({
       event_date: draft.event_date,
       music_track_id: draft.music_track_id,
       is_published: draft.is_published,
+      is_public: draft.kind === "tech" && draft.is_public,
     };
     try {
       let savedEntry: PrivateEntry;
@@ -2179,20 +2547,24 @@ function OwnerSpaceEditor({
           </aside>
 
           <form className="space-editor__form" onSubmit={handleSave}>
-            <div className="space-editor__form-row">
+            <div className="space-editor__form-row space-editor__form-row--primary">
               <label>{tr(language, "title")}<input value={draft.title} onChange={(event) => updateDraft("title", event.target.value)} placeholder={tr(language, "titlePlaceholder")} /></label>
-              <fieldset className="space-editor__kind">
+              <fieldset className="space-editor__kind space-editor__kind--contained">
                 <legend>{tr(language, "type")}</legend>
                 <div role="group" aria-label={tr(language, "type")}>
-                  {(["writing", "photography", "film"] as const).map((kind) => (
+                  {(["writing", "photography", "film", "tech"] as const).map((kind) => (
                     <button
                       key={kind}
                       type="button"
                       aria-pressed={draft.kind === kind}
                       className={draft.kind === kind ? "is-active" : ""}
-                      onClick={() => updateDraft("kind", kind)}
+                      onClick={() => setDraft((current) => ({
+                        ...current,
+                        kind,
+                        is_public: kind === "tech" ? current.is_public : false,
+                      }))}
                     >
-                      {kind === "writing" ? tr(language, "writing") : kind === "photography" ? tr(language, "photography") : tr(language, "filmNote")}
+                      {entryKindLabel(language, kind)}
                     </button>
                   ))}
                 </div>
@@ -2213,6 +2585,7 @@ function OwnerSpaceEditor({
             <label>
               {tr(language, "markdownBody")}
               <textarea
+                className="space-editor__markdown-input"
                 ref={bodyTextareaRef}
                 rows={12}
                 value={draft.body}
@@ -2237,7 +2610,15 @@ function OwnerSpaceEditor({
               </select>
             </label>
             <div className="space-editor__form-row">
-              <label>{tr(language, "eventDate")}<input type="date" value={draft.event_date || ""} onChange={(event) => updateDraft("event_date", event.target.value || null)} /></label>
+              <label>
+                {tr(language, "eventDate")}
+                <DatePickerInput
+                  language={language}
+                  label={tr(language, "eventDate")}
+                  value={draft.event_date || ""}
+                  onChange={(value) => updateDraft("event_date", value || null)}
+                />
+              </label>
               <label>{tr(language, "image")}<input type="file" accept="image/*" multiple onChange={handleImageUpload} /><small>{tr(language, "imageUploadHelp")}</small></label>
             </div>
             {previewCover && (
@@ -2354,6 +2735,9 @@ function OwnerSpaceEditor({
               </div>
             )}
             <label className="space-editor__publish"><input type="checkbox" checked={draft.is_published} onChange={(event) => updateDraft("is_published", event.target.checked)} /> {tr(language, "publishEntry")}</label>
+            {draft.kind === "tech" && (
+              <label className="space-editor__publish space-editor__publish--public"><input type="checkbox" checked={draft.is_public} onChange={(event) => updateDraft("is_public", event.target.checked)} /> {tr(language, "publishToVolOne")}</label>
+            )}
             {editorError && <p className="space-editor__error" role="alert">{editorError}</p>}
             {editorNotice && <p className="space-editor__notice" role="status">{editorNotice}</p>}
             <div className="space-editor__footer"><button className="space-editor__save" type="submit" disabled={isBusy || isOptimizingImage}>{isOptimizingImage ? tr(language, "optimizingImage") : isBusy ? tr(language, "saving") : tr(language, "saveEntry")}</button>{isPersisted && <button className="space-editor__delete" type="button" onClick={handleDelete} disabled={isBusy || isOptimizingImage}>{tr(language, "delete")}</button>}</div>
@@ -2378,12 +2762,14 @@ function OwnerSpaceEditor({
                     : ""}
                 </p>
                 <h3>{draft.title || tr(language, "untitledFragment")}</h3>
-                {draft.excerpt && <strong>{draft.excerpt}</strong>}
-                {draft.kind === "film" && draft.external_url && (
-                  <a className="archive-entry__external" href={draft.external_url} target="_blank" rel="noreferrer">
-                    {tr(language, "viewDouban")} <span aria-hidden="true">↗</span>
-                  </a>
-                )}
+                <div className="archive-entry__summary">
+                  {draft.excerpt && <strong className="archive-entry__excerpt">{draft.excerpt}</strong>}
+                  {draft.kind === "film" && draft.external_url && (
+                    <a className="archive-entry__external" href={draft.external_url} target="_blank" rel="noreferrer">
+                      {tr(language, "viewDouban")} <span aria-hidden="true">↗</span>
+                    </a>
+                  )}
+                </div>
                 <div className="archive-entry__body">
                   {renderRichEntryBody(draft.body, draft.images, language)}
                 </div>
@@ -2425,6 +2811,7 @@ function AdminPage({ language }: { language: Language }) {
   const [inviteSuffix, setInviteSuffix] = useState(makeInviteSuffix);
   const [expiresAt, setExpiresAt] = useState("");
   const [createdCode, setCreatedCode] = useState("");
+  const [resetCodeNotice, setResetCodeNotice] = useState("");
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedVisitorId, setCopiedVisitorId] = useState("");
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
@@ -2593,6 +2980,22 @@ function AdminPage({ language }: { language: Language }) {
     }
   };
 
+  const handleResetVisitorCode = async (visitor: AdminInvite) => {
+    if (!sessionToken || !window.confirm(tr(language, "resetVisitorCodeConfirm"))) return;
+    const nextCode = `${makeInvitePrefix(visitor.label)}-${makeInviteSuffix()}`;
+    setBusyId(`reset-${visitor.id}`);
+    setError("");
+    try {
+      const updatedInvite = await resetVisitorInviteCode(sessionToken, visitor.id, nextCode);
+      setResetCodeNotice(updatedInvite.code_display || nextCode);
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : localized(language, "The visitor code could not be reset.", "访客密钥重置失败。"));
+    } finally {
+      setBusyId("");
+    }
+  };
+
   const handleMessageStatus = async (messageId: string, status: "visible" | "hidden") => {
     if (!sessionToken) return;
     setBusyId(messageId);
@@ -2710,6 +3113,7 @@ function AdminPage({ language }: { language: Language }) {
           <section className="admin-panel admin-panel--visitors">
             <div className="admin-panel__heading"><span>02</span><h2>{tr(language, "visitorAccess")}</h2></div>
             <div className="visitor-table">
+              {resetCodeNotice && <p className="admin-code-notice" role="status">{tr(language, "resetVisitorCodeHelp")} <code>{resetCodeNotice}</code></p>}
               {dashboard.invitations.length === 0 && <p className="admin-empty">{tr(language, "noVisitors")}</p>}
               {dashboard.invitations.map((visitor) => (
                 <article key={visitor.id}>
@@ -2721,6 +3125,7 @@ function AdminPage({ language }: { language: Language }) {
                   </div>
                   <div className="visitor-table__actions">
                     <button disabled={busyId === visitor.id} onClick={() => handleVisitorStatus(visitor.id, !visitor.is_active)}>{visitor.is_active ? tr(language, "pauseAccess") : tr(language, "restoreAccess")}</button>
+                    <button disabled={busyId === `reset-${visitor.id}`} onClick={() => handleResetVisitorCode(visitor)}>{busyId === `reset-${visitor.id}` ? tr(language, "saving") : tr(language, "resetVisitorCode")}</button>
                     <button className="is-delete" disabled={busyId === visitor.id} onClick={() => handleDeleteVisitor(visitor.id)}>{tr(language, "deleteVisitor")}</button>
                   </div>
                 </article>
@@ -2949,7 +3354,7 @@ export default function App() {
   return (
     <>
       <main className={`site site--${theme}`} data-theme={theme}>
-        <header className={`site-header${currentPage === "space" ? " site-header--dark" : ""}`}>
+        <header className={`site-header${theme === "band" || currentPage === "space" ? " site-header--dark" : ""}`}>
           <nav>
           <a
             href="#/"

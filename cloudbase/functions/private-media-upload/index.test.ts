@@ -103,6 +103,57 @@ describe("private media RPC proxy", () => {
     expect(fetchMock.mock.calls[1][0]).toMatch(/\/rpc\/owner_set_guestbook_reply$/);
   });
 
+  it("allows article interaction and v4 Tech Note operations", async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ ok: true }),
+      ok: true,
+      status: 200,
+    })) as unknown as typeof fetch;
+    const main = loadFunction(fetchMock);
+
+    for (const rpcName of [
+      "toggle_private_entry_like",
+      "post_private_entry_comment",
+      "owner_upsert_private_entry_v4",
+    ]) {
+      const result = await main({
+        action: "rpc",
+        accessKey: "public-client-key",
+        rpcName,
+        args: { session_token: "session-token" },
+      });
+      expect(result).toMatchObject({ ok: true });
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("loads public Tech Notes through the dedicated public-content action", async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ([{
+        id: "public-tech",
+        kind: "tech",
+        image_url: null,
+        is_public: true,
+      }]),
+      ok: true,
+      status: 200,
+    })) as unknown as typeof fetch;
+    const main = loadFunction(fetchMock);
+
+    const result = await main({
+      action: "public-content",
+      accessKey: "public-client-key",
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: [{ id: "public-tech", kind: "tech", is_public: true }],
+      files: {},
+    });
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rpc\/get_public_technical_notes$/);
+  });
+
   it("rejects operations outside the explicit allowlist", async () => {
     const fetchMock = vi.fn() as unknown as typeof fetch;
     const main = loadFunction(fetchMock);

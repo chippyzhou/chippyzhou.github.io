@@ -1,6 +1,6 @@
 export type PrivateEntry = {
   id: string;
-  kind: "writing" | "photography" | "film";
+  kind: "writing" | "photography" | "film" | "tech";
   title: string;
   excerpt: string;
   body: string;
@@ -10,6 +10,24 @@ export type PrivateEntry = {
   display_date?: string | null;
   music_track_id: string | null;
   is_published: boolean;
+  is_public: boolean;
+  like_count: number;
+  liked_by_visitor: boolean;
+  comments: PrivateEntryComment[];
+};
+
+export type PrivateEntryComment = {
+  id: string;
+  entry_id: string;
+  visitor_name: string;
+  body: string;
+  created_at: string;
+};
+
+export type PrivateEntryLikeState = {
+  entry_id: string;
+  like_count: number;
+  liked_by_visitor: boolean;
 };
 
 export type PrivateMusicTrack = {
@@ -349,15 +367,53 @@ export async function loadPrivateSpace(sessionToken: string) {
     entries: content.entries.map((entry) => ({
       ...entry,
       image_url: hydrateEntryMedia(entry.image_url, files),
+      is_public: Boolean(entry.is_public),
+      like_count: Number(entry.like_count || 0),
+      liked_by_visitor: Boolean(entry.liked_by_visitor),
+      comments: entry.comments || [],
     })),
     playlist: hydratePlaylist(content.playlist, files),
   };
+}
+
+export async function loadPublicTechnicalNotes() {
+  const response = await callPrivateMedia({ action: "public-content" });
+  const entries = Array.isArray(response.data) ? response.data as PrivateEntry[] : [];
+  return entries.map((entry) => ({
+    ...entry,
+    image_url: hydrateEntryMedia(entry.image_url, response.files || {}),
+    is_public: true,
+    like_count: 0,
+    liked_by_visitor: false,
+    comments: [],
+  }));
 }
 
 export function postGuestbookMessage(sessionToken: string, message: string, requestId: string) {
   return rpc<GuestbookMessage>("post_guestbook_message_v2", {
     session_token: sessionToken,
     message_body: message,
+    request_id: requestId,
+  });
+}
+
+export function togglePrivateEntryLike(sessionToken: string, entryId: string) {
+  return rpc<PrivateEntryLikeState>("toggle_private_entry_like", {
+    session_token: sessionToken,
+    target_entry_id: entryId,
+  });
+}
+
+export function postPrivateEntryComment(
+  sessionToken: string,
+  entryId: string,
+  body: string,
+  requestId: string,
+) {
+  return rpc<PrivateEntryComment>("post_private_entry_comment", {
+    session_token: sessionToken,
+    target_entry_id: entryId,
+    comment_body: body,
     request_id: requestId,
   });
 }
@@ -395,6 +451,14 @@ export function deleteVisitorInvite(sessionToken: string, inviteId: string) {
   });
 }
 
+export function resetVisitorInviteCode(sessionToken: string, inviteId: string, inviteCode: string) {
+  return rpc<AdminInvite>("owner_reset_visitor_invite_code", {
+    session_token: sessionToken,
+    visitor_id: inviteId,
+    invite_code: inviteCode,
+  });
+}
+
 export function setGuestbookMessageStatus(
   sessionToken: string,
   messageId: string,
@@ -429,6 +493,7 @@ export function savePrivateEntry(
     event_date: string | null;
     music_track_id?: string | null;
     is_published: boolean;
+    is_public: boolean;
   },
 ) {
   const body = {
@@ -445,12 +510,19 @@ export function savePrivateEntry(
     entry_published: entry.is_published,
   };
 
-  return "music_track_id" in entry
-    ? rpc<PrivateEntry>("owner_upsert_private_entry_v3", {
+  return rpc<PrivateEntry>("owner_upsert_private_entry_v4", {
+    ...body,
+    entry_music_track_id: entry.music_track_id || null,
+    entry_public: entry.is_public,
+  }, saveRequestTimeoutMs).catch((error) => {
+    const v4Unavailable = error instanceof PrivateSpaceRequestError
+      && (error.status === 404 || (error.status === 403 && /unsupported database operation/i.test(error.message)));
+    if (entry.kind === "tech" || !v4Unavailable) throw error;
+    return rpc<PrivateEntry>("owner_upsert_private_entry_v3", {
       ...body,
-      entry_music_track_id: entry.music_track_id,
-    }, saveRequestTimeoutMs)
-    : rpc<PrivateEntry>("owner_upsert_private_entry_v2", body, saveRequestTimeoutMs);
+      entry_music_track_id: entry.music_track_id || null,
+    }, saveRequestTimeoutMs);
+  });
 }
 
 export function deletePrivateEntry(sessionToken: string, entryId: string) {

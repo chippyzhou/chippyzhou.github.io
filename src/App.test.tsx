@@ -9,13 +9,17 @@ const api = vi.hoisted(() => ({
   deletePrivateMusicTrack: vi.fn(),
   loadAdminDashboard: vi.fn(),
   loadPrivateSpace: vi.fn(),
+  loadPublicTechnicalNotes: vi.fn(),
+  postPrivateEntryComment: vi.fn(),
   postGuestbookMessage: vi.fn(),
   reorderPrivateMusicTracks: vi.fn(),
+  resetVisitorInviteCode: vi.fn(),
   savePrivateMusicTrack: vi.fn(),
   savePrivateEntry: vi.fn(),
   setGuestbookMessageStatus: vi.fn(),
   setGuestbookMessageReply: vi.fn(),
   setVisitorInviteStatus: vi.fn(),
+  togglePrivateEntryLike: vi.fn(),
   unlockPrivateSpace: vi.fn(),
 }));
 
@@ -36,6 +40,7 @@ describe("owner session restoration", () => {
     window.location.hash = "#/";
     window.scrollTo = vi.fn();
     vi.resetAllMocks();
+    api.loadPublicTechnicalNotes.mockResolvedValue([]);
     Object.defineProperties(window.HTMLMediaElement.prototype, {
       load: { configurable: true, value: vi.fn() },
       pause: { configurable: true, value: vi.fn() },
@@ -95,17 +100,22 @@ describe("owner session restoration", () => {
     expect(award?.querySelector(".award-result")?.textContent).toBe("2026 MCM/ICM · Problem C");
   });
 
-  it("turns the top navigation dark only in personal space", () => {
+  it("uses the private header treatment throughout the girl-band edition", async () => {
     window.location.hash = "#/space";
     const { unmount } = render(<App />);
 
     expect(document.querySelector(".site-header")?.classList.contains("site-header--dark")).toBe(true);
 
     unmount();
-    window.location.hash = "#/awards";
+    window.location.hash = "#/writing";
+    api.unlockPrivateSpace.mockResolvedValue({ name: "Visitor", visitor_number: 1, is_owner: false, session_token: "visitor-token" });
+    api.loadPrivateSpace.mockResolvedValue({ visitor: { name: "Visitor", visitor_number: 1, visit_count: 1, is_owner: false }, entries: [], messages: [], playlist: [] });
     render(<App />);
+    fireEvent.change(screen.getByPlaceholderText("Enter invitation code"), { target: { value: "visitor-code" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enter ↗" }));
 
-    expect(document.querySelector(".site-header")?.classList.contains("site-header--dark")).toBe(false);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("band"));
+    expect(document.querySelector(".site-header")?.classList.contains("site-header--dark")).toBe(true);
   });
 
   it("uses resume-focused home content without girl-band imagery in the minimal edition", () => {
@@ -385,7 +395,7 @@ describe("owner session restoration", () => {
         kind: "writing",
         title: "A private note",
         excerpt: "A short excerpt",
-        body: "Intro paragraph.\n\n{{media:inline}}\n\n| Model | Score |\n| --- | ---: |\n| Baseline | 0.91 |",
+        body: "# Opening\n\nIntro paragraph.\n\n## Results\n\n{{media:inline}}\n\n| Model | Score |\n| --- | ---: |\n| Baseline | 0.91 |",
         image_url: `yuyun-media-v1:${JSON.stringify([
           {
             id: "cover",
@@ -428,6 +438,9 @@ describe("owner session restoration", () => {
     expect(expandedEntry?.classList.contains("is-expanded")).toBe(true);
     expect(body).toBeTruthy();
     expect(container.querySelector("table")).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Article outline" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Opening" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Results" })).toBeTruthy();
     expect(container.querySelector(".archive-entry__gallery")).toBeNull();
     expect(inlineMedia?.querySelector("img")?.getAttribute("src")).toContain("inline");
     const table = container.querySelector("table");
@@ -484,6 +497,8 @@ describe("owner session restoration", () => {
     expect(doubanLink.getAttribute("href"))
       .toBe("https://movie.douban.com/subject/1295644/");
     expect(doubanLink.classList.contains("archive-entry__external")).toBe(true);
+    const summary = doubanLink.closest(".archive-entry__summary");
+    expect(summary?.textContent).toContain("After the screening");
 
     const startDateInput = screen.getByLabelText("Start date");
     const endDateInput = screen.getByLabelText("End date");
@@ -508,6 +523,24 @@ describe("owner session restoration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
     expect(screen.getByLabelText("起始日期").getAttribute("type")).toBe("date");
     expect((screen.getByLabelText("终止日期") as HTMLInputElement).value).toBe("2025-12-31");
+  });
+
+  it("uses a plain writing font in the Markdown editor and keeps type controls contained", async () => {
+    localStorage.setItem("yuyun-owner-console-session", "owner-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: { name: "Yuyun", visitor_number: 1, visit_count: 1, is_owner: true },
+      entries: [],
+      messages: [],
+      playlist: [],
+    });
+
+    const { container } = render(<App />);
+    await screen.findByText("Shape the archive.");
+    const editor = container.querySelector(".space-editor__markdown-input");
+    expect(editor).toBeTruthy();
+    expect(container.querySelector(".space-editor__kind")?.classList.contains("space-editor__kind--contained")).toBe(true);
+    expect(screen.getByText("yyyy/mm/dd")).toBeTruthy();
   });
 
   it("uses the creation date for undated visitor entries and keeps them filterable", async () => {
@@ -542,7 +575,7 @@ describe("owner session restoration", () => {
     expect(screen.getByRole("heading", { name: "A saved fragment" })).toBeTruthy();
   });
 
-  it("shows the visible invitation code and lets the owner delete a visitor", async () => {
+  it("shows the visible invitation code and lets the owner delete or reset a visitor", async () => {
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
     window.location.hash = "#/admin";
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -571,9 +604,27 @@ describe("owner session restoration", () => {
     render(<App />);
 
     expect(await screen.findByText("HuangRuiQi-AbCdEf1234567")).toBeTruthy();
+    api.resetVisitorInviteCode.mockResolvedValue({
+      id: "invite-1",
+      label: "HuangRuiQi",
+      is_active: true,
+      expires_at: null,
+      visit_count: 2,
+      last_seen_at: null,
+      created_at: "2026-08-12T08:00:00.000Z",
+      code_display: "HuangRuiQi-ZyXwVu9876543",
+    });
     fireEvent.click(screen.getByRole("button", { name: "Delete visitor" }));
 
     await waitFor(() => expect(api.deleteVisitorInvite).toHaveBeenCalledWith("owner-token", "invite-1"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset code" }));
+    await waitFor(() => expect(api.resetVisitorInviteCode).toHaveBeenCalledWith(
+      "owner-token",
+      "invite-1",
+      expect.stringMatching(/^HuangRuiQi-/),
+    ));
+    expect(await screen.findByText("HuangRuiQi-ZyXwVu9876543")).toBeTruthy();
   });
 
   it("lets the owner save a guestbook reply and shows that reply to the visitor", async () => {
@@ -706,5 +757,133 @@ describe("owner session restoration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Return to playlist" }));
     await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/default.mp3"));
+  });
+
+  it("lets an invited visitor like and comment on an article without duplicate submissions", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: { name: "Visitor", visitor_number: 2, visit_count: 1, is_owner: false },
+      playlist: [],
+      messages: [],
+      entries: [{
+        id: "entry-one",
+        kind: "writing",
+        title: "A shared note",
+        excerpt: "A complete short line",
+        body: "# Opening\n\nArticle body.",
+        image_url: null,
+        external_url: null,
+        event_date: "2026-08-17",
+        display_date: "2026-08-17",
+        music_track_id: null,
+        is_published: true,
+        is_public: false,
+        like_count: 2,
+        liked_by_visitor: false,
+        comments: [],
+      }],
+    });
+    api.togglePrivateEntryLike.mockResolvedValue({
+      entry_id: "entry-one",
+      like_count: 3,
+      liked_by_visitor: true,
+    });
+    api.postPrivateEntryComment.mockResolvedValue({
+      id: "comment-one",
+      entry_id: "entry-one",
+      visitor_name: "Visitor",
+      body: "I read this.",
+      created_at: "2026-08-18T08:00:00.000Z",
+    });
+
+    render(<App />);
+    await screen.findByRole("heading", { name: "A shared note" });
+    fireEvent.click(screen.getByRole("button", { name: "Like · 2" }));
+    await waitFor(() => expect(api.togglePrivateEntryLike).toHaveBeenCalledWith("visitor-token", "entry-one"));
+    expect(screen.getByRole("button", { name: "Unlike · 3" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    fireEvent.change(screen.getByPlaceholderText("Leave a comment on this article..."), {
+      target: { value: "I read this." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Post comment" }));
+
+    await waitFor(() => expect(api.postPrivateEntryComment).toHaveBeenCalledWith(
+      "visitor-token",
+      "entry-one",
+      "I read this.",
+      expect.any(String),
+    ));
+    expect(await screen.findByText("I read this.")).toBeTruthy();
+    expect(api.postPrivateEntryComment).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves Tech Notes with a separate VOL.01 publishing choice", async () => {
+    localStorage.setItem("yuyun-owner-console-session", "owner-token");
+    window.location.hash = "#/space";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: { name: "Yuyun", visitor_number: 1, visit_count: 1, is_owner: true },
+      entries: [],
+      playlist: [],
+      messages: [],
+    });
+    api.savePrivateEntry.mockResolvedValue({
+      id: "tech-one",
+      kind: "tech",
+      title: "Evaluation notes",
+      excerpt: "How I compare models",
+      body: "# Evaluation",
+      image_url: null,
+      external_url: null,
+      event_date: null,
+      display_date: "2026-08-18",
+      music_track_id: null,
+      is_published: false,
+      is_public: true,
+      like_count: 0,
+      liked_by_visitor: false,
+      comments: [],
+    });
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Tech Note" }));
+    fireEvent.change(screen.getByPlaceholderText("A title for this fragment"), { target: { value: "Evaluation notes" } });
+    fireEvent.click(screen.getByLabelText("Publish this Tech Note to VOL.01"));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+
+    await waitFor(() => expect(api.savePrivateEntry).toHaveBeenCalledWith(
+      "owner-token",
+      expect.objectContaining({ kind: "tech", title: "Evaluation notes", is_public: true }),
+    ));
+  });
+
+  it("renders published Tech Notes on VOL.01 with the article card and outline", async () => {
+    window.location.hash = "#/notes";
+    api.loadPublicTechnicalNotes.mockResolvedValue([{
+      id: "public-tech-one",
+      kind: "tech",
+      title: "Public evaluation notes",
+      excerpt: "A practical model comparison.",
+      body: "# Setup\n\n## Results\n\nThe result.",
+      image_url: null,
+      external_url: null,
+      event_date: "2026-08-18",
+      display_date: "2026-08-18",
+      music_track_id: null,
+      is_published: false,
+      is_public: true,
+      like_count: 0,
+      liked_by_visitor: false,
+      comments: [],
+    }]);
+
+    render(<App />);
+    const title = await screen.findByRole("heading", { name: "Public evaluation notes" });
+    expect(title.closest(".public-note-card")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    expect(screen.getByRole("navigation", { name: "Article outline" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Setup" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Results" })).toBeTruthy();
   });
 });
