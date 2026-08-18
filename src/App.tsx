@@ -153,6 +153,7 @@ const copy = {
     pinNote: "Pin this note",
     noteDelivered: "Your note has been delivered to Yuyun.",
     yourMessages: "Your pinned notes",
+    allMessages: "All pinned notes",
     noMessagesYet: "Nothing pinned yet.",
     messageTime: "Pinned",
     filterByType: "Filter by type",
@@ -227,10 +228,15 @@ const copy = {
     publishToVolOne: "Publish this Tech Note to VOL.01",
     publicTechNotes: "Published notes",
     likeEntry: "Like",
+    likedEntry: "Liked",
     unlikeEntry: "Unlike",
     articleComments: "Comments",
     noArticleComments: "No comments yet.",
     commentPlaceholder: "Leave a comment on this article...",
+    commentVisibility: "Who can see this comment?",
+    commentPublic: "Everyone",
+    commentPrivate: "Only me + Yuyun",
+    privateComment: "Private comment",
     postComment: "Post comment",
     postingComment: "Posting...",
     saving: "Saving...",
@@ -412,6 +418,7 @@ const copy = {
     pinNote: "钉住这张便签",
     noteDelivered: "你的留言已经送达 Yuyun。",
     yourMessages: "你留下的便签",
+    allMessages: "全部访客便签",
     noMessagesYet: "还没有留下便签。",
     messageTime: "写于",
     filterByType: "按类型筛选",
@@ -486,10 +493,15 @@ const copy = {
     publishToVolOne: "将这篇技术笔记发布到 VOL.01",
     publicTechNotes: "已发布笔记",
     likeEntry: "点赞",
+    likedEntry: "已点赞",
     unlikeEntry: "取消点赞",
     articleComments: "文章评论",
     noArticleComments: "还没有评论。",
     commentPlaceholder: "写下对这篇文章的评论...",
+    commentVisibility: "谁可以看到这条评论？",
+    commentPublic: "所有人可见",
+    commentPrivate: "仅自己和 Yuyun",
+    privateComment: "私密评论",
     postComment: "发布评论",
     postingComment: "发布中...",
     saving: "保存中...",
@@ -1041,10 +1053,12 @@ function HomePage({
       <section className="home-hero">
         <div className="home-copy">
           <p className="kicker">{tr(language, "role")}</p>
-          <h1>
-            Yuyun
-            <br />
-            <em>Chen.</em>
+          <h1 className={language === "zh" ? "home-name--zh" : undefined}>
+            {language === "zh" ? "陈彧赟" : <>
+              Yuyun
+              <br />
+              <em>Chen.</em>
+            </>}
           </h1>
           <p className="hero-intro">{tr(language, "intro")}</p>
           <div className="hero-actions">
@@ -1538,14 +1552,48 @@ function DatePickerInput({
   label: string;
   language: Language;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const displayValue = value
     ? formatDisplayDate(`${value}T12:00:00`, language)
     : language === "zh" ? "年月日" : "yyyy/mm/dd";
+  const pickerLabel = language === "zh" ? `打开${label}日历` : `Open ${label} calendar`;
+
+  const openPicker = () => {
+    const input = inputRef.current;
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+        return;
+      }
+    } catch {
+      // Some mobile browsers expose showPicker but only allow the native fallback.
+    }
+    input.focus();
+    input.click();
+  };
 
   return (
     <span className="date-picker-input">
-      <span aria-hidden="true">{displayValue}</span>
+      <span
+        className="date-picker-input__trigger"
+        role="button"
+        tabIndex={0}
+        aria-label={pickerLabel}
+        onClick={openPicker}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openPicker();
+          }
+        }}
+      >
+        <span aria-hidden="true">{displayValue}</span>
+        <i aria-hidden="true" />
+      </span>
       <input
+        ref={inputRef}
+        className="date-picker-input__native"
         type="date"
         lang="en-CA"
         aria-label={label}
@@ -1650,22 +1698,26 @@ function ArticleEngagement({
   language,
   expanded,
   commentDraft,
+  commentVisibility,
   isLiking,
   isCommenting,
   error,
   onLike,
   onCommentDraftChange,
+  onCommentVisibilityChange,
   onComment,
 }: {
   entry: PrivateEntry;
   language: Language;
   expanded: boolean;
   commentDraft: string;
+  commentVisibility: "public" | "private";
   isLiking: boolean;
   isCommenting: boolean;
   error: string;
   onLike: () => void;
   onCommentDraftChange: (value: string) => void;
+  onCommentVisibilityChange: (value: "public" | "private") => void;
   onComment: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const comments = entry.comments || [];
@@ -1681,7 +1733,7 @@ function ArticleEngagement({
           onClick={onLike}
         >
           <span aria-hidden="true">{entry.liked_by_visitor ? "♥" : "♡"}</span>
-          {tr(language, entry.liked_by_visitor ? "unlikeEntry" : "likeEntry")}
+          {tr(language, entry.liked_by_visitor ? "likedEntry" : "likeEntry")}
           <strong>{entry.like_count || 0}</strong>
         </button>
         <span>{tr(language, "articleComments")} <strong>{comments.length}</strong></span>
@@ -1692,7 +1744,13 @@ function ArticleEngagement({
             {comments.length === 0 && <p className="entry-comments__empty">{tr(language, "noArticleComments")}</p>}
             {comments.map((comment: PrivateEntryComment) => (
               <article key={comment.id}>
-                <header><strong>{comment.visitor_name}</strong><time dateTime={comment.created_at}>{formatPrivateDate(comment.created_at, language)}</time></header>
+                <header>
+                  <span>
+                    <strong>{comment.visitor_name}</strong>
+                    {comment.visibility === "private" && <small>{tr(language, "privateComment")}</small>}
+                  </span>
+                  <time dateTime={comment.created_at}>{formatPrivateDate(comment.created_at, language)}</time>
+                </header>
                 <p>{comment.body}</p>
               </article>
             ))}
@@ -1705,6 +1763,27 @@ function ArticleEngagement({
               maxLength={1000}
               rows={3}
             />
+            <fieldset className="entry-comments__visibility">
+              <legend>{tr(language, "commentVisibility")}</legend>
+              <label>
+                <input
+                  type="radio"
+                  name={`comment-visibility-${entry.id}`}
+                  checked={commentVisibility === "public"}
+                  onChange={() => onCommentVisibilityChange("public")}
+                />
+                <span>{tr(language, "commentPublic")}</span>
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name={`comment-visibility-${entry.id}`}
+                  checked={commentVisibility === "private"}
+                  onChange={() => onCommentVisibilityChange("private")}
+                />
+                <span>{tr(language, "commentPrivate")}</span>
+              </label>
+            </fieldset>
             <div>
               <span>{commentDraft.length}/1000</span>
               <button type="submit" disabled={isCommenting || !commentDraft.trim()}>
@@ -1855,6 +1934,7 @@ function PersonalSpacePage({
   const [entryEndDate, setEntryEndDate] = useState("");
   const [musicPlayRequest, setMusicPlayRequest] = useState<MusicPlayRequest | null>(null);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [commentVisibilities, setCommentVisibilities] = useState<Record<string, "public" | "private">>({});
   const [likingEntryId, setLikingEntryId] = useState("");
   const [commentingEntryId, setCommentingEntryId] = useState("");
   const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
@@ -1900,7 +1980,11 @@ function PersonalSpacePage({
             is_public: Boolean(entry.is_public),
             like_count: Number(entry.like_count || 0),
             liked_by_visitor: Boolean(entry.liked_by_visitor),
-            comments: entry.comments || [],
+            comments: (entry.comments || []).map((comment) => ({
+              ...comment,
+              visibility: comment.visibility === "private" ? "private" : "public",
+              is_own: Boolean(comment.is_own),
+            })),
           })),
         });
         if (payload.visitor.is_owner) {
@@ -2011,6 +2095,7 @@ function PersonalSpacePage({
     setEntryEndDate("");
     setMusicPlayRequest(null);
     setCommentDrafts({});
+    setCommentVisibilities({});
     setLikingEntryId("");
     setCommentingEntryId("");
     setInteractionErrors({});
@@ -2062,6 +2147,7 @@ function PersonalSpacePage({
   const handleEntryComment = async (event: React.FormEvent<HTMLFormElement>, entryId: string) => {
     event.preventDefault();
     const body = (commentDrafts[entryId] || "").trim();
+    const visibility = commentVisibilities[entryId] || "public";
     if (!sessionToken || !body || commentingEntryId) return;
     const requestId = crypto.randomUUID();
     setCommentingEntryId(entryId);
@@ -2069,10 +2155,10 @@ function PersonalSpacePage({
     try {
       let savedComment: PrivateEntryComment;
       try {
-        savedComment = await postPrivateEntryComment(sessionToken, entryId, body, requestId);
+        savedComment = await postPrivateEntryComment(sessionToken, entryId, body, visibility, requestId);
       } catch (requestError) {
         if (!isTransientPrivateSpaceError(requestError)) throw requestError;
-        savedComment = await postPrivateEntryComment(sessionToken, entryId, body, requestId);
+        savedComment = await postPrivateEntryComment(sessionToken, entryId, body, visibility, requestId);
       }
       setContent((current) => current ? {
         ...current,
@@ -2082,6 +2168,7 @@ function PersonalSpacePage({
         } : entry),
       } : current);
       setCommentDrafts((current) => ({ ...current, [entryId]: "" }));
+      setCommentVisibilities((current) => ({ ...current, [entryId]: "public" }));
     } catch (requestError) {
       setInteractionErrors((current) => ({
         ...current,
@@ -2145,7 +2232,7 @@ function PersonalSpacePage({
   }
 
   return (
-    <section className="personal-space personal-space--open">
+    <section className={`personal-space personal-space--open${musicPlayRequest ? " has-music-player" : ""}`}>
       <div className="space-noise" aria-hidden="true" />
       <div className="space-open__inner">
         <header className="space-welcome">
@@ -2325,11 +2412,13 @@ function PersonalSpacePage({
                         language={language}
                         expanded
                         commentDraft={commentDrafts[entry.id] || ""}
+                        commentVisibility={commentVisibilities[entry.id] || "public"}
                         isLiking={likingEntryId === entry.id}
                         isCommenting={commentingEntryId === entry.id}
                         error={interactionErrors[entry.id] || ""}
                         onLike={() => handleEntryLike(entry)}
                         onCommentDraftChange={(value) => setCommentDrafts((current) => ({ ...current, [entry.id]: value }))}
+                        onCommentVisibilityChange={(value) => setCommentVisibilities((current) => ({ ...current, [entry.id]: value }))}
                         onComment={(event) => handleEntryComment(event, entry.id)}
                       />
                       <button
@@ -2349,11 +2438,13 @@ function PersonalSpacePage({
                         language={language}
                         expanded={false}
                         commentDraft=""
+                        commentVisibility="public"
                         isLiking={likingEntryId === entry.id}
                         isCommenting={false}
                         error=""
                         onLike={() => handleEntryLike(entry)}
                         onCommentDraftChange={() => undefined}
+                        onCommentVisibilityChange={() => undefined}
                         onComment={(event) => event.preventDefault()}
                       />
                       <button
@@ -2394,11 +2485,12 @@ function PersonalSpacePage({
             </form>
             {error && <p className="space-error" role="alert">{error}</p>}
             <div className="guestbook-history">
-              <p className="space-editor__label">{tr(language, "yourMessages")}</p>
+              <p className="space-editor__label">{tr(language, content.visitor.is_owner ? "allMessages" : "yourMessages")}</p>
               {content.messages.length === 0 && <p className="guestbook-history__empty">{tr(language, "noMessagesYet")}</p>}
               <div className="guestbook-history__grid">
                 {content.messages.map((item) => (
                   <article className="guestbook-note" key={item.id}>
+                    {content.visitor.is_owner && <strong className="guestbook-note__author">{item.visitor_name}</strong>}
                     <p>{item.body}</p>
                     {item.owner_reply && (
                       <div className="guestbook-note__reply">
@@ -3288,7 +3380,15 @@ function AdminPage({ language }: { language: Language }) {
             <form className="invite-form" onSubmit={handleCreateInvite}>
               <label>{tr(language, "visitorName")}<input value={visitorName} onChange={(event) => setVisitorName(event.target.value)} placeholder={tr(language, "visitorNamePlaceholder")} /></label>
               <label>{tr(language, "invitationCode")} <small>{tr(language, "randomCharacters")}</small><div className="invite-code-field"><input value={inviteCode} readOnly /><button type="button" onClick={() => setInviteSuffix(makeInviteSuffix())}>{tr(language, "generate")}</button></div></label>
-              <label>{tr(language, "expiresOn")} <small>{tr(language, "optional")}</small><input type="date" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} /></label>
+              <label>
+                {tr(language, "expiresOn")} <small>{tr(language, "optional")}</small>
+                <DatePickerInput
+                  language={language}
+                  label={tr(language, "expiresOn")}
+                  value={expiresAt}
+                  onChange={setExpiresAt}
+                />
+              </label>
               <button className="admin-primary" disabled={busyId === "create" || !visitorName.trim() || inviteCode.trim().length < 10}>{busyId === "create" ? tr(language, "creating") : tr(language, "createInvitation")}</button>
             </form>
             {createdCode && (

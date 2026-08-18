@@ -144,12 +144,12 @@ describe("private space RPC transport", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await togglePrivateEntryLike("visitor-token", "entry-one");
-    await postPrivateEntryComment("visitor-token", "entry-one", "A comment", "request-one");
+    await postPrivateEntryComment("visitor-token", "entry-one", "A comment", "private", "request-one");
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ rpcName: "toggle_private_entry_like" });
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
       rpcName: "post_private_entry_comment",
-      args: { request_id: "request-one" },
+      args: { comment_visibility: "private", request_id: "request-one" },
     });
   });
 

@@ -32,6 +32,8 @@ const labels = {
     shuffle: "Shuffle",
     sequence: "Play in order",
     repeat: "Repeat one",
+    minimize: "Minimize player",
+    restore: "Restore player",
   },
   zh: {
     playlist: "私人歌单",
@@ -53,6 +55,8 @@ const labels = {
     shuffle: "随机播放",
     sequence: "顺序播放",
     repeat: "单曲循环",
+    minimize: "最小化播放器",
+    restore: "展开播放器",
   },
 } as const;
 
@@ -84,6 +88,8 @@ export function PrivateMusicPlayer({
   const [currentTrackId, setCurrentTrackId] = useState("");
   const [mode, setMode] = useState<"playlist" | "entry">("playlist");
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>("shuffle");
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false);
@@ -113,9 +119,11 @@ export function PrivateMusicPlayer({
     setMode(nextMode);
     setCurrentTrackId((current) => {
       if (current === trackId) {
-        shouldPlayRef.current = false;
-        if (audioRef.current) audioRef.current.currentTime = 0;
-        void attemptPlay();
+        if (audioRef.current) {
+          shouldPlayRef.current = false;
+          audioRef.current.currentTime = 0;
+          void attemptPlay();
+        }
       }
       return trackId;
     });
@@ -202,12 +210,14 @@ export function PrivateMusicPlayer({
       shouldPlayRef.current = false;
       void attemptPlay();
     }
-  }, [currentTrack?.id]);
+  }, [currentTrack?.id, hasStarted]);
 
   useEffect(() => {
     if (!playRequest) return;
     const requestedTrack = activeTracks.find((track) => track.id === playRequest.trackId);
     if (requestedTrack) {
+      setHasStarted(true);
+      setIsMinimized(false);
       const requestedMode = playRequest.mode || "entry";
       if (requestedMode === "playlist") {
         const requestedIndex = activeTracks.findIndex((track) => track.id === requestedTrack.id);
@@ -222,7 +232,7 @@ export function PrivateMusicPlayer({
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
 
-  if (!currentTrack || activeTracks.length === 0) return null;
+  if (!hasStarted || !currentTrack || activeTracks.length === 0) return null;
 
   const togglePlayback = () => {
     const audio = audioRef.current;
@@ -257,22 +267,51 @@ export function PrivateMusicPlayer({
   };
   const playbackModeLabel = copy[playbackMode];
 
-  return (
+  const audioElement = (
+    <audio
+      ref={audioRef}
+      src={currentTrack.audio_url}
+      preload="metadata"
+      onEnded={handleEnded}
+      onPlay={() => setIsPlaying(true)}
+      onPause={() => setIsPlaying(false)}
+      onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
+      onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+      onError={() => {
+        setIsPlaying(false);
+        setPlaybackError(copy.playbackFailed);
+      }}
+    />
+  );
+
+  if (isMinimized) {
+    return <>
+      {audioElement}
+      <button
+        className={`private-music-player__mini${isPlaying ? " is-playing" : ""}`}
+        type="button"
+        onClick={() => setIsMinimized(false)}
+        aria-label={copy.restore}
+        title={copy.restore}
+      >
+        {currentTrack.cover_url ? <img src={currentTrack.cover_url} alt="" /> : <span aria-hidden="true">♪</span>}
+        <i aria-hidden="true" />
+      </button>
+    </>;
+  }
+
+  return <>
+    {audioElement}
     <aside className="private-music-player" aria-label={copy.nowPlaying}>
-      <audio
-        ref={audioRef}
-        src={currentTrack.audio_url}
-        preload="metadata"
-        onEnded={handleEnded}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
-        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
-        onError={() => {
-          setIsPlaying(false);
-          setPlaybackError(copy.playbackFailed);
-        }}
-      />
+      <button
+        className="private-music-player__minimize"
+        type="button"
+        onClick={() => setIsMinimized(true)}
+        aria-label={copy.minimize}
+        title={copy.minimize}
+      >
+        <span aria-hidden="true">—</span>
+      </button>
 
       {isQueueOpen && (
         <div className="private-music-player__queue">
@@ -385,5 +424,5 @@ export function PrivateMusicPlayer({
         <button type="button" onClick={() => setIsQueueOpen((open) => !open)} aria-label={isQueueOpen ? copy.closeQueue : copy.queue} title={isQueueOpen ? copy.closeQueue : copy.queue}>≡</button>
       </div>
     </aside>
-  );
+  </>;
 }

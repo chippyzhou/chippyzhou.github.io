@@ -179,6 +179,7 @@ describe("owner session restoration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
 
+    expect(screen.getByRole("heading", { level: 1, name: "陈彧赟" })).toBeTruthy();
     const navigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
     expect(navigation).toEqual(["首页", "项目", "学术", "竞赛", "笔记"]);
   });
@@ -457,6 +458,11 @@ describe("owner session restoration", () => {
   });
 
   it("renders film notes with a Douban link and filters entries by type and date range", async () => {
+    const showPicker = vi.fn();
+    Object.defineProperty(window.HTMLInputElement.prototype, "showPicker", {
+      configurable: true,
+      value: showPicker,
+    });
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
     window.location.hash = "#/film";
     api.loadPrivateSpace.mockResolvedValue({
@@ -505,6 +511,8 @@ describe("owner session restoration", () => {
     const endDateInput = screen.getByLabelText("End date");
     expect(startDateInput.getAttribute("type")).toBe("date");
     expect(endDateInput.getAttribute("type")).toBe("date");
+    fireEvent.click(screen.getByRole("button", { name: "Open Start date calendar" }));
+    expect(showPicker).toHaveBeenCalledOnce();
 
     fireEvent.change(startDateInput, { target: { value: "2026-01-01" } });
     expect(screen.getByRole("heading", { name: "A film note" })).toBeTruthy();
@@ -570,6 +578,11 @@ describe("owner session restoration", () => {
   });
 
   it("shows the visible invitation code and lets the owner delete or reset a visitor", async () => {
+    const showPicker = vi.fn();
+    Object.defineProperty(window.HTMLInputElement.prototype, "showPicker", {
+      configurable: true,
+      value: showPicker,
+    });
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
     window.location.hash = "#/admin";
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -598,6 +611,8 @@ describe("owner session restoration", () => {
     render(<App />);
 
     expect(await screen.findByText("HuangRuiQi-AbCdEf1234567")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open Expires on calendar" }));
+    expect(showPicker).toHaveBeenCalledOnce();
     api.resetVisitorInviteCode.mockResolvedValue({
       id: "invite-1",
       label: "HuangRuiQi",
@@ -691,6 +706,33 @@ describe("owner session restoration", () => {
     expect(screen.getByText("Reply noted.")).toBeTruthy();
   });
 
+  it("shows every visitor guestbook note to the owner on the ordinary Now page", async () => {
+    localStorage.setItem("yuyun-owner-console-session", "owner-token");
+    window.location.hash = "#/now";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: { name: "Yuyun", visitor_number: 1, visit_count: 1, is_owner: true },
+      entries: [],
+      playlist: [],
+      messages: [{
+        id: "message-a",
+        visitor_name: "HuangRuiQi",
+        body: "First visitor note",
+        created_at: "2026-08-18T09:00:00.000Z",
+      }, {
+        id: "message-b",
+        visitor_name: "Another friend",
+        body: "Second visitor note",
+        created_at: "2026-08-18T10:00:00.000Z",
+      }],
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("All pinned notes")).toBeTruthy();
+    expect(screen.getByText("HuangRuiQi")).toBeTruthy();
+    expect(screen.getByText("Another friend")).toBeTruthy();
+  });
+
   it("keeps the default playlist until a visitor explicitly starts an article soundtrack", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
     window.location.hash = "#/writing";
@@ -742,11 +784,12 @@ describe("owner session restoration", () => {
     const { container } = render(<App />);
 
     await screen.findByRole("heading", { name: "A soundtracked note" });
-    const audio = container.querySelector("audio");
-    expect(audio?.getAttribute("src")).toBe("/audio/default.mp3");
+    expect(container.querySelector("audio")).toBeNull();
     expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Play this note's soundtrack: Entry song" }));
+    await waitFor(() => expect(container.querySelector("audio")).toBeTruthy());
+    const audio = container.querySelector("audio");
     await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/entry.mp3"));
     expect(screen.getByRole("button", { name: "Return to playlist" })).toBeTruthy();
 
@@ -800,7 +843,7 @@ describe("owner session restoration", () => {
 
     const { container } = render(<App />);
     const record = await screen.findByRole("button", { name: "Play track: Drive Thru" });
-    const audio = container.querySelector("audio");
+    expect(container.querySelector("audio")).toBeNull();
     expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
     expect(screen.getByText("Album · Drive Thru")).toBeTruthy();
     expect(screen.getByText("Late-night repeat.")).toBeTruthy();
@@ -809,7 +852,14 @@ describe("owner session restoration", () => {
 
     fireEvent.click(record);
     await waitFor(() => expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1));
+    const audio = container.querySelector("audio");
     expect(audio?.getAttribute("src")).toBe("/audio/drive-thru.mp3");
+
+    fireEvent.click(screen.getByRole("button", { name: "Minimize player" }));
+    expect(screen.getByRole("button", { name: "Restore player" })).toBeTruthy();
+    expect(screen.queryByRole("complementary", { name: "Now playing" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Restore player" }));
+    expect(screen.getByRole("complementary", { name: "Now playing" })).toBeTruthy();
 
     fireEvent.ended(audio as HTMLAudioElement);
     await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/three.mp3"));
@@ -864,6 +914,8 @@ describe("owner session restoration", () => {
       entry_id: "entry-one",
       visitor_name: "Visitor",
       body: "I read this.",
+      visibility: "private",
+      is_own: true,
       created_at: "2026-08-18T08:00:00.000Z",
     });
 
@@ -871,9 +923,12 @@ describe("owner session restoration", () => {
     await screen.findByRole("heading", { name: "A shared note" });
     fireEvent.click(screen.getByRole("button", { name: "Like · 2" }));
     await waitFor(() => expect(api.togglePrivateEntryLike).toHaveBeenCalledWith("visitor-token", "entry-one"));
-    expect(screen.getByRole("button", { name: "Unlike · 3" })).toBeTruthy();
+    const likedButton = screen.getByRole("button", { name: "Unlike · 3" });
+    expect(likedButton.textContent).toContain("Liked");
+    expect(likedButton.textContent).not.toContain("Unlike");
 
     fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Only me + Yuyun" }));
     fireEvent.change(screen.getByPlaceholderText("Leave a comment on this article..."), {
       target: { value: "I read this." },
     });
@@ -883,9 +938,11 @@ describe("owner session restoration", () => {
       "visitor-token",
       "entry-one",
       "I read this.",
+      "private",
       expect.any(String),
     ));
     expect(await screen.findByText("I read this.")).toBeTruthy();
+    expect(screen.getByText("Private comment")).toBeTruthy();
     expect(api.postPrivateEntryComment).toHaveBeenCalledTimes(1);
   });
 

@@ -21,6 +21,8 @@ export type PrivateEntryComment = {
   entry_id: string;
   visitor_name: string;
   body: string;
+  visibility: "public" | "private";
+  is_own?: boolean;
   created_at: string;
 };
 
@@ -410,12 +412,14 @@ export function postPrivateEntryComment(
   sessionToken: string,
   entryId: string,
   body: string,
+  visibility: "public" | "private",
   requestId: string,
 ) {
   return rpc<PrivateEntryComment>("post_private_entry_comment", {
     session_token: sessionToken,
     target_entry_id: entryId,
     comment_body: body,
+    comment_visibility: visibility,
     request_id: requestId,
   });
 }
