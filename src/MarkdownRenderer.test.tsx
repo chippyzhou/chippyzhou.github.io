@@ -45,6 +45,22 @@ describe("Obsidian Markdown", () => {
     expect(container.querySelector(".katex")).toBeTruthy();
   });
 
+  it("syntax-highlights fenced code by language", () => {
+    const { container } = render(
+      <MarkdownRenderer
+        emptyLabel="Empty"
+        source={'```typescript\nconst message: string = "hello";\n// visible comment\n```'}
+      />,
+    );
+
+    const code = container.querySelector("pre code");
+    expect(code?.classList.contains("hljs")).toBe(true);
+    expect(code?.classList.contains("language-typescript")).toBe(true);
+    expect(code?.querySelector(".hljs-keyword")?.textContent).toBe("const");
+    expect(code?.querySelector(".hljs-string")?.textContent).toBe('"hello"');
+    expect(code?.querySelector(".hljs-comment")?.textContent).toBe("// visible comment");
+  });
+
   it("renders bracket-delimited LaTeX blocks pasted into the editor", () => {
     const source = String.raw`\[
 \boxed{

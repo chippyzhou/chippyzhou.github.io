@@ -1,4 +1,5 @@
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import remarkBreaks from "remark-breaks";
 import remarkFrontmatter from "remark-frontmatter";
@@ -132,7 +133,7 @@ export function MarkdownRenderer({ source, emptyLabel }: { source: string; empty
     <ReactMarkdown
       components={components}
       remarkPlugins={[remarkFrontmatter, remarkGfm, remarkBreaks, remarkMath]}
-      rehypePlugins={[rehypeKatex]}
+      rehypePlugins={[rehypeKatex, rehypeHighlight]}
       urlTransform={customUrlTransform}
     >
       {transformObsidianMarkdown(source)}
