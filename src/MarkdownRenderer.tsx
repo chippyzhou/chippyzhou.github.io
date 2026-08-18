@@ -53,8 +53,29 @@ function encodeTarget(value: string) {
   return encodeURIComponent(value.trim());
 }
 
+export function normalizeLatexDelimiters(source: string) {
+  let fenceMarker = "";
+
+  return source.split(/\r?\n/u).map((line) => {
+    const fence = line.match(/^\s*(```+|~~~+)/u);
+    if (fence) {
+      const marker = fence[1][0];
+      fenceMarker = fenceMarker === marker ? "" : fenceMarker || marker;
+      return line;
+    }
+    if (fenceMarker) return line;
+
+    const trimmed = line.trim();
+    if (trimmed === "\\[" || trimmed === "\\]") return "$$";
+
+    return line
+      .replace(/\\\[([^\n]+?)\\\]/gu, (_, formula: string) => `$$${formula}$$`)
+      .replace(/\\\(([^\n]+?)\\\)/gu, (_, formula: string) => `$${formula}$`);
+  }).join("\n");
+}
+
 export function transformObsidianMarkdown(source: string) {
-  return source
+  return normalizeLatexDelimiters(source)
     .replace(/%%[\s\S]*?%%/g, "")
     .replace(
       /!\[\[(https?:\/\/[^\]|]+)(?:\|([^\]]+))?\]\]/g,

@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { extractMarkdownOutline, MarkdownRenderer, transformObsidianMarkdown } from "./MarkdownRenderer";
+import { extractMarkdownOutline, MarkdownRenderer, normalizeLatexDelimiters, transformObsidianMarkdown } from "./MarkdownRenderer";
 
 describe("Obsidian Markdown", () => {
   it("transforms Obsidian links, embeds, callouts, highlights, and comments", () => {
@@ -43,6 +43,34 @@ describe("Obsidian Markdown", () => {
     expect(container.querySelector("mark")?.textContent).toBe("Key result");
     expect(container.querySelector(".obsidian-wikilink")?.textContent).toBe("Experiment log");
     expect(container.querySelector(".katex")).toBeTruthy();
+  });
+
+  it("renders bracket-delimited LaTeX blocks pasted into the editor", () => {
+    const source = String.raw`\[
+\boxed{
+\begin{aligned}
+\mathcal{F}(\theta)
+&=\lim_{N\to\infty}\sum_{n=1}^{N}\frac{(-1)^{n+1}}{n^\alpha}
++\det\!\begin{pmatrix}a_{11}&a_{12}\\a_{21}&a_{22}\end{pmatrix}
++\left\|\mathbf{y}-\sum_{k=1}^{K}\sigma(\mathbf{W}_k\mathbf{x}+\mathbf{b}_k)\right\|_2^2
+\\
+&\quad+\begin{cases}
+\dfrac{\Gamma(\alpha+1)}{\sqrt{2\pi\sigma^2}}\exp\!\left(-\dfrac{(x-\mu)^2}{2\sigma^2}\right),&x\ge0,\\
+\displaystyle\sum_{j=0}^{\infty}\dfrac{(-1)^j x^{2j+1}}{(2j+1)!},&x<0.
+\end{cases}
+\end{aligned}
+}
+\]`;
+    const { container } = render(<MarkdownRenderer emptyLabel="Empty" source={source} />);
+
+    expect(normalizeLatexDelimiters(source)).toMatch(/^\$\$/u);
+    expect(container.querySelector(".katex-display")).toBeTruthy();
+    expect(container.querySelector(".katex-error")).toBeNull();
+  });
+
+  it("leaves LaTeX delimiters inside fenced code blocks untouched", () => {
+    const source = "```tex\n\\[x^2\\]\n```";
+    expect(normalizeLatexDelimiters(source)).toBe(source);
   });
 
   it("renders raw HTML and script URLs as inert text rather than executable content", () => {

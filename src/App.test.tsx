@@ -523,6 +523,7 @@ describe("owner session restoration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
     expect(screen.getByLabelText("起始日期").getAttribute("type")).toBe("date");
     expect((screen.getByLabelText("终止日期") as HTMLInputElement).value).toBe("2025-12-31");
+    expect(screen.getAllByText("年月日").length).toBeGreaterThanOrEqual(1);
   });
 
   it("uses a plain writing font in the Markdown editor and keeps type controls contained", async () => {

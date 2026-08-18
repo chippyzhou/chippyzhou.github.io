@@ -320,9 +320,13 @@ begin
     'music_track_id', saved_entry.music_track_id,
     'is_published', saved_entry.is_published,
     'is_public', saved_entry.is_public,
-    'like_count', (select count(*) from public.private_entry_likes where entry_id = saved_entry.id),
+    'like_count', (
+      select count(*) from public.private_entry_likes entry_like
+      where entry_like.entry_id = saved_entry.id
+    ),
     'liked_by_visitor', exists(
-      select 1 from public.private_entry_likes where entry_id = saved_entry.id and invite_id = owner_invite.id
+      select 1 from public.private_entry_likes entry_like
+      where entry_like.entry_id = saved_entry.id and entry_like.invite_id = owner_invite.id
     ),
     'comments', coalesce((
       select jsonb_agg(jsonb_build_object(

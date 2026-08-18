@@ -731,15 +731,27 @@ img { display: block; max-width: 100%; }
   font: 700 11px/1 Arial, Helvetica, sans-serif;
   text-transform: none;
 }
-.date-picker-input::after {
-  content: "▦";
+.date-picker-input::before {
+  content: "";
   position: absolute;
-  right: 10px;
+  right: 11px;
   top: 50%;
-  color: #d7af68;
-  font-size: 17px;
-  line-height: 1;
+  width: 14px;
+  height: 13px;
+  border: 1px solid #d7af68;
+  background: linear-gradient(#d7af68, #d7af68) 0 3px / 100% 1px no-repeat;
   transform: translateY(-50%);
+  pointer-events: none;
+}
+.date-picker-input::after {
+  content: "";
+  position: absolute;
+  right: 13px;
+  top: calc(50% - 8px);
+  width: 1px;
+  height: 4px;
+  background: #d7af68;
+  box-shadow: 8px 0 0 #d7af68;
   pointer-events: none;
 }
 .date-picker-input > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -844,13 +856,15 @@ img { display: block; max-width: 100%; }
 .archive-entry__summary:empty { display: none; }
 .archive-entry__preview-text {
   margin: 10px 0 0;
+  max-height: 3.1em;
+  flex: 0 0 auto;
   overflow: hidden;
   display: -webkit-box;
   color: #8f8993 !important;
   font: 12px/1.55 Georgia, serif !important;
   text-transform: none !important;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
 }
 .archive-entry__toggle {
   width: 100%;
@@ -921,13 +935,13 @@ img { display: block; max-width: 100%; }
 .archive-entry__outline {
   position: relative;
   margin: 18px 0 0;
-  padding: 0 0 4px 16px;
+  padding: 0 0 4px 18px;
   display: grid;
   gap: 2px;
   overflow: visible;
   border-left: 1px solid #655d69;
 }
-.archive-entry__outline > span { margin: 0 0 8px -16px; color: #d7af68; font: 900 9px/1.2 Arial, Helvetica, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.archive-entry__outline > span { margin: 0 0 8px; color: #d7af68; font: 900 9px/1.2 Arial, Helvetica, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
 .archive-entry__outline > small { color: #8f8993; font: 11px/1.45 Arial, Helvetica, sans-serif; }
 .archive-entry__outline button {
   position: relative;

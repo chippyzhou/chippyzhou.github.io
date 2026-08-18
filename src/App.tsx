@@ -376,7 +376,7 @@ const copy = {
     filterByType: "按类型筛选",
     filterStartDate: "起始日期",
     filterEndDate: "终止日期",
-    filterDatePlaceholder: "年/月/日",
+    filterDatePlaceholder: "年月日",
     allTypes: "全部类型",
     entriesShown: "篇记录",
     noFilteredEntries: "没有符合当前筛选条件的记录。",
@@ -1493,7 +1493,7 @@ function DatePickerInput({
 }) {
   const displayValue = value
     ? formatDisplayDate(`${value}T12:00:00`, language)
-    : language === "zh" ? "年/月/日" : "yyyy/mm/dd";
+    : language === "zh" ? "年月日" : "yyyy/mm/dd";
 
   return (
     <span className="date-picker-input">
