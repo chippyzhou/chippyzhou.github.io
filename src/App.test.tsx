@@ -731,6 +731,27 @@ describe("owner session restoration", () => {
     expect(await screen.findByText("All pinned notes")).toBeTruthy();
     expect(screen.getByText("HuangRuiQi")).toBeTruthy();
     expect(screen.getByText("Another friend")).toBeTruthy();
+
+    api.setGuestbookMessageReply.mockResolvedValue({
+      id: "message-a",
+      visitor_name: "HuangRuiQi",
+      body: "First visitor note",
+      created_at: "2026-08-18T09:00:00.000Z",
+      owner_reply: "I saw this.",
+      owner_replied_at: "2026-08-18T11:00:00.000Z",
+    });
+    fireEvent.change(screen.getAllByPlaceholderText("Write a reply to this visitor...")[0], {
+      target: { value: "I saw this." },
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: "Save reply" })[0]);
+
+    await waitFor(() => expect(api.setGuestbookMessageReply).toHaveBeenCalledWith(
+      "owner-token",
+      "message-a",
+      "I saw this.",
+    ));
+    expect(await screen.findByText("Reply from Yuyun")).toBeTruthy();
+    expect(document.querySelector(".guestbook-note__reply p")?.textContent).toBe("I saw this.");
   });
 
   it("keeps the default playlist until a visitor explicitly starts an article soundtrack", async () => {

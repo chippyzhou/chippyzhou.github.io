@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { PrivateMusicTrack } from "./privateSpaceApi";
 
 export type MusicPlayRequest = {
@@ -97,6 +97,8 @@ export function PrivateMusicPlayer({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.72);
   const [playbackError, setPlaybackError] = useState("");
+  const [miniPosition, setMiniPosition] = useState<{ left: number; top: number } | null>(null);
+  const miniDragRef = useRef<{ startX: number; startY: number; left: number; top: number; dragged: boolean } | null>(null);
 
   const currentTrack = tracks.find((track) => track.id === currentTrackId)
     || activeTracks[playlistIndex]
@@ -267,6 +269,38 @@ export function PrivateMusicPlayer({
   };
   const playbackModeLabel = copy[playbackMode];
 
+  const handleMiniPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    miniDragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      left: rect.left,
+      top: rect.top,
+      dragged: false,
+    };
+  };
+
+  const handleMiniPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = miniDragRef.current;
+    if (!drag) return;
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) drag.dragged = true;
+    if (!drag.dragged) return;
+    const size = event.currentTarget.getBoundingClientRect().width;
+    setMiniPosition({
+      left: Math.max(8, Math.min(window.innerWidth - size - 8, drag.left + deltaX)),
+      top: Math.max(76, Math.min(window.innerHeight - size - 8, drag.top + deltaY)),
+    });
+  };
+
+  const handleMiniClick = () => {
+    const wasDragged = miniDragRef.current?.dragged;
+    miniDragRef.current = null;
+    if (!wasDragged) setIsMinimized(false);
+  };
+
   const audioElement = (
     <audio
       ref={audioRef}
@@ -290,7 +324,11 @@ export function PrivateMusicPlayer({
       <button
         className={`private-music-player__mini${isPlaying ? " is-playing" : ""}`}
         type="button"
-        onClick={() => setIsMinimized(false)}
+        style={miniPosition ? { left: miniPosition.left, top: miniPosition.top, right: "auto", bottom: "auto" } : undefined}
+        onPointerDown={handleMiniPointerDown}
+        onPointerMove={handleMiniPointerMove}
+        onPointerCancel={() => { miniDragRef.current = null; }}
+        onClick={handleMiniClick}
         aria-label={copy.restore}
         title={copy.restore}
       >

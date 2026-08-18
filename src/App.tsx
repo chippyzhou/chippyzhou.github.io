@@ -1928,6 +1928,8 @@ function PersonalSpacePage({
   const [isRestoring, setIsRestoring] = useState(Boolean(sessionToken));
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [guestbookReplyDrafts, setGuestbookReplyDrafts] = useState<Record<string, string>>({});
+  const [replyingGuestbookId, setReplyingGuestbookId] = useState("");
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(() => new Set());
   const [entryKindFilter, setEntryKindFilter] = useState<"all" | PrivateEntry["kind"]>(fixedEntryKind);
   const [entryStartDate, setEntryStartDate] = useState("");
@@ -2080,6 +2082,33 @@ function PersonalSpacePage({
     }
   };
 
+  const handleGuestbookReply = async (messageId: string) => {
+    if (!sessionToken || !content?.visitor.is_owner || replyingGuestbookId) return;
+    const reply = (guestbookReplyDrafts[messageId] || "").trim();
+    setReplyingGuestbookId(messageId);
+    setError("");
+    try {
+      const savedMessage = await setGuestbookMessageReply(sessionToken, messageId, reply);
+      setContent((current) => current ? {
+        ...current,
+        messages: current.messages.map((item) => item.id === savedMessage.id ? {
+          ...item,
+          owner_reply: savedMessage.owner_reply,
+          owner_replied_at: savedMessage.owner_replied_at,
+        } : item),
+      } : current);
+      setGuestbookReplyDrafts((current) => {
+        const next = { ...current };
+        delete next[messageId];
+        return next;
+      });
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, language, localized(language, "Unable to save this reply.", "回复保存失败。")));
+    } finally {
+      setReplyingGuestbookId("");
+    }
+  };
+
   const handleVisitorLogout = () => {
     sessionStorage.removeItem(visitorSessionKey);
     localStorage.removeItem(ownerSessionKey);
@@ -2089,6 +2118,8 @@ function PersonalSpacePage({
     setIsUnlocking(false);
     setInviteCode("");
     setMessage("");
+    setGuestbookReplyDrafts({});
+    setReplyingGuestbookId("");
     setExpandedEntryIds(new Set());
     setEntryKindFilter("all");
     setEntryStartDate("");
@@ -2217,6 +2248,8 @@ function PersonalSpacePage({
                 inputMode="text"
                 enterKeyHint="go"
                 autoFocus
+                onPointerDown={(event) => event.currentTarget.focus()}
+                onTouchStart={(event) => event.currentTarget.focus()}
               />
               <button type="submit" disabled={!inviteCode.trim() || isUnlocking}>
                 {isUnlocking ? tr(language, "checking") : tr(language, "enter")}
@@ -2489,16 +2522,39 @@ function PersonalSpacePage({
               {content.messages.length === 0 && <p className="guestbook-history__empty">{tr(language, "noMessagesYet")}</p>}
               <div className="guestbook-history__grid">
                 {content.messages.map((item) => (
-                  <article className="guestbook-note" key={item.id}>
-                    {content.visitor.is_owner && <strong className="guestbook-note__author">{item.visitor_name}</strong>}
-                    <p>{item.body}</p>
-                    {item.owner_reply && (
+                <article className={`guestbook-note${content.visitor.is_owner ? " guestbook-note--owner" : ""}`} key={item.id}>
+                  {content.visitor.is_owner && <strong className="guestbook-note__author">{item.visitor_name}</strong>}
+                  <p>{item.body}</p>
+                  {item.owner_reply && (
                       <div className="guestbook-note__reply">
                         <strong>{tr(language, "replyFromYuyun")}</strong>
-                        <p>{item.owner_reply}</p>
-                      </div>
-                    )}
-                    <time dateTime={item.created_at}>
+                      <p>{item.owner_reply}</p>
+                    </div>
+                  )}
+                  {content.visitor.is_owner && (
+                    <form
+                      className="guestbook-note__reply-editor"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void handleGuestbookReply(item.id);
+                      }}
+                    >
+                      <label>
+                        <span>{tr(language, "reply")}</span>
+                        <textarea
+                          value={guestbookReplyDrafts[item.id] ?? item.owner_reply ?? ""}
+                          onChange={(event) => setGuestbookReplyDrafts((current) => ({ ...current, [item.id]: event.target.value }))}
+                          placeholder={tr(language, "replyPlaceholder")}
+                          maxLength={500}
+                          rows={2}
+                        />
+                      </label>
+                      <button type="submit" disabled={replyingGuestbookId === item.id}>
+                        {tr(language, replyingGuestbookId === item.id ? "saving" : "saveReply")}
+                      </button>
+                    </form>
+                  )}
+                  <time dateTime={item.created_at}>
                       {tr(language, "messageTime")} · {formatPrivateDate(item.created_at, language)}
                     </time>
                   </article>
