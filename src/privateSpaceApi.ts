@@ -34,6 +34,8 @@ export type PrivateMusicTrack = {
   id: string;
   title: string;
   artist: string;
+  album?: string;
+  description?: string;
   audio_url: string;
   audio_storage_url?: string;
   cover_url: string | null;
@@ -538,6 +540,8 @@ export async function savePrivateMusicTrack(
     id: string | null;
     title: string;
     artist: string;
+    album: string;
+    description: string;
     audio_url: string;
     cover_url: string | null;
     external_url: string | null;
@@ -549,6 +553,8 @@ export async function savePrivateMusicTrack(
     track_id: track.id,
     track_title: track.title,
     track_artist: track.artist,
+    track_album: track.album,
+    track_description: track.description,
     track_audio_url: encodePrivateMediaReference(track.audio_url),
     track_cover_url: track.cover_url ? encodePrivateMediaReference(track.cover_url) : null,
     track_external_url: track.external_url,

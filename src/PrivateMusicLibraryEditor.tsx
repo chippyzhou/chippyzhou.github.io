@@ -14,6 +14,8 @@ type TrackDraft = {
   id: string | null;
   title: string;
   artist: string;
+  album: string;
+  description: string;
   audio_url: string;
   audio_storage_url: string;
   cover_url: string;
@@ -31,6 +33,8 @@ const labels = {
     empty: "No tracks yet.",
     trackTitle: "Track title",
     artist: "Artist",
+    album: "Album",
+    description: "One-line note",
     audioSource: "Audio file address",
     coverSource: "Cover image address",
     uploadAudio: "Upload audio file",
@@ -52,6 +56,8 @@ const labels = {
     artwork: "Track artwork",
     trackTitlePlaceholder: "Song title",
     artistPlaceholder: "Artist or band",
+    albumPlaceholder: "Album or single",
+    descriptionPlaceholder: "Optional note shown on the record wall",
     audioPlaceholder: "https://.../song.mp3",
     coverPlaceholder: "https://.../cover.jpg",
     externalPlaceholder: "https://music.163.com/#/song?id=...",
@@ -64,6 +70,8 @@ const labels = {
     empty: "歌单里还没有歌曲。",
     trackTitle: "歌曲名",
     artist: "歌手 / 乐队",
+    album: "所属专辑",
+    description: "一句话介绍",
     audioSource: "音频文件地址",
     coverSource: "封面图片地址",
     uploadAudio: "上传音频文件",
@@ -85,6 +93,8 @@ const labels = {
     artwork: "歌曲封面",
     trackTitlePlaceholder: "歌曲标题",
     artistPlaceholder: "歌手或乐队",
+    albumPlaceholder: "专辑或单曲名称",
+    descriptionPlaceholder: "可选，展示在唱片墙上",
     audioPlaceholder: "https://.../song.mp3",
     coverPlaceholder: "https://.../cover.jpg",
     externalPlaceholder: "https://music.163.com/#/song?id=...",
@@ -96,6 +106,8 @@ function blankTrack(): TrackDraft {
     id: null,
     title: "",
     artist: "",
+    album: "",
+    description: "",
     audio_url: "",
     audio_storage_url: "",
     cover_url: "",
@@ -110,6 +122,8 @@ function trackToDraft(track: PrivateMusicTrack): TrackDraft {
     id: track.id,
     title: track.title,
     artist: track.artist,
+    album: track.album || "",
+    description: track.description || "",
     audio_url: track.audio_url,
     audio_storage_url: track.audio_storage_url || "",
     cover_url: track.cover_url || "",
@@ -166,6 +180,8 @@ export function PrivateMusicLibraryEditor({
       id: draft.id || crypto.randomUUID(),
       title: draft.title.trim(),
       artist: draft.artist.trim(),
+      album: draft.album.trim(),
+      description: draft.description.trim(),
       audio_url: draft.audio_storage_url || draft.audio_url.trim(),
       cover_url: draft.cover_storage_url || draft.cover_url.trim() || null,
       external_url: draft.external_url.trim() || null,
@@ -316,6 +332,14 @@ export function PrivateMusicLibraryEditor({
             <label>
               {copy.artist}
               <input value={draft.artist} onChange={(event) => updateDraft("artist", event.target.value)} placeholder={copy.artistPlaceholder} />
+            </label>
+            <label>
+              {copy.album}
+              <input value={draft.album} onChange={(event) => updateDraft("album", event.target.value)} placeholder={copy.albumPlaceholder} />
+            </label>
+            <label>
+              {copy.description}
+              <input value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} placeholder={copy.descriptionPlaceholder} maxLength={240} />
             </label>
             <label>
               {copy.audioSource}

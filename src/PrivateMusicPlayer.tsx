@@ -4,7 +4,10 @@ import type { PrivateMusicTrack } from "./privateSpaceApi";
 export type MusicPlayRequest = {
   id: string;
   trackId: string;
+  mode?: "playlist" | "entry";
 };
+
+type PlaybackMode = "shuffle" | "sequence" | "repeat";
 
 type Language = "en" | "zh";
 
@@ -26,6 +29,9 @@ const labels = {
     nowPlaying: "Now playing",
     openService: "Open in music service",
     playbackFailed: "This audio source could not be played.",
+    shuffle: "Shuffle",
+    sequence: "Play in order",
+    repeat: "Repeat one",
   },
   zh: {
     playlist: "私人歌单",
@@ -44,6 +50,9 @@ const labels = {
     nowPlaying: "正在播放",
     openService: "在音乐服务中打开",
     playbackFailed: "这个音频地址暂时无法播放。",
+    shuffle: "随机播放",
+    sequence: "顺序播放",
+    repeat: "单曲循环",
   },
 } as const;
 
@@ -68,10 +77,13 @@ export function PrivateMusicPlayer({
     [tracks],
   );
   const audioRef = useRef<HTMLAudioElement>(null);
-  const shouldPlayRef = useRef(true);
+  const shouldPlayRef = useRef(false);
+  const shuffleQueueRef = useRef<string[]>([]);
+  const shufflePositionRef = useRef(0);
   const [playlistIndex, setPlaylistIndex] = useState(0);
   const [currentTrackId, setCurrentTrackId] = useState("");
   const [mode, setMode] = useState<"playlist" | "entry">("playlist");
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>("shuffle");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false);
@@ -101,6 +113,7 @@ export function PrivateMusicPlayer({
     setMode(nextMode);
     setCurrentTrackId((current) => {
       if (current === trackId) {
+        shouldPlayRef.current = false;
         if (audioRef.current) audioRef.current.currentTime = 0;
         void attemptPlay();
       }
@@ -108,11 +121,59 @@ export function PrivateMusicPlayer({
     });
   };
 
+  const buildShuffleQueue = (startTrackId: string) => {
+    const remainingTrackIds = activeTracks
+      .map((track) => track.id)
+      .filter((trackId) => trackId !== startTrackId);
+    for (let index = remainingTrackIds.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [remainingTrackIds[index], remainingTrackIds[randomIndex]] = [remainingTrackIds[randomIndex], remainingTrackIds[index]];
+    }
+    const queue = [startTrackId, ...remainingTrackIds];
+    shuffleQueueRef.current = queue;
+    shufflePositionRef.current = 0;
+    return queue;
+  };
+
   const playPlaylistIndex = (nextIndex: number) => {
     if (activeTracks.length === 0) return;
     const normalizedIndex = (nextIndex + activeTracks.length) % activeTracks.length;
     setPlaylistIndex(normalizedIndex);
     startTrack(activeTracks[normalizedIndex].id, "playlist");
+  };
+
+  const startPlaylistAt = (nextIndex: number) => {
+    if (activeTracks.length === 0) return;
+    const normalizedIndex = (nextIndex + activeTracks.length) % activeTracks.length;
+    buildShuffleQueue(activeTracks[normalizedIndex].id);
+    playPlaylistIndex(normalizedIndex);
+  };
+
+  const playShuffleStep = (offset: -1 | 1) => {
+    if (activeTracks.length === 0) return;
+    const currentPlaylistTrack = activeTracks[playlistIndex] || activeTracks[0];
+    const activeIds = new Set(activeTracks.map((track) => track.id));
+    let queue = shuffleQueueRef.current;
+    let position = shufflePositionRef.current;
+    const queueIsCurrent = queue.length === activeTracks.length
+      && queue.every((trackId) => activeIds.has(trackId))
+      && queue[position] === currentPlaylistTrack.id;
+
+    if (!queueIsCurrent) {
+      queue = buildShuffleQueue(currentPlaylistTrack.id);
+      position = 0;
+    }
+
+    let nextPosition = position + offset;
+    if (nextPosition < 0) return;
+    if (nextPosition >= queue.length) {
+      queue = buildShuffleQueue(currentPlaylistTrack.id);
+      nextPosition = Math.min(1, queue.length - 1);
+    }
+
+    shufflePositionRef.current = nextPosition;
+    const nextTrackIndex = activeTracks.findIndex((track) => track.id === queue[nextPosition]);
+    if (nextTrackIndex >= 0) playPlaylistIndex(nextTrackIndex);
   };
 
   useEffect(() => {
@@ -125,7 +186,6 @@ export function PrivateMusicPlayer({
     const activeIndex = activeTracks.findIndex((track) => track.id === currentTrackId);
     if (!currentTrackId || (mode === "playlist" && activeIndex < 0)) {
       setPlaylistIndex(0);
-      shouldPlayRef.current = true;
       setMode("playlist");
       setCurrentTrackId(activeTracks[0].id);
     }
@@ -147,7 +207,15 @@ export function PrivateMusicPlayer({
   useEffect(() => {
     if (!playRequest) return;
     const requestedTrack = activeTracks.find((track) => track.id === playRequest.trackId);
-    if (requestedTrack) startTrack(requestedTrack.id, "entry");
+    if (requestedTrack) {
+      const requestedMode = playRequest.mode || "entry";
+      if (requestedMode === "playlist") {
+        const requestedIndex = activeTracks.findIndex((track) => track.id === requestedTrack.id);
+        buildShuffleQueue(requestedTrack.id);
+        setPlaylistIndex(requestedIndex);
+      }
+      startTrack(requestedTrack.id, requestedMode);
+    }
   }, [playRequest?.id]);
 
   useEffect(() => {
@@ -168,8 +236,26 @@ export function PrivateMusicPlayer({
       playPlaylistIndex(playlistIndex);
       return;
     }
+    if (playbackMode === "repeat") {
+      if (audioRef.current) audioRef.current.currentTime = 0;
+      void attemptPlay();
+      return;
+    }
+    if (playbackMode === "shuffle") {
+      playShuffleStep(1);
+      return;
+    }
     playPlaylistIndex(playlistIndex + 1);
   };
+
+  const playbackModes: PlaybackMode[] = ["shuffle", "sequence", "repeat"];
+  const nextPlaybackMode = () => {
+    const currentIndex = playbackModes.indexOf(playbackMode);
+    const nextMode = playbackModes[(currentIndex + 1) % playbackModes.length];
+    if (nextMode === "shuffle" && currentTrack) buildShuffleQueue(currentTrack.id);
+    setPlaybackMode(nextMode);
+  };
+  const playbackModeLabel = copy[playbackMode];
 
   return (
     <aside className="private-music-player" aria-label={copy.nowPlaying}>
@@ -201,7 +287,7 @@ export function PrivateMusicPlayer({
                 className={mode === "playlist" && currentTrack.id === track.id ? "is-current" : ""}
                 key={track.id}
                 onClick={() => {
-                  playPlaylistIndex(index);
+                  startPlaylistAt(index);
                   setIsQueueOpen(false);
                 }}
               >
@@ -238,11 +324,11 @@ export function PrivateMusicPlayer({
 
       <div className="private-music-player__transport">
         <div className="private-music-player__buttons">
-          <button type="button" onClick={() => playPlaylistIndex(playlistIndex - 1)} aria-label={copy.previous} title={copy.previous}>‹</button>
+          <button type="button" onClick={() => playbackMode === "shuffle" && mode === "playlist" ? playShuffleStep(-1) : playPlaylistIndex(playlistIndex - 1)} aria-label={copy.previous} title={copy.previous}>‹</button>
           <button className="private-music-player__play" type="button" onClick={togglePlayback} aria-label={isPlaying ? copy.pause : copy.play} title={isPlaying ? copy.pause : copy.play}>
             {isPlaying ? "Ⅱ" : "▶"}
           </button>
-          <button type="button" onClick={() => playPlaylistIndex(playlistIndex + 1)} aria-label={copy.next} title={copy.next}>›</button>
+          <button type="button" onClick={() => playbackMode === "shuffle" && mode === "playlist" ? playShuffleStep(1) : playPlaylistIndex(playlistIndex + 1)} aria-label={copy.next} title={copy.next}>›</button>
         </div>
         <div className="private-music-player__timeline">
           <span>{formatTime(currentTime)}</span>
@@ -275,6 +361,15 @@ export function PrivateMusicPlayer({
           </button>
         )}
         {playbackError && <span className="private-music-player__error" role="status">{playbackError}</span>}
+        <button
+          className="private-music-player__mode"
+          type="button"
+          onClick={nextPlaybackMode}
+          aria-label={playbackModeLabel}
+          title={playbackModeLabel}
+        >
+          <span aria-hidden="true">{playbackMode === "shuffle" ? "⇄" : playbackMode === "sequence" ? "→" : "↻¹"}</span>
+        </button>
         <label title={copy.volume}>
           <span aria-hidden="true">◖</span>
           <input

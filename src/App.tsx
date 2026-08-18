@@ -41,9 +41,10 @@ import {
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
 
-type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "writing" | "photography" | "film" | "space" | "admin";
+type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "now" | "writing" | "photography" | "music" | "film" | "editor" | "space" | "admin";
 type Language = "en" | "zh";
 type SiteTheme = "minimal" | "band";
+type PrivateSpaceView = "now" | "entries" | "music" | "editor";
 
 const copy = {
   en: {
@@ -55,6 +56,9 @@ const copy = {
     notes: "Tech Notes",
     awards: "Awards",
     gallery: "Gallery",
+    now: "Now",
+    music: "Music",
+    editor: "Editor",
     space: "Personal Space",
     closeNavigation: "Close navigation",
     openNavigation: "Open navigation",
@@ -109,6 +113,23 @@ const copy = {
     lastEncore: "After the",
     lastEncoreEm: "last encore.",
     privateIntro: "Writing, photographs, film notes, and unfinished fragments shared with invited visitors.",
+    nowKicker: "Now / a moving snapshot",
+    nowTitle: "What is playing lately.",
+    nowIntro: "A small, changing view of the latest fragment and the song currently circling this private archive.",
+    recentFragment: "Latest fragment",
+    onRepeat: "On repeat",
+    noRecentFragment: "The next fragment is still being written.",
+    musicKicker: "Music / private rotation",
+    musicTitle: "Songs in the room.",
+    musicIntro: "The current private playlist, kept in order and played from the listening desk below.",
+    playTrack: "Play track",
+    emptyPlaylist: "The playlist is quiet for now.",
+    album: "Album",
+    trackDescription: "One-line note",
+    neteaseLink: "NetEase Music",
+    editorPageKicker: "Owner studio / editing desk",
+    editorPageTitle: "Edit the private archive.",
+    editorPageIntro: "Manage the playlist, write entries, arrange images, and decide what invited visitors can see.",
     personalInvitation: "Your personal invitation",
     invitationPlaceholder: "Enter invitation code",
     checking: "Checking...",
@@ -294,6 +315,9 @@ const copy = {
     notes: "笔记",
     awards: "竞赛",
     gallery: "图片墙",
+    now: "此刻",
+    music: "音乐",
+    editor: "编辑",
     space: "个人",
     closeNavigation: "关闭导航",
     openNavigation: "打开导航",
@@ -348,6 +372,23 @@ const copy = {
     lastEncore: "最后一场",
     lastEncoreEm: "安可之后。",
     privateIntro: "写作、摄影、影评和未完成的片段，只与受邀访客分享。",
+    nowKicker: "此刻 / 持续变化的切片",
+    nowTitle: "最近正在发生什么。",
+    nowIntro: "从最近的记录和循环播放的歌里，截取一小块正在变化的私人档案。",
+    recentFragment: "最近片段",
+    onRepeat: "最近循环",
+    noRecentFragment: "下一段记录还在写作中。",
+    musicKicker: "音乐 / 私人轮播",
+    musicTitle: "房间里的歌。",
+    musicIntro: "按当前顺序简单陈列私人歌单，也可以直接交给下方播放台播放。",
+    playTrack: "播放歌曲",
+    emptyPlaylist: "歌单暂时还是安静的。",
+    album: "所属专辑",
+    trackDescription: "一句话介绍",
+    neteaseLink: "网易云音乐",
+    editorPageKicker: "管理员工作室 / 编辑台",
+    editorPageTitle: "编辑私人档案。",
+    editorPageIntro: "维护歌单、撰写文章、编排图片，并决定哪些内容向受邀访客展示。",
     personalInvitation: "你的专属邀请",
     invitationPlaceholder: "输入邀请密钥",
     checking: "检查中...",
@@ -590,9 +631,12 @@ const navLabelKeys: Record<Exclude<PageKey, "admin">, CopyKey> = {
   notes: "notes",
   awards: "awards",
   gallery: "gallery",
+  now: "now",
   writing: "writing",
   photography: "photography",
+  music: "music",
   film: "filmNote",
+  editor: "editor",
   space: "space",
 };
 
@@ -884,9 +928,12 @@ const pages: Array<{ key: Exclude<PageKey, "admin">; label: string; icon: string
   { key: "awards", label: "Awards", icon: "🥁" },
   { key: "notes", label: "Tech Notes", icon: "📓" },
   { key: "gallery", label: "Gallery", icon: "🖼️" },
+  { key: "now", label: "Now", icon: "✦" },
   { key: "writing", label: "Writing", icon: "✒️" },
   { key: "photography", label: "Photography", icon: "📷" },
+  { key: "music", label: "Music", icon: "🎧" },
   { key: "film", label: "Film Notes", icon: "🎬" },
+  { key: "editor", label: "Editor", icon: "✎" },
   { key: "space", label: "Personal Space", icon: "🔐" },
 ];
 
@@ -1672,15 +1719,126 @@ function ArticleEngagement({
   );
 }
 
+function PrivateNowBoard({
+  entries,
+  tracks,
+  language,
+  onPlayTrack,
+}: {
+  entries: PrivateEntry[];
+  tracks: PrivateMusicTrack[];
+  language: Language;
+  onPlayTrack: (trackId: string) => void;
+}) {
+  const latestEntry = entries[0];
+  const currentTrack = [...tracks]
+    .filter((track) => track.is_active)
+    .sort((a, b) => a.sort_order - b.sort_order)[0];
+  const latestImages = latestEntry ? parseEntryImages(latestEntry.image_url) : [];
+  const latestCover = latestImages.find((image) => image.isCover) || latestImages[0];
+
+  return (
+    <section className="private-now">
+      <header className="private-view-heading">
+        <p className="space-eyebrow">{tr(language, "nowKicker")}</p>
+        <h2>{tr(language, "nowTitle")}</h2>
+        <p>{tr(language, "nowIntro")}</p>
+      </header>
+      <div className="private-now__grid">
+        <article className="private-now__fragment">
+          {latestCover && <img src={latestCover.src} alt={latestCover.caption} style={{ objectPosition: `${latestCover.focusX}% ${latestCover.focusY}%` }} />}
+          <div>
+            <span>{tr(language, "recentFragment")}</span>
+            {latestEntry ? (
+              <>
+                <small>{entryKindLabel(language, latestEntry.kind)}</small>
+                <h3>{latestEntry.title}</h3>
+                <p>{latestEntry.excerpt || markdownPreview(latestEntry.body)}</p>
+              </>
+            ) : <p>{tr(language, "noRecentFragment")}</p>}
+          </div>
+        </article>
+        <article className="private-now__record">
+          <span>{tr(language, "onRepeat")}</span>
+          {currentTrack ? (
+            <button type="button" onClick={() => onPlayTrack(currentTrack.id)} aria-label={`${tr(language, "playTrack")}: ${currentTrack.title}`}>
+              {currentTrack.cover_url ? <img src={currentTrack.cover_url} alt="" /> : <i aria-hidden="true">♪</i>}
+              <strong>{currentTrack.title}</strong>
+              <small>{currentTrack.artist}</small>
+              <b aria-hidden="true">▶</b>
+            </button>
+          ) : <p>{tr(language, "emptyPlaylist")}</p>}
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function PrivateRecordWall({
+  tracks,
+  language,
+  onPlayTrack,
+}: {
+  tracks: PrivateMusicTrack[];
+  language: Language;
+  onPlayTrack: (trackId: string) => void;
+}) {
+  const activeTracks = [...tracks]
+    .filter((track) => track.is_active)
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  return (
+    <section className="record-wall">
+      <header className="private-view-heading">
+        <p className="space-eyebrow">{tr(language, "musicKicker")}</p>
+        <h2>{tr(language, "musicTitle")}</h2>
+        <p>{tr(language, "musicIntro")}</p>
+      </header>
+      {activeTracks.length === 0 && <p className="record-wall__empty">{tr(language, "emptyPlaylist")}</p>}
+      <div className="record-wall__grid">
+        {activeTracks.map((track) => (
+          <article className="record-wall__item" key={track.id}>
+            <button
+              className="record-wall__play"
+              type="button"
+              onClick={() => onPlayTrack(track.id)}
+              aria-label={`${tr(language, "playTrack")}: ${track.title}`}
+            >
+              <span className="record-wall__sleeve">
+                {track.cover_url ? <img src={track.cover_url} alt="" /> : <i aria-hidden="true">♪</i>}
+                <span className="record-wall__disc" aria-hidden="true" />
+                <b aria-hidden="true">▶</b>
+              </span>
+            </button>
+            <div className="record-wall__copy">
+              <h3>{track.title}</h3>
+              <p>{track.artist || "—"}</p>
+              {track.album && <small>{tr(language, "album")} · {track.album}</small>}
+              {track.description && <blockquote>{track.description}</blockquote>}
+              {track.external_url && (
+                <a href={track.external_url} target="_blank" rel="noreferrer">
+                  {tr(language, "neteaseLink")} <span aria-hidden="true">↗</span>
+                </a>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function PersonalSpacePage({
   language,
+  view = "now",
   fixedEntryKind = "all",
   onAccessGranted,
   onSignedOut,
 }: {
   language: Language;
+  view?: PrivateSpaceView;
   fixedEntryKind?: "all" | PrivateEntry["kind"];
-  onAccessGranted?: (options?: { redirectHome?: boolean }) => void;
+  onAccessGranted?: (options?: { redirectHome?: boolean; isOwner?: boolean }) => void;
   onSignedOut?: () => void;
 }) {
   const [inviteCode, setInviteCode] = useState("");
@@ -1704,12 +1862,16 @@ function PersonalSpacePage({
 
   const normalizedStartDate = normalizeDateFilter(entryStartDate);
   const normalizedEndDate = normalizeDateFilter(entryEndDate);
-  const filteredEntries = useMemo(() => (content?.entries || []).filter((entry) => {
+  const publishedEntries = useMemo(
+    () => (content?.entries || []).filter((entry) => entry.is_published),
+    [content?.entries],
+  );
+  const filteredEntries = useMemo(() => publishedEntries.filter((entry) => {
     const entryDate = privateEntryDisplayDate(entry);
     return (entryKindFilter === "all" || entry.kind === entryKindFilter)
       && (!normalizedStartDate || (entryDate && entryDate >= normalizedStartDate))
       && (!normalizedEndDate || (entryDate && entryDate <= normalizedEndDate));
-  }), [content?.entries, entryKindFilter, normalizedEndDate, normalizedStartDate]);
+  }), [publishedEntries, entryKindFilter, normalizedEndDate, normalizedStartDate]);
 
   useEffect(() => {
     setEntryKindFilter(fixedEntryKind);
@@ -1748,7 +1910,7 @@ function PersonalSpacePage({
           localStorage.removeItem(ownerSessionKey);
         }
         setError("");
-        onAccessGranted?.({ redirectHome: shouldRedirectAfterUnlockRef.current });
+        onAccessGranted?.({ redirectHome: shouldRedirectAfterUnlockRef.current, isOwner: payload.visitor.is_owner });
         shouldRedirectAfterUnlockRef.current = false;
       })
       .catch((requestError: Error) => {
@@ -1772,6 +1934,12 @@ function PersonalSpacePage({
       isCurrentRequest = false;
     };
   }, [language, sessionToken]);
+
+  useEffect(() => {
+    if (content && view === "editor" && !content.visitor.is_owner) {
+      window.location.hash = "#/now";
+    }
+  }, [content, view]);
 
   const handleUnlock = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1993,8 +2161,30 @@ function PersonalSpacePage({
           </div>
         </header>
 
-        {content.visitor.is_owner && (
+        {view === "now" && (
+          <PrivateNowBoard
+            entries={publishedEntries}
+            tracks={content.playlist}
+            language={language}
+            onPlayTrack={(trackId) => setMusicPlayRequest({ id: crypto.randomUUID(), trackId, mode: "playlist" })}
+          />
+        )}
+
+        {view === "music" && (
+          <PrivateRecordWall
+            tracks={content.playlist}
+            language={language}
+            onPlayTrack={(trackId) => setMusicPlayRequest({ id: crypto.randomUUID(), trackId, mode: "playlist" })}
+          />
+        )}
+
+        {view === "editor" && content.visitor.is_owner && (
           <>
+            <header className="private-view-heading private-view-heading--editor">
+              <p className="space-eyebrow">{tr(language, "editorPageKicker")}</p>
+              <h2>{tr(language, "editorPageTitle")}</h2>
+              <p>{tr(language, "editorPageIntro")}</p>
+            </header>
             <PrivateMusicLibraryEditor
               sessionToken={sessionToken}
               tracks={content.playlist}
@@ -2011,7 +2201,7 @@ function PersonalSpacePage({
           </>
         )}
 
-        {content.entries.length > 0 && (
+        {view === "entries" && publishedEntries.length > 0 && (
           <div className="archive-filters">
             <p><strong>{filteredEntries.length}</strong> {tr(language, "entriesShown")}</p>
             {fixedEntryKind === "all" && (
@@ -2051,9 +2241,9 @@ function PersonalSpacePage({
           </div>
         )}
 
-        <div className="private-archive">
-          {content.entries.length === 0 && <p className="archive-empty">{tr(language, "firstEntry")}</p>}
-          {content.entries.length > 0 && filteredEntries.length === 0 && <p className="archive-empty">{tr(language, "noFilteredEntries")}</p>}
+        {view === "entries" && <div className="private-archive">
+          {publishedEntries.length === 0 && <p className="archive-empty">{tr(language, "firstEntry")}</p>}
+          {publishedEntries.length > 0 && filteredEntries.length === 0 && <p className="archive-empty">{tr(language, "noFilteredEntries")}</p>}
           {filteredEntries.map((entry) => {
             const images = parseEntryImages(entry.image_url);
             const cover = images.find((image) => image.isCover) || images[0];
@@ -2181,9 +2371,9 @@ function PersonalSpacePage({
               </article>
             );
           })}
-        </div>
+        </div>}
 
-        <section className="guestbook">
+        {view === "now" && <section className="guestbook">
           <div className="guestbook__intro">
             <p className="space-eyebrow">{tr(language, "guestbookKicker")}</p>
             <h2>{tr(language, "guestbookTitle")}<br />{tr(language, "guestbookTitleEm")}</h2>
@@ -2224,7 +2414,7 @@ function PersonalSpacePage({
               </div>
             </div>
           </div>
-        </section>
+        </section>}
       </div>
       <PrivateMusicPlayer
         tracks={content.playlist}
@@ -3226,6 +3416,7 @@ export default function App() {
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem(languageStorageKey) === "zh" ? "zh" : "en");
   const [theme, setTheme] = useState<SiteTheme>("minimal");
   const [hasPrivateAccess, setHasPrivateAccess] = useState(false);
+  const [hasOwnerAccess, setHasOwnerAccess] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(languageStorageKey, language);
@@ -3257,23 +3448,26 @@ export default function App() {
     sessionStorage.removeItem(ownerPreviewKey);
     localStorage.removeItem(ownerSessionKey);
     setHasPrivateAccess(false);
+    setHasOwnerAccess(false);
     setTheme("minimal");
     window.location.hash = "#/";
     setCurrentPage("home");
     setIsMenuOpen(false);
   };
 
-  const grantPrivateAccess = (options?: { redirectHome?: boolean }) => {
+  const grantPrivateAccess = (options?: { redirectHome?: boolean; isOwner?: boolean }) => {
     setHasPrivateAccess(true);
+    setHasOwnerAccess(Boolean(options?.isOwner));
     setTheme("band");
     if (options?.redirectHome) {
-      window.location.hash = "#/";
-      setCurrentPage("home");
+      window.location.hash = "#/now";
+      setCurrentPage("now");
     }
   };
 
   const revokePrivateAccess = () => {
     setHasPrivateAccess(false);
+    setHasOwnerAccess(false);
     setTheme("minimal");
     window.location.hash = "#/";
     setCurrentPage("home");
@@ -3293,11 +3487,21 @@ export default function App() {
       photography: "photography",
       film: "film",
     };
-    const isPrivatePage = currentPage === "gallery" || Boolean(entryKindForPage[currentPage]);
+    const privateViewForPage: Partial<Record<PageKey, PrivateSpaceView>> = {
+      now: "now",
+      writing: "entries",
+      photography: "entries",
+      music: "music",
+      film: "entries",
+      editor: "editor",
+      space: "now",
+    };
+    const isPrivatePage = Boolean(privateViewForPage[currentPage]);
     if (currentPage === "space" || (isPrivatePage && !hasPrivateAccess)) {
       return (
         <PersonalSpacePage
           language={language}
+          view={privateViewForPage[currentPage] || "now"}
           fixedEntryKind={entryKindForPage[currentPage] || "all"}
           onAccessGranted={grantPrivateAccess}
           onSignedOut={revokePrivateAccess}
@@ -3313,14 +3517,16 @@ export default function App() {
         return <TechnicalNotesPage language={language} theme={theme} />;
       case "awards":
         return <AwardsPage language={language} theme={theme} />;
-      case "gallery":
-        return <GalleryPage language={language} />;
+      case "now":
       case "writing":
       case "photography":
+      case "music":
       case "film":
+      case "editor":
         return (
           <PersonalSpacePage
             language={language}
+            view={privateViewForPage[currentPage] || "entries"}
             fixedEntryKind={entryKindForPage[currentPage]}
             onAccessGranted={grantPrivateAccess}
             onSignedOut={revokePrivateAccess}
@@ -3335,7 +3541,7 @@ export default function App() {
 
   const visiblePages = theme === "minimal"
     ? pages.filter((page) => ["home", "projects", "publications", "awards", "notes"].includes(page.key))
-    : pages.filter((page) => ["home", "gallery", "writing", "photography", "film"].includes(page.key));
+    : pages.filter((page) => ["now", "writing", "photography", "music", "film"].includes(page.key) || (page.key === "editor" && hasOwnerAccess));
   const navigationItems = visiblePages.map((page) => (
     <a
       key={page.key}
@@ -3354,11 +3560,11 @@ export default function App() {
   return (
     <>
       <main className={`site site--${theme}`} data-theme={theme}>
-        <header className={`site-header${theme === "band" || currentPage === "space" ? " site-header--dark" : ""}`}>
+        <header className={`site-header${theme === "band" || ["space", "now", "writing", "photography", "music", "film", "editor"].includes(currentPage) ? " site-header--dark" : ""}`}>
           <nav>
           <a
-            href="#/"
-            onClick={() => setCurrentPage("home")}
+            href={theme === "band" ? "#/now" : "#/"}
+            onClick={() => setCurrentPage(theme === "band" ? "now" : "home")}
             className="site-name"
             aria-label={profile.name}
           >
@@ -3401,7 +3607,7 @@ export default function App() {
           </nav>
         </header>
         {pageContent}
-        {currentPage === "home" && <Footer language={language} theme={theme} />}
+        {theme === "minimal" && currentPage === "home" && <Footer language={language} theme={theme} />}
       </main>
       {isMenuOpen && createPortal(
         <div className="mobile-nav-layer">

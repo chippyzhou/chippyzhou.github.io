@@ -166,10 +166,11 @@ describe("owner session restoration", () => {
     fireEvent.change(screen.getByPlaceholderText("Enter invitation code"), { target: { value: "Visitor-example" } });
     fireEvent.click(screen.getByRole("button", { name: "Enter ↗" }));
 
-    await waitFor(() => expect(window.location.hash).toBe("#/"));
+    await waitFor(() => expect(window.location.hash).toBe("#/now"));
     expect(document.documentElement.dataset.theme).toBe("band");
     const bandNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(bandNavigation).toEqual(["Home🏠", "Gallery🖼️", "Writing✒️", "Photography📷", "Film note🎬"]);
+    expect(bandNavigation).toEqual(["Now✦", "Writing✒️", "Photography📷", "Music🎧", "Film note🎬"]);
+    expect(screen.queryByRole("link", { name: /Editor/ })).toBeNull();
     expect(screen.queryByPlaceholderText("Enter invitation code")).toBeNull();
   });
 
@@ -248,16 +249,16 @@ describe("owner session restoration", () => {
   });
 
   it("routes direct girl-band links through the private password gate", () => {
-    window.location.hash = "#/gallery";
+    window.location.hash = "#/now";
     const { unmount } = render(<App />);
 
     expect(document.documentElement.dataset.theme).toBe("minimal");
     expect(screen.getByPlaceholderText("Enter invitation code")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Visual record" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "What is playing lately." })).toBeNull();
 
     unmount();
     localStorage.clear();
-    window.location.hash = "#/space";
+    window.location.hash = "#/editor";
     render(<App />);
 
     expect(document.documentElement.dataset.theme).toBe("minimal");
@@ -291,7 +292,7 @@ describe("owner session restoration", () => {
 
   it("automatically retries the first transient entry save with one stable entry id", async () => {
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/editor";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: {
         name: "Yuyun",
@@ -325,7 +326,7 @@ describe("owner session restoration", () => {
 
   it("retries a guestbook post once and immediately renders the saved read-only card", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/now";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: {
         name: "Visitor",
@@ -382,7 +383,7 @@ describe("owner session restoration", () => {
 
   it("keeps article cards collapsed until the visitor expands one", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/writing";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: {
         name: "Visitor",
@@ -457,7 +458,7 @@ describe("owner session restoration", () => {
 
   it("renders film notes with a Douban link and filters entries by type and date range", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/film";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: {
         name: "Visitor",
@@ -505,20 +506,12 @@ describe("owner session restoration", () => {
     expect(startDateInput.getAttribute("type")).toBe("date");
     expect(endDateInput.getAttribute("type")).toBe("date");
 
-    fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "writing" } });
-    expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
-
     fireEvent.change(startDateInput, { target: { value: "2026-01-01" } });
-    expect(screen.queryByRole("heading", { name: "A notebook page" })).toBeNull();
-
-    fireEvent.change(screen.getByLabelText("Filter by type"), { target: { value: "all" } });
     expect(screen.getByRole("heading", { name: "A film note" })).toBeTruthy();
 
     fireEvent.change(startDateInput, { target: { value: "" } });
     fireEvent.change(endDateInput, { target: { value: "2025-12-31" } });
     expect(screen.queryByRole("heading", { name: "A film note" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "A notebook page" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Switch to Chinese" }));
     expect(screen.getByLabelText("起始日期").getAttribute("type")).toBe("date");
@@ -528,7 +521,7 @@ describe("owner session restoration", () => {
 
   it("uses a plain writing font in the Markdown editor and keeps type controls contained", async () => {
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/editor";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: { name: "Yuyun", visitor_number: 1, visit_count: 1, is_owner: true },
       entries: [],
@@ -546,7 +539,7 @@ describe("owner session restoration", () => {
 
   it("uses the creation date for undated visitor entries and keeps them filterable", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/writing";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: {
         name: "Visitor",
@@ -672,7 +665,7 @@ describe("owner session restoration", () => {
 
   it("renders visitor replies beneath the original guestbook note", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/now";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: {
         name: "Visitor",
@@ -700,7 +693,7 @@ describe("owner session restoration", () => {
 
   it("keeps the default playlist until a visitor explicitly starts an article soundtrack", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/writing";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: {
         name: "Visitor",
@@ -751,6 +744,7 @@ describe("owner session restoration", () => {
     await screen.findByRole("heading", { name: "A soundtracked note" });
     const audio = container.querySelector("audio");
     expect(audio?.getAttribute("src")).toBe("/audio/default.mp3");
+    expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Play this note's soundtrack: Entry song" }));
     await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/entry.mp3"));
@@ -760,9 +754,84 @@ describe("owner session restoration", () => {
     await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/default.mp3"));
   });
 
+  it("starts the full playlist from a clicked record and cycles playback modes", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/music";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: { name: "Visitor", visitor_number: 2, visit_count: 1, is_owner: false },
+      entries: [],
+      messages: [],
+      playlist: [
+        {
+          id: "record-one",
+          title: "Drive Thru",
+          artist: "Ivoris",
+          album: "Drive Thru",
+          description: "Late-night repeat.",
+          audio_url: "/audio/drive-thru.mp3",
+          cover_url: "/covers/drive-thru.jpg",
+          external_url: "https://music.163.com/song?id=1954372700",
+          is_active: true,
+          sort_order: 0,
+        },
+        {
+          id: "record-two",
+          title: "Song Two",
+          artist: "Band Two",
+          audio_url: "/audio/two.mp3",
+          cover_url: null,
+          external_url: null,
+          is_active: true,
+          sort_order: 1,
+        },
+        {
+          id: "record-three",
+          title: "Song Three",
+          artist: "Band Three",
+          audio_url: "/audio/three.mp3",
+          cover_url: null,
+          external_url: null,
+          is_active: true,
+          sort_order: 2,
+        },
+      ],
+    });
+
+    const { container } = render(<App />);
+    const record = await screen.findByRole("button", { name: "Play track: Drive Thru" });
+    const audio = container.querySelector("audio");
+    expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    expect(screen.getByText("Album · Drive Thru")).toBeTruthy();
+    expect(screen.getByText("Late-night repeat.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /NetEase Music/ }).getAttribute("href"))
+      .toBe("https://music.163.com/song?id=1954372700");
+
+    fireEvent.click(record);
+    await waitFor(() => expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1));
+    expect(audio?.getAttribute("src")).toBe("/audio/drive-thru.mp3");
+
+    fireEvent.ended(audio as HTMLAudioElement);
+    await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/three.mp3"));
+    fireEvent.ended(audio as HTMLAudioElement);
+    await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/two.mp3"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Shuffle" }));
+    expect(screen.getByRole("button", { name: "Play in order" })).toBeTruthy();
+    fireEvent.ended(audio as HTMLAudioElement);
+    await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/three.mp3"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Play in order" }));
+    expect(screen.getByRole("button", { name: "Repeat one" })).toBeTruthy();
+    fireEvent.ended(audio as HTMLAudioElement);
+    expect(audio?.getAttribute("src")).toBe("/audio/three.mp3");
+
+    randomSpy.mockRestore();
+  });
+
   it("lets an invited visitor like and comment on an article without duplicate submissions", async () => {
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/writing";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: { name: "Visitor", visitor_number: 2, visit_count: 1, is_owner: false },
       playlist: [],
@@ -822,7 +891,7 @@ describe("owner session restoration", () => {
 
   it("saves Tech Notes with a separate VOL.01 publishing choice", async () => {
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
-    window.location.hash = "#/space";
+    window.location.hash = "#/editor";
     api.loadPrivateSpace.mockResolvedValue({
       visitor: { name: "Yuyun", visitor_number: 1, visit_count: 1, is_owner: true },
       entries: [],
