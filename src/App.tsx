@@ -1354,15 +1354,22 @@ function PublicTechnicalNoteCard({ entry, index, language }: { entry: PrivateEnt
 
 function TechnicalNotesPage({ language, theme }: { language: Language; theme: SiteTheme }) {
   const [publishedNotes, setPublishedNotes] = useState<PrivateEntry[]>([]);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
 
   useEffect(() => {
     let isCurrent = true;
     loadPublicTechnicalNotes()
       .then((entries) => {
-        if (isCurrent) setPublishedNotes(entries);
+        if (isCurrent) {
+          setPublishedNotes(entries);
+          setIsLoadingNotes(false);
+        }
       })
       .catch(() => {
-        if (isCurrent) setPublishedNotes([]);
+        if (isCurrent) {
+          setPublishedNotes([]);
+          setIsLoadingNotes(false);
+        }
       });
     return () => {
       isCurrent = false;
@@ -1371,10 +1378,10 @@ function TechnicalNotesPage({ language, theme }: { language: Language; theme: Si
 
   const toc = publishedNotes.length > 0
     ? publishedNotes.map((note) => ({ id: `public-note-${note.id}`, label: note.title }))
-    : technicalNotes.map((note, index) => ({
+    : !isLoadingNotes ? technicalNotes.map((note, index) => ({
       id: `note-${index + 1}`,
       label: localized(language, note.title, note.titleZh),
-    }));
+    })) : [];
 
   return (
     <PageShell
@@ -1385,7 +1392,13 @@ function TechnicalNotesPage({ language, theme }: { language: Language; theme: Si
       description={themedTr(language, theme, "notesDescription")}
       toc={toc}
     >
-      {publishedNotes.length > 0 ? (
+      {isLoadingNotes ? (
+        <div className="public-notes-loading" aria-busy="true" aria-label={language === "zh" ? "正在加载技术笔记" : "Loading technical notes"}>
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : publishedNotes.length > 0 ? (
         <div className="public-notes-index">
           {publishedNotes.map((note, index) => (
             <PublicTechnicalNoteCard entry={note} index={index} language={language} key={note.id} />

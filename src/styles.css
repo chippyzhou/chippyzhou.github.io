@@ -532,6 +532,20 @@ img { display: block; max-width: 100%; }
 .note-sheet__body > p:not(.entry-meta) { max-width: 760px; color: #555c7b; line-height: 1.7; }
 .note-sheet__mark { align-self: start; padding: 20px 16px; color: var(--red); font: 700 36px/1 Georgia, serif; transform: rotate(-12deg); }
 .public-notes-index { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.public-notes-loading {
+  min-height: 232px;
+  padding: 34px 28px;
+  display: grid;
+  align-content: center;
+  gap: 15px;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.public-notes-loading span { height: 11px; display: block; background: #e4e4df; animation: public-note-loading 900ms ease-in-out infinite alternate; }
+.public-notes-loading span:nth-child(1) { width: 16%; }
+.public-notes-loading span:nth-child(2) { width: 48%; height: 28px; animation-delay: 120ms; }
+.public-notes-loading span:nth-child(3) { width: 76%; animation-delay: 240ms; }
+@keyframes public-note-loading { from { opacity: .5; } to { opacity: 1; } }
 .public-note-card {
   min-width: 0;
   min-height: 230px;

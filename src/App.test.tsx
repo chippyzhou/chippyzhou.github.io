@@ -217,7 +217,7 @@ describe("owner session restoration", () => {
     expect(links[0].getAttribute("href")).toBe("https://arxiv.org/abs/2607.26518");
   });
 
-  it("keeps one coming-soon placeholder on the projects and technical notes pages", () => {
+  it("keeps one coming-soon placeholder on the projects and technical notes pages", async () => {
     window.location.hash = "#/projects";
     const { unmount } = render(<App />);
 
@@ -229,8 +229,10 @@ describe("owner session restoration", () => {
     window.location.hash = "#/notes";
     render(<App />);
 
+    expect(document.querySelector(".public-notes-loading")).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 2, name: "Coming soon" })).toBeNull();
+    await screen.findByRole("heading", { level: 2, name: "Coming soon" });
     expect(document.querySelectorAll(".note-sheet")).toHaveLength(1);
-    expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
   });
 
   it("defaults to VOL. 01 minimal and routes VOL through the private password gate", () => {
