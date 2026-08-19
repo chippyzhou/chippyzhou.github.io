@@ -127,6 +127,18 @@ const copy = {
     musicKicker: "Music / private rotation",
     musicTitle: "Songs in the room.",
     musicIntro: "The current private playlist, kept in order and played from the listening desk below.",
+    photographyKicker: "Photography / contact sheets",
+    photographyTitle: "Light caught in passing.",
+    photographyIntro: "A wall of small scenes, each kept with one line and the day it stayed behind.",
+    essaysKicker: "Essays / loose pages",
+    essaysTitle: "Things I meant to say.",
+    essaysIntro: "Fragments, letters, and thoughts that needed a little more room than a caption.",
+    readingKicker: "Reading notes / margin marks",
+    readingTitle: "What stayed after reading.",
+    readingIntro: "Sentences, questions, and traces left in the margin of a book.",
+    filmKicker: "Film notes / after the credits",
+    filmTitle: "When the screen goes dark.",
+    filmIntro: "A few scenes, a lingering feeling, and the route back to the film.",
     playTrack: "Play track",
     emptyPlaylist: "The playlist is quiet for now.",
     album: "Album",
@@ -398,6 +410,18 @@ const copy = {
     musicKicker: "音乐 / 私人轮播",
     musicTitle: "房间里的歌。",
     musicIntro: "按当前顺序简单陈列私人歌单，也可以直接交给下方播放台播放。",
+    photographyKicker: "摄影 / 接触表",
+    photographyTitle: "被光留下的瞬间。",
+    photographyIntro: "把路过的场景贴在这里，只留下一句话和它发生的日期。",
+    essaysKicker: "随笔 / 松散页",
+    essaysTitle: "那些本来想说的话。",
+    essaysIntro: "一些片段、信件和比一句话更需要留白的念头。",
+    readingKicker: "读书笔记 / 页边批注",
+    readingTitle: "读完之后留下的东西。",
+    readingIntro: "书页里划下的句子、冒出来的问题，以及没有立刻散去的痕迹。",
+    filmKicker: "影评 / 字幕落下之后",
+    filmTitle: "屏幕暗下来的时候。",
+    filmIntro: "一些画面、一个余韵，以及回到电影本身的入口。",
     playTrack: "播放歌曲",
     emptyPlaylist: "歌单暂时还是安静的。",
     album: "所属专辑",
@@ -1937,6 +1961,24 @@ function PrivateRecordWall({
   );
 }
 
+function PrivateEntriesHeading({ language, kind }: { language: Language; kind: PrivateEntry["kind"] }) {
+  const keys = kind === "photography"
+    ? ["photographyKicker", "photographyTitle", "photographyIntro"] as const
+    : kind === "writing"
+      ? ["essaysKicker", "essaysTitle", "essaysIntro"] as const
+      : kind === "reading"
+        ? ["readingKicker", "readingTitle", "readingIntro"] as const
+        : ["filmKicker", "filmTitle", "filmIntro"] as const;
+
+  return (
+    <header className={`private-view-heading private-view-heading--${kind}`}>
+      <p className="space-eyebrow">{tr(language, keys[0])}</p>
+      <h2>{tr(language, keys[1])}</h2>
+      <p>{tr(language, keys[2])}</p>
+    </header>
+  );
+}
+
 function PrivatePhotographyWall({
   entries,
   language,
@@ -2480,6 +2522,8 @@ function PersonalSpacePage({
             />
           </>
         )}
+
+        {view === "entries" && fixedEntryKind !== "all" && <PrivateEntriesHeading language={language} kind={fixedEntryKind} />}
 
         {view === "entries" && publishedEntries.length > 0 && (
           <div className="archive-filters">
