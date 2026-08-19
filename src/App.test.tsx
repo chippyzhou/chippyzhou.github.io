@@ -6,18 +6,19 @@ const api = vi.hoisted(() => ({
   createVisitorInvite: vi.fn(),
   deleteVisitorInvite: vi.fn(),
   deletePrivateEntry: vi.fn(),
+  deleteGuestbookReply: vi.fn(),
   deletePrivateMusicTrack: vi.fn(),
   loadAdminDashboard: vi.fn(),
   loadPrivateSpace: vi.fn(),
   loadPublicTechnicalNotes: vi.fn(),
   postPrivateEntryComment: vi.fn(),
   postGuestbookMessage: vi.fn(),
+  postGuestbookReply: vi.fn(),
   reorderPrivateMusicTracks: vi.fn(),
   resetVisitorInviteCode: vi.fn(),
   savePrivateMusicTrack: vi.fn(),
   savePrivateEntry: vi.fn(),
   setGuestbookMessageStatus: vi.fn(),
-  setGuestbookMessageReply: vi.fn(),
   setVisitorInviteStatus: vi.fn(),
   togglePrivateEntryLike: vi.fn(),
   unlockPrivateSpace: vi.fn(),
@@ -636,7 +637,7 @@ describe("owner session restoration", () => {
     expect(await screen.findByText("HuangRuiQi-ZyXwVu9876543")).toBeTruthy();
   });
 
-  it("lets the owner save a guestbook reply and shows that reply to the visitor", async () => {
+  it("lets the owner send a new guestbook reply and clears the composer", async () => {
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
     window.location.hash = "#/admin";
     api.loadAdminDashboard.mockResolvedValue({
@@ -659,23 +660,21 @@ describe("owner session restoration", () => {
         owner_replied_at: null,
       }],
     });
-    api.setGuestbookMessageReply.mockResolvedValue({
-      id: "message-1",
-      visitor_name: "Visitor",
-      body: "Hello there",
-      status: "visible",
+    api.postGuestbookReply.mockResolvedValue({
+      id: "reply-1",
+      message_id: "message-1",
+      body: "See you soon",
       created_at: "2026-08-13T09:12:00.000Z",
-      owner_reply: "See you soon",
-      owner_replied_at: "2026-08-13T10:00:00.000Z",
     });
 
     render(<App />);
     fireEvent.change(await screen.findByPlaceholderText("Write a reply to this visitor..."), {
       target: { value: "See you soon" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save reply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
 
-    await waitFor(() => expect(api.setGuestbookMessageReply).toHaveBeenCalledWith("owner-token", "message-1", "See you soon"));
+    await waitFor(() => expect(api.postGuestbookReply).toHaveBeenCalledWith("owner-token", "message-1", "See you soon"));
+    expect((screen.getByPlaceholderText("Write a reply to this visitor...") as HTMLTextAreaElement).value).toBe("");
   });
 
   it("renders visitor replies beneath the original guestbook note", async () => {
@@ -732,26 +731,29 @@ describe("owner session restoration", () => {
     expect(screen.getByText("HuangRuiQi")).toBeTruthy();
     expect(screen.getByText("Another friend")).toBeTruthy();
 
-    api.setGuestbookMessageReply.mockResolvedValue({
-      id: "message-a",
-      visitor_name: "HuangRuiQi",
-      body: "First visitor note",
+    api.postGuestbookReply.mockResolvedValue({
+      id: "reply-a",
+      message_id: "message-a",
+      body: "I saw this.",
       created_at: "2026-08-18T09:00:00.000Z",
-      owner_reply: "I saw this.",
-      owner_replied_at: "2026-08-18T11:00:00.000Z",
     });
     fireEvent.change(screen.getAllByPlaceholderText("Write a reply to this visitor...")[0], {
       target: { value: "I saw this." },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: "Save reply" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Send reply" })[0]);
 
-    await waitFor(() => expect(api.setGuestbookMessageReply).toHaveBeenCalledWith(
+    await waitFor(() => expect(api.postGuestbookReply).toHaveBeenCalledWith(
       "owner-token",
       "message-a",
       "I saw this.",
     ));
-    expect(await screen.findByText("Reply from Yuyun")).toBeTruthy();
-    expect(document.querySelector(".guestbook-note__reply p")?.textContent).toBe("I saw this.");
+    expect((screen.getAllByPlaceholderText("Write a reply to this visitor...")[0] as HTMLTextAreaElement).value).toBe("");
+    expect(await screen.findByText("I saw this.")).toBeTruthy();
+
+    api.deleteGuestbookReply.mockResolvedValue({ id: "reply-a", message_id: "message-a" });
+    fireEvent.click(screen.getByRole("button", { name: "Delete reply" }));
+    await waitFor(() => expect(api.deleteGuestbookReply).toHaveBeenCalledWith("owner-token", "reply-a"));
+    await waitFor(() => expect(screen.queryByText("I saw this.")).toBeNull());
   });
 
   it("keeps the default playlist until a visitor explicitly starts an article soundtrack", async () => {

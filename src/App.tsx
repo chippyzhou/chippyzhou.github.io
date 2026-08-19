@@ -5,6 +5,7 @@ import { PrivateMusicLibraryEditor } from "./PrivateMusicLibraryEditor";
 import { PrivateMusicPlayer, type MusicPlayRequest } from "./PrivateMusicPlayer";
 import {
   createVisitorInvite,
+  deleteGuestbookReply,
   deleteVisitorInvite,
   deletePrivateEntry,
   isTransientPrivateSpaceError,
@@ -14,16 +15,18 @@ import {
   loadPublicTechnicalNotes,
   postPrivateEntryComment,
   postGuestbookMessage,
+  postGuestbookReply,
   resetVisitorInviteCode,
   savePrivateEntry,
   setGuestbookMessageStatus,
-  setGuestbookMessageReply,
   setVisitorInviteStatus,
   togglePrivateEntryLike,
   unlockPrivateSpace,
   uploadPrivateMedia,
   type AdminInvite,
   type AdminDashboard,
+  type GuestbookMessage,
+  type GuestbookReply,
   type PrivateEntry,
   type PrivateEntryComment,
   type PrivateMusicTrack,
@@ -303,7 +306,9 @@ const copy = {
     show: "Show",
     reply: "Reply",
     replyPlaceholder: "Write a reply to this visitor...",
-    saveReply: "Save reply",
+    sendReply: "Send reply",
+    sendingReply: "Sending...",
+    deleteReply: "Delete reply",
     replyFromYuyun: "Reply from Yuyun",
     never: "Never",
     contactKicker: "Backstage pass / contact",
@@ -568,7 +573,9 @@ const copy = {
     show: "显示",
     reply: "回复",
     replyPlaceholder: "回复这位访客...",
-    saveReply: "保存回复",
+    sendReply: "发送回复",
+    sendingReply: "发送中...",
+    deleteReply: "删除回复",
     replyFromYuyun: "Yuyun 的回复",
     never: "从未",
     contactKicker: "后台通行证 / 联系方式",
@@ -634,6 +641,17 @@ function themedTr(language: Language, theme: SiteTheme, key: CopyKey) {
 
 function localized(language: Language, english: string, chinese: string) {
   return language === "zh" ? chinese : english;
+}
+
+function guestbookReplies(message: GuestbookMessage): GuestbookReply[] {
+  if (message.replies?.length) return message.replies;
+  if (!message.owner_reply) return [];
+  return [{
+    id: `legacy-${message.id}`,
+    message_id: message.id,
+    body: message.owner_reply,
+    created_at: message.owner_replied_at || message.created_at,
+  }];
 }
 
 const navLabelKeys: Record<Exclude<PageKey, "admin">, CopyKey> = {
@@ -1930,6 +1948,7 @@ function PersonalSpacePage({
   const [isPosting, setIsPosting] = useState(false);
   const [guestbookReplyDrafts, setGuestbookReplyDrafts] = useState<Record<string, string>>({});
   const [replyingGuestbookId, setReplyingGuestbookId] = useState("");
+  const [deletingGuestbookReplyId, setDeletingGuestbookReplyId] = useState("");
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(() => new Set());
   const [entryKindFilter, setEntryKindFilter] = useState<"all" | PrivateEntry["kind"]>(fixedEntryKind);
   const [entryStartDate, setEntryStartDate] = useState("");
@@ -2085,16 +2104,16 @@ function PersonalSpacePage({
   const handleGuestbookReply = async (messageId: string) => {
     if (!sessionToken || !content?.visitor.is_owner || replyingGuestbookId) return;
     const reply = (guestbookReplyDrafts[messageId] || "").trim();
+    if (!reply) return;
     setReplyingGuestbookId(messageId);
     setError("");
     try {
-      const savedMessage = await setGuestbookMessageReply(sessionToken, messageId, reply);
+      const savedReply = await postGuestbookReply(sessionToken, messageId, reply);
       setContent((current) => current ? {
         ...current,
-        messages: current.messages.map((item) => item.id === savedMessage.id ? {
+        messages: current.messages.map((item) => item.id === messageId ? {
           ...item,
-          owner_reply: savedMessage.owner_reply,
-          owner_replied_at: savedMessage.owner_replied_at,
+          replies: [...guestbookReplies(item), savedReply],
         } : item),
       } : current);
       setGuestbookReplyDrafts((current) => {
@@ -2109,6 +2128,26 @@ function PersonalSpacePage({
     }
   };
 
+  const handleGuestbookReplyDelete = async (messageId: string, replyId: string) => {
+    if (!sessionToken || !content?.visitor.is_owner || deletingGuestbookReplyId || replyId.startsWith("legacy-")) return;
+    setDeletingGuestbookReplyId(replyId);
+    setError("");
+    try {
+      await deleteGuestbookReply(sessionToken, replyId);
+      setContent((current) => current ? {
+        ...current,
+        messages: current.messages.map((item) => item.id === messageId ? {
+          ...item,
+          replies: guestbookReplies(item).filter((reply) => reply.id !== replyId),
+        } : item),
+      } : current);
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, language, localized(language, "Unable to delete this reply.", "回复删除失败。")));
+    } finally {
+      setDeletingGuestbookReplyId("");
+    }
+  };
+
   const handleVisitorLogout = () => {
     sessionStorage.removeItem(visitorSessionKey);
     localStorage.removeItem(ownerSessionKey);
@@ -2120,6 +2159,7 @@ function PersonalSpacePage({
     setMessage("");
     setGuestbookReplyDrafts({});
     setReplyingGuestbookId("");
+    setDeletingGuestbookReplyId("");
     setExpandedEntryIds(new Set());
     setEntryKindFilter("all");
     setEntryStartDate("");
@@ -2240,6 +2280,8 @@ function PersonalSpacePage({
                 type="password"
                 value={inviteCode}
                 onChange={(event) => setInviteCode(event.target.value)}
+                onInput={(event) => setInviteCode(event.currentTarget.value)}
+                onCompositionEnd={(event) => setInviteCode(event.currentTarget.value)}
                 placeholder={tr(language, "invitationPlaceholder")}
                 autoComplete="current-password"
                 autoCapitalize="none"
@@ -2247,9 +2289,9 @@ function PersonalSpacePage({
                 spellCheck={false}
                 inputMode="text"
                 enterKeyHint="go"
-                autoFocus
-                onPointerDown={(event) => event.currentTarget.focus()}
-                onTouchStart={(event) => event.currentTarget.focus()}
+                onPointerDown={(event) => event.currentTarget.focus({ preventScroll: true })}
+                onTouchStart={(event) => event.currentTarget.focus({ preventScroll: true })}
+                onClick={(event) => event.currentTarget.focus({ preventScroll: true })}
               />
               <button type="submit" disabled={!inviteCode.trim() || isUnlocking}>
                 {isUnlocking ? tr(language, "checking") : tr(language, "enter")}
@@ -2525,12 +2567,23 @@ function PersonalSpacePage({
                 <article className={`guestbook-note${content.visitor.is_owner ? " guestbook-note--owner" : ""}`} key={item.id}>
                   {content.visitor.is_owner && <strong className="guestbook-note__author">{item.visitor_name}</strong>}
                   <p>{item.body}</p>
-                  {item.owner_reply && (
-                      <div className="guestbook-note__reply">
+                  {guestbookReplies(item).map((reply) => (
+                    <div className="guestbook-note__reply" key={reply.id}>
+                      <div className="guestbook-note__reply-heading">
                         <strong>{tr(language, "replyFromYuyun")}</strong>
-                      <p>{item.owner_reply}</p>
+                        {content.visitor.is_owner && !reply.id.startsWith("legacy-") && (
+                          <button
+                            type="button"
+                            disabled={deletingGuestbookReplyId === reply.id}
+                            onClick={() => void handleGuestbookReplyDelete(item.id, reply.id)}
+                          >
+                            {tr(language, "deleteReply")}
+                          </button>
+                        )}
+                      </div>
+                      <p>{reply.body}</p>
                     </div>
-                  )}
+                  ))}
                   {content.visitor.is_owner && (
                     <form
                       className="guestbook-note__reply-editor"
@@ -2542,15 +2595,15 @@ function PersonalSpacePage({
                       <label>
                         <span>{tr(language, "reply")}</span>
                         <textarea
-                          value={guestbookReplyDrafts[item.id] ?? item.owner_reply ?? ""}
+                          value={guestbookReplyDrafts[item.id] ?? ""}
                           onChange={(event) => setGuestbookReplyDrafts((current) => ({ ...current, [item.id]: event.target.value }))}
                           placeholder={tr(language, "replyPlaceholder")}
                           maxLength={500}
                           rows={2}
                         />
                       </label>
-                      <button type="submit" disabled={replyingGuestbookId === item.id}>
-                        {tr(language, replyingGuestbookId === item.id ? "saving" : "saveReply")}
+                      <button type="submit" disabled={replyingGuestbookId === item.id || !(guestbookReplyDrafts[item.id] || "").trim()}>
+                        {tr(language, replyingGuestbookId === item.id ? "sendingReply" : "sendReply")}
                       </button>
                     </form>
                   )}
@@ -3349,11 +3402,12 @@ function AdminPage({ language }: { language: Language }) {
   };
 
   const handleMessageReply = async (messageId: string) => {
-    if (!sessionToken) return;
+    const reply = (replyDrafts[messageId] || "").trim();
+    if (!sessionToken || !reply) return;
     setBusyId(`reply-${messageId}`);
     setError("");
     try {
-      await setGuestbookMessageReply(sessionToken, messageId, replyDrafts[messageId] || "");
+      await postGuestbookReply(sessionToken, messageId, reply);
       setReplyDrafts((current) => {
         const next = { ...current };
         delete next[messageId];
@@ -3362,6 +3416,20 @@ function AdminPage({ language }: { language: Language }) {
       await refreshDashboard(sessionToken);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : localized(language, "The reply could not be saved.", "回复保存失败。"));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const handleDeleteMessageReply = async (replyId: string) => {
+    if (!sessionToken || replyId.startsWith("legacy-")) return;
+    setBusyId(`delete-reply-${replyId}`);
+    setError("");
+    try {
+      await deleteGuestbookReply(sessionToken, replyId);
+      await refreshDashboard(sessionToken);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : localized(language, "The reply could not be deleted.", "回复删除失败。"));
     } finally {
       setBusyId("");
     }
@@ -3494,11 +3562,19 @@ function AdminPage({ language }: { language: Language }) {
               {dashboard.messages.map((messageItem) => (
                 <article key={messageItem.id} className={messageItem.status === "hidden" ? "is-hidden" : ""}>
                   <p>{messageItem.body}</p>
-                  {messageItem.owner_reply && <div className="moderation-list__reply"><strong>{tr(language, "replyFromYuyun")}</strong><p>{messageItem.owner_reply}</p></div>}
+                  {guestbookReplies(messageItem).map((reply) => (
+                    <div className="moderation-list__reply" key={reply.id}>
+                      <div>
+                        <strong>{tr(language, "replyFromYuyun")}</strong>
+                        {!reply.id.startsWith("legacy-") && <button type="button" disabled={busyId === `delete-reply-${reply.id}`} onClick={() => handleDeleteMessageReply(reply.id)}>{tr(language, "deleteReply")}</button>}
+                      </div>
+                      <p>{reply.body}</p>
+                    </div>
+                  ))}
                   <label className="moderation-list__reply-editor">
                     <span>{tr(language, "reply")}</span>
-                    <textarea value={replyDrafts[messageItem.id] ?? messageItem.owner_reply ?? ""} onChange={(event) => setReplyDrafts((current) => ({ ...current, [messageItem.id]: event.target.value }))} placeholder={tr(language, "replyPlaceholder")} maxLength={500} />
-                    <button type="button" disabled={busyId === `reply-${messageItem.id}`} onClick={() => handleMessageReply(messageItem.id)}>{busyId === `reply-${messageItem.id}` ? tr(language, "saving") : tr(language, "saveReply")}</button>
+                    <textarea value={replyDrafts[messageItem.id] ?? ""} onChange={(event) => setReplyDrafts((current) => ({ ...current, [messageItem.id]: event.target.value }))} placeholder={tr(language, "replyPlaceholder")} maxLength={500} />
+                    <button type="button" disabled={busyId === `reply-${messageItem.id}` || !(replyDrafts[messageItem.id] || "").trim()} onClick={() => handleMessageReply(messageItem.id)}>{busyId === `reply-${messageItem.id}` ? tr(language, "sendingReply") : tr(language, "sendReply")}</button>
                   </label>
                   <footer><span><strong>{messageItem.visitor_name}</strong> · {formatAdminDate(messageItem.created_at, language)}</span><button disabled={busyId === messageItem.id} onClick={() => handleMessageStatus(messageItem.id, messageItem.status === "visible" ? "hidden" : "visible")}>{messageItem.status === "visible" ? tr(language, "hide") : tr(language, "show")}</button></footer>
                 </article>

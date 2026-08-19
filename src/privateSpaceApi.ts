@@ -52,8 +52,16 @@ export type GuestbookMessage = {
   visitor_name: string;
   body: string;
   created_at: string;
+  replies?: GuestbookReply[];
   owner_reply?: string | null;
   owner_replied_at?: string | null;
+};
+
+export type GuestbookReply = {
+  id: string;
+  message_id: string;
+  body: string;
+  created_at: string;
 };
 
 export type VisitorIdentity = {
@@ -482,6 +490,22 @@ export function setGuestbookMessageReply(sessionToken: string, messageId: string
     session_token: sessionToken,
     message_id: messageId,
     reply_body: reply,
+  });
+}
+
+export function postGuestbookReply(sessionToken: string, messageId: string, reply: string) {
+  return rpc<GuestbookReply>("owner_set_guestbook_reply", {
+    session_token: sessionToken,
+    message_id: messageId,
+    reply_body: reply,
+  });
+}
+
+export function deleteGuestbookReply(sessionToken: string, replyId: string) {
+  return rpc<{ id: string; message_id: string }>("owner_set_guestbook_reply", {
+    session_token: sessionToken,
+    reply_id: replyId,
+    delete_reply: true,
   });
 }
 
