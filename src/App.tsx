@@ -44,7 +44,7 @@ import {
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
 
-type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "now" | "writing" | "photography" | "music" | "film" | "editor" | "space" | "admin";
+type PageKey = "home" | "projects" | "publications" | "notes" | "awards" | "gallery" | "now" | "writing" | "photography" | "music" | "reading" | "film" | "editor" | "space" | "admin";
 type Language = "en" | "zh";
 type SiteTheme = "minimal" | "band";
 type PrivateSpaceView = "now" | "entries" | "music" | "editor";
@@ -60,7 +60,9 @@ const copy = {
     awards: "Awards",
     gallery: "Gallery",
     now: "Now",
+    essays: "Essays",
     music: "Music",
+    readingNotes: "Reading Notes",
     editor: "Editor",
     space: "Personal Space",
     closeNavigation: "Close navigation",
@@ -186,9 +188,11 @@ const copy = {
     type: "Type",
     writing: "Writing",
     photography: "Photography",
+    readingNote: "Reading note",
     filmNote: "Film note",
     techNote: "Tech Note",
     excerpt: "Excerpt",
+    photographyDescription: "One-line description",
     excerptPlaceholder: "The short line visitors see first",
     markdownBody: "Markdown body",
     markdownPlaceholder: "# Heading\n\nWrite with Markdown...",
@@ -327,7 +331,9 @@ const copy = {
     awards: "竞赛",
     gallery: "图片墙",
     now: "此刻",
+    essays: "随笔",
     music: "音乐",
+    readingNotes: "读书笔记",
     editor: "编辑",
     space: "个人",
     closeNavigation: "关闭导航",
@@ -409,7 +415,7 @@ const copy = {
     privateSetup: "私人档案正在设置中。",
     invitationFootnote: "每个邀请只属于一位访客，可以暂停访问，但不会抹去历史记录。",
     visitor: "访客",
-    welcomeAfterHours: "欢迎来到闭馆之后，",
+    welcomeAfterHours: "欢迎来到幕后，",
     visitorPass: "访客通行证",
     manageVisitors: "管理访客 →",
     logOut: "退出登录",
@@ -453,9 +459,11 @@ const copy = {
     type: "类型",
     writing: "写作",
     photography: "摄影",
+    readingNote: "读书笔记",
     filmNote: "影评",
     techNote: "技术笔记",
     excerpt: "摘要",
+    photographyDescription: "一句话介绍",
     excerptPlaceholder: "访客首先看到的短句",
     markdownBody: "Markdown 正文",
     markdownPlaceholder: "# 标题\n\n使用 Markdown 写作...",
@@ -662,9 +670,10 @@ const navLabelKeys: Record<Exclude<PageKey, "admin">, CopyKey> = {
   awards: "awards",
   gallery: "gallery",
   now: "now",
-  writing: "writing",
+  writing: "essays",
   photography: "photography",
   music: "music",
+  reading: "readingNotes",
   film: "filmNote",
   editor: "editor",
   space: "space",
@@ -959,9 +968,10 @@ const pages: Array<{ key: Exclude<PageKey, "admin">; label: string; icon: string
   { key: "notes", label: "Tech Notes", icon: "📓" },
   { key: "gallery", label: "Gallery", icon: "🖼️" },
   { key: "now", label: "Now", icon: "✦" },
-  { key: "writing", label: "Writing", icon: "✒️" },
   { key: "photography", label: "Photography", icon: "📷" },
   { key: "music", label: "Music", icon: "🎧" },
+  { key: "writing", label: "Essays", icon: "✒️" },
+  { key: "reading", label: "Reading Notes", icon: "📖" },
   { key: "film", label: "Film Notes", icon: "🎬" },
   { key: "editor", label: "Editor", icon: "✎" },
   { key: "space", label: "Personal Space", icon: "🔐" },
@@ -1495,9 +1505,11 @@ function SessionLoading({ language, admin = false }: { language: Language; admin
 
 function entryKindLabel(language: Language, kind: PrivateEntry["kind"]) {
   return kind === "writing"
-    ? tr(language, "writing")
+    ? tr(language, "essays")
     : kind === "photography"
       ? tr(language, "photography")
+      : kind === "reading"
+        ? tr(language, "readingNote")
       : kind === "film"
         ? tr(language, "filmNote")
         : tr(language, "techNote");
@@ -1925,6 +1937,110 @@ function PrivateRecordWall({
   );
 }
 
+function PrivatePhotographyWall({
+  entries,
+  language,
+  expandedEntryIds,
+  commentDrafts,
+  commentVisibilities,
+  likingEntryId,
+  commentingEntryId,
+  interactionErrors,
+  onToggleEntry,
+  onLike,
+  onCommentDraftChange,
+  onCommentVisibilityChange,
+  onComment,
+  emptyLabel,
+}: {
+  entries: PrivateEntry[];
+  language: Language;
+  expandedEntryIds: Set<string>;
+  commentDrafts: Record<string, string>;
+  commentVisibilities: Record<string, "public" | "private">;
+  likingEntryId: string;
+  commentingEntryId: string;
+  interactionErrors: Record<string, string>;
+  onToggleEntry: (entryId: string) => void;
+  onLike: (entry: PrivateEntry) => void;
+  onCommentDraftChange: (entryId: string, value: string) => void;
+  onCommentVisibilityChange: (entryId: string, value: "public" | "private") => void;
+  onComment: (event: React.FormEvent<HTMLFormElement>, entryId: string) => void;
+  emptyLabel: string;
+}) {
+  if (entries.length === 0) {
+    return <p className="archive-empty">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="private-photo-wall">
+      {entries.map((entry) => {
+        const images = parseEntryImages(entry.image_url);
+        const cover = images.find((image) => image.isCover) || images[0];
+        const isExpanded = expandedEntryIds.has(entry.id);
+        const displayDate = privateEntryDisplayDate(entry);
+        return (
+          <article className={`photo-entry${isExpanded ? " is-expanded" : ""}`} data-entry-id={entry.id} key={entry.id}>
+            <button
+              className="photo-entry__image"
+              type="button"
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? tr(language, "collapseEntry") : tr(language, "expandEntry")}
+              onClick={() => onToggleEntry(entry.id)}
+            >
+              {cover ? <img src={cover.src} alt={cover.caption || entry.excerpt} style={{ objectPosition: `${cover.focusX}% ${cover.focusY}%` }} /> : <span aria-hidden="true">◌</span>}
+            </button>
+            <div className="photo-entry__caption">
+              {entry.excerpt && <p>{entry.excerpt}</p>}
+              {displayDate && <time dateTime={displayDate}>{formatDisplayDate(displayDate, language)}</time>}
+            </div>
+            {isExpanded && (
+              <div className="photo-entry__detail">
+                {images.length > 1 && (
+                  <div className="photo-entry__gallery">
+                    {images.filter((image) => image.id !== cover?.id).map((image) => <EntryMediaFigure image={image} key={image.id} />)}
+                  </div>
+                )}
+                <ArticleEngagement
+                  entry={entry}
+                  language={language}
+                  expanded
+                  commentDraft={commentDrafts[entry.id] || ""}
+                  commentVisibility={commentVisibilities[entry.id] || "public"}
+                  isLiking={likingEntryId === entry.id}
+                  isCommenting={commentingEntryId === entry.id}
+                  error={interactionErrors[entry.id] || ""}
+                  onLike={() => onLike(entry)}
+                  onCommentDraftChange={(value) => onCommentDraftChange(entry.id, value)}
+                  onCommentVisibilityChange={(value) => onCommentVisibilityChange(entry.id, value)}
+                  onComment={(event) => onComment(event, entry.id)}
+                />
+                <button className="photo-entry__close" type="button" onClick={() => onToggleEntry(entry.id)}>{tr(language, "collapseEntry")}</button>
+              </div>
+            )}
+            {!isExpanded && (
+              <ArticleEngagement
+                entry={entry}
+                language={language}
+                expanded={false}
+                commentDraft=""
+                commentVisibility="public"
+                isLiking={likingEntryId === entry.id}
+                isCommenting={false}
+                error=""
+                onLike={() => onLike(entry)}
+                onCommentDraftChange={() => undefined}
+                onCommentVisibilityChange={() => undefined}
+                onComment={(event) => event.preventDefault()}
+              />
+            )}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 function PersonalSpacePage({
   language,
   view = "now",
@@ -2310,18 +2426,20 @@ function PersonalSpacePage({
     <section className={`personal-space personal-space--open${musicPlayRequest ? " has-music-player" : ""}`}>
       <div className="space-noise" aria-hidden="true" />
       <div className="space-open__inner">
-        <header className="space-welcome">
-          <div>
-            <p className="space-eyebrow">{language === "zh" ? `私人版本 / 访客 ${String(content.visitor.visitor_number).padStart(3, "0")}` : `Private edition / visitor ${String(content.visitor.visitor_number).padStart(3, "0")}`}</p>
-            <h1>{tr(language, "welcomeAfterHours")}<br /><em>{content.visitor.name}.</em></h1>
-          </div>
-          <div className="visitor-pass">
-            <span>{tr(language, "visitorPass")}</span>
-            <strong>#{String(content.visitor.visitor_number).padStart(3, "0")}</strong>
-            {content.visitor.is_owner && <a className="owner-console-link" href="#/admin">{tr(language, "manageVisitors")}</a>}
-            <button className="space-signout" type="button" onClick={handleVisitorLogout}>{tr(language, "logOut")}</button>
-          </div>
-        </header>
+        {view === "now" && (
+          <header className="space-welcome">
+            <div>
+              <p className="space-eyebrow">{language === "zh" ? `私人版本 / 访客 ${String(content.visitor.visitor_number).padStart(3, "0")}` : `Private edition / visitor ${String(content.visitor.visitor_number).padStart(3, "0")}`}</p>
+              <h1>{tr(language, "welcomeAfterHours")}<br /><em>{language === "zh" ? "陈彧赟。" : `${content.visitor.name}.`}</em></h1>
+            </div>
+            <div className="visitor-pass">
+              <span>{tr(language, "visitorPass")}</span>
+              <strong>#{String(content.visitor.visitor_number).padStart(3, "0")}</strong>
+              {content.visitor.is_owner && <a className="owner-console-link" href="#/admin">{tr(language, "manageVisitors")}</a>}
+              <button className="space-signout" type="button" onClick={handleVisitorLogout}>{tr(language, "logOut")}</button>
+            </div>
+          </header>
+        )}
 
         {view === "now" && (
           <PrivateNowBoard
@@ -2377,6 +2495,7 @@ function PersonalSpacePage({
                   <option value="all">{tr(language, "allTypes")}</option>
                   <option value="writing">{tr(language, "writing")}</option>
                   <option value="photography">{tr(language, "photography")}</option>
+                  <option value="reading">{tr(language, "readingNote")}</option>
                   <option value="film">{tr(language, "filmNote")}</option>
                   <option value="tech">{tr(language, "techNote")}</option>
                 </select>
@@ -2403,7 +2522,24 @@ function PersonalSpacePage({
           </div>
         )}
 
-        {view === "entries" && <div className="private-archive">
+        {view === "entries" && fixedEntryKind === "photography" && <PrivatePhotographyWall
+          entries={filteredEntries}
+          language={language}
+          expandedEntryIds={expandedEntryIds}
+          commentDrafts={commentDrafts}
+          commentVisibilities={commentVisibilities}
+          likingEntryId={likingEntryId}
+          commentingEntryId={commentingEntryId}
+          interactionErrors={interactionErrors}
+          onToggleEntry={toggleEntry}
+          onLike={handleEntryLike}
+          onCommentDraftChange={(entryId, value) => setCommentDrafts((current) => ({ ...current, [entryId]: value }))}
+          onCommentVisibilityChange={(entryId, value) => setCommentVisibilities((current) => ({ ...current, [entryId]: value }))}
+          onComment={handleEntryComment}
+          emptyLabel={publishedEntries.length === 0 ? tr(language, "firstEntry") : tr(language, "noFilteredEntries")}
+        />}
+
+        {view === "entries" && fixedEntryKind !== "photography" && <div className="private-archive">
           {publishedEntries.length === 0 && <p className="archive-empty">{tr(language, "firstEntry")}</p>}
           {publishedEntries.length > 0 && filteredEntries.length === 0 && <p className="archive-empty">{tr(language, "noFilteredEntries")}</p>}
           {filteredEntries.map((entry) => {
@@ -2724,7 +2860,7 @@ function OwnerSpaceEditor({
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!draft.title.trim()) {
+    if (!draft.title.trim() && draft.kind !== "photography") {
       setEditorError(tr(language, "ownerRequiredTitle"));
       return;
     }
@@ -2735,9 +2871,11 @@ function OwnerSpaceEditor({
     const payload = {
       id: stableEntryId,
       kind: draft.kind,
-      title: draft.title.trim(),
+      title: draft.kind === "photography"
+        ? (draft.excerpt.trim() || draft.event_date || localized(language, "Untitled photograph", "未命名照片"))
+        : draft.title.trim(),
       excerpt: draft.excerpt.trim(),
-      body: draft.body,
+      body: draft.kind === "photography" ? "" : draft.body,
       image_url: draft.imagesDirty || !draft.id ? serializeEntryImages(draft.images) : null,
       external_url: draft.kind === "film" ? draft.external_url?.trim() || null : null,
       replace_image: draft.imagesDirty || !draft.id,
@@ -2939,29 +3077,25 @@ function OwnerSpaceEditor({
 
           <form className="space-editor__form" onSubmit={handleSave}>
             <div className="space-editor__form-row space-editor__form-row--primary">
-              <label>{tr(language, "title")}<input value={draft.title} onChange={(event) => updateDraft("title", event.target.value)} placeholder={tr(language, "titlePlaceholder")} /></label>
-              <fieldset className="space-editor__kind space-editor__kind--contained">
-                <legend>{tr(language, "type")}</legend>
-                <div role="group" aria-label={tr(language, "type")}>
-                  {(["writing", "photography", "film", "tech"] as const).map((kind) => (
-                    <button
-                      key={kind}
-                      type="button"
-                      aria-pressed={draft.kind === kind}
-                      className={draft.kind === kind ? "is-active" : ""}
-                      onClick={() => setDraft((current) => ({
-                        ...current,
-                        kind,
-                        is_public: kind === "tech" ? current.is_public : false,
-                      }))}
-                    >
-                      {entryKindLabel(language, kind)}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
+              {draft.kind !== "photography" && <label>{tr(language, "title")}<input value={draft.title} onChange={(event) => updateDraft("title", event.target.value)} placeholder={tr(language, "titlePlaceholder")} /></label>}
+              <label className={draft.kind === "photography" ? "space-editor__type--wide" : ""}>{tr(language, "type")}
+                <select
+                  value={draft.kind}
+                  onChange={(event) => setDraft((current) => ({
+                    ...current,
+                    kind: event.target.value as PrivateEntry["kind"],
+                    is_public: event.target.value === "tech" ? current.is_public : false,
+                  }))}
+                >
+                  <option value="writing">{entryKindLabel(language, "writing")}</option>
+                  <option value="photography">{entryKindLabel(language, "photography")}</option>
+                  <option value="reading">{entryKindLabel(language, "reading")}</option>
+                  <option value="film">{entryKindLabel(language, "film")}</option>
+                  <option value="tech">{entryKindLabel(language, "tech")}</option>
+                </select>
+              </label>
             </div>
-            <label>{tr(language, "excerpt")}<input value={draft.excerpt} onChange={(event) => updateDraft("excerpt", event.target.value)} placeholder={tr(language, "excerptPlaceholder")} /></label>
+            <label>{draft.kind === "photography" ? tr(language, "photographyDescription") : tr(language, "excerpt")}<input value={draft.excerpt} onChange={(event) => updateDraft("excerpt", event.target.value)} placeholder={tr(language, "excerptPlaceholder")} /></label>
             {draft.kind === "film" && (
               <label>
                 {tr(language, "doubanLink")}
@@ -2973,7 +3107,7 @@ function OwnerSpaceEditor({
                 />
               </label>
             )}
-            <label>
+            {draft.kind !== "photography" && <label>
               {tr(language, "markdownBody")}
               <textarea
                 className="space-editor__markdown-input"
@@ -2983,8 +3117,8 @@ function OwnerSpaceEditor({
                 onChange={(event) => updateDraft("body", event.target.value)}
                 placeholder={tr(language, "markdownPlaceholder")}
               />
-            </label>
-            <label>
+            </label>}
+            {draft.kind !== "photography" && <label>
               {tr(language, "entrySoundtrack")}
               <select
                 value={draft.music_track_id || ""}
@@ -2999,7 +3133,7 @@ function OwnerSpaceEditor({
                     </option>
                   ))}
               </select>
-            </label>
+            </label>}
             <div className="space-editor__form-row">
               <label>
                 {tr(language, "eventDate")}
@@ -3717,6 +3851,7 @@ export default function App() {
     const entryKindForPage: Partial<Record<PageKey, PrivateEntry["kind"]>> = {
       writing: "writing",
       photography: "photography",
+      reading: "reading",
       film: "film",
     };
     const privateViewForPage: Partial<Record<PageKey, PrivateSpaceView>> = {
@@ -3724,6 +3859,7 @@ export default function App() {
       writing: "entries",
       photography: "entries",
       music: "music",
+      reading: "entries",
       film: "entries",
       editor: "editor",
       space: "now",
@@ -3753,6 +3889,7 @@ export default function App() {
       case "writing":
       case "photography":
       case "music":
+      case "reading":
       case "film":
       case "editor":
         return (
@@ -3773,7 +3910,7 @@ export default function App() {
 
   const visiblePages = theme === "minimal"
     ? pages.filter((page) => ["home", "projects", "publications", "awards", "notes"].includes(page.key))
-    : pages.filter((page) => ["now", "writing", "photography", "music", "film"].includes(page.key) || (page.key === "editor" && hasOwnerAccess));
+    : pages.filter((page) => ["now", "photography", "music", "writing", "reading", "film"].includes(page.key) || (page.key === "editor" && hasOwnerAccess));
   const navigationItems = visiblePages.map((page) => (
     <a
       key={page.key}
@@ -3792,7 +3929,7 @@ export default function App() {
   return (
     <>
       <main className={`site site--${theme}`} data-theme={theme}>
-        <header className={`site-header${theme === "band" || ["space", "now", "writing", "photography", "music", "film", "editor"].includes(currentPage) ? " site-header--dark" : ""}`}>
+        <header className={`site-header${theme === "band" || ["space", "now", "writing", "photography", "music", "reading", "film", "editor"].includes(currentPage) ? " site-header--dark" : ""}`}>
           <nav>
           <a
             href={theme === "band" ? "#/now" : "#/"}

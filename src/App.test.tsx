@@ -170,7 +170,7 @@ describe("owner session restoration", () => {
     await waitFor(() => expect(window.location.hash).toBe("#/now"));
     expect(document.documentElement.dataset.theme).toBe("band");
     const bandNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(bandNavigation).toEqual(["Now✦", "Writing✒️", "Photography📷", "Music🎧", "Film note🎬"]);
+    expect(bandNavigation).toEqual(["Now✦", "Photography📷", "Music🎧", "Essays✒️", "Reading Notes📖", "Film note🎬"]);
     expect(screen.queryByRole("link", { name: /Editor/ })).toBeNull();
     expect(screen.queryByPlaceholderText("Enter invitation code")).toBeNull();
   });
@@ -528,7 +528,7 @@ describe("owner session restoration", () => {
     expect(screen.getAllByText("年月日").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("uses a plain writing font in the Markdown editor and keeps type controls contained", async () => {
+  it("uses a plain writing font in the Markdown editor and exposes content type as a select", async () => {
     localStorage.setItem("yuyun-owner-console-session", "owner-token");
     window.location.hash = "#/editor";
     api.loadPrivateSpace.mockResolvedValue({
@@ -542,7 +542,7 @@ describe("owner session restoration", () => {
     await screen.findByText("Shape the archive.");
     const editor = container.querySelector(".space-editor__markdown-input");
     expect(editor).toBeTruthy();
-    expect(container.querySelector(".space-editor__kind")?.classList.contains("space-editor__kind--contained")).toBe(true);
+    expect(screen.getByLabelText("Type").tagName).toBe("SELECT");
     expect(screen.getByText("yyyy/mm/dd")).toBeTruthy();
   });
 
@@ -573,7 +573,7 @@ describe("owner session restoration", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Writing · 2025/04/06")).toBeTruthy();
+    expect(await screen.findByText("Essays · 2025/04/06")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2025-01-01" } });
     expect(screen.getByRole("heading", { name: "A saved fragment" })).toBeTruthy();
   });
@@ -997,7 +997,7 @@ describe("owner session restoration", () => {
     });
 
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: "Tech Note" }));
+    fireEvent.change(await screen.findByLabelText("Type"), { target: { value: "tech" } });
     fireEvent.change(screen.getByPlaceholderText("A title for this fragment"), { target: { value: "Evaluation notes" } });
     fireEvent.click(screen.getByLabelText("Publish this Tech Note to VOL.01"));
     fireEvent.click(screen.getByRole("button", { name: "Save entry" }));

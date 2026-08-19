@@ -233,14 +233,14 @@ export function PrivateMusicLibraryEditor({
     }
   };
 
-  const handleDelete = async () => {
-    if (!draft.id || !window.confirm(copy.deleteConfirm)) return;
+  const handleDelete = async (trackId = draft.id) => {
+    if (!trackId || !window.confirm(copy.deleteConfirm)) return;
     setIsBusy(true);
     setError("");
     try {
-      await deletePrivateMusicTrack(sessionToken, draft.id);
-      onTracksChange(tracks.filter((track) => track.id !== draft.id));
-      setDraft(blankTrack());
+      await deletePrivateMusicTrack(sessionToken, trackId);
+      onTracksChange(tracks.filter((track) => track.id !== trackId));
+      if (draft.id === trackId) setDraft(blankTrack());
       setNotice(copy.saved);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : copy.required);
@@ -315,6 +315,7 @@ export function PrivateMusicLibraryEditor({
               <div>
                 <button type="button" disabled={index === 0 || isBusy} aria-label={copy.moveEarlier} title={copy.moveEarlier} onClick={() => void moveTrack(track.id, -1)}>↑</button>
                 <button type="button" disabled={index === orderedTracks.length - 1 || isBusy} aria-label={copy.moveLater} title={copy.moveLater} onClick={() => void moveTrack(track.id, 1)}>↓</button>
+                <button className="music-library-editor__delete-track" type="button" disabled={isBusy} aria-label={`${copy.delete}: ${track.title}`} title={`${copy.delete}: ${track.title}`} onClick={() => void handleDelete(track.id)}>×</button>
               </div>
             </article>
           ))}
@@ -369,7 +370,7 @@ export function PrivateMusicLibraryEditor({
             {notice && <p className="space-editor__notice" role="status">{notice}</p>}
             <div className="music-library-editor__actions">
               <button type="submit" disabled={isBusy || isUploading}>{isBusy ? copy.saving : copy.save}</button>
-              {draft.id && <button type="button" className="is-delete" disabled={isBusy} onClick={handleDelete}>{copy.delete}</button>}
+              {draft.id && <button type="button" className="is-delete" disabled={isBusy} onClick={() => void handleDelete()}>{copy.delete}</button>}
             </div>
           </form>
         )}

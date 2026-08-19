@@ -1,6 +1,6 @@
 export type PrivateEntry = {
   id: string;
-  kind: "writing" | "photography" | "film" | "tech";
+  kind: "writing" | "photography" | "reading" | "film" | "tech";
   title: string;
   excerpt: string;
   body: string;
