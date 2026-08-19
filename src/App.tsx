@@ -2602,6 +2602,11 @@ function PersonalSpacePage({
                 className={`archive-entry archive-entry--${entry.kind}${isExpanded ? " is-expanded" : ""}${cover ? "" : " archive-entry--no-cover"}`}
                 data-entry-id={entry.id}
                 key={entry.id}
+                onClick={(event) => {
+                  if (isExpanded) return;
+                  if ((event.target as HTMLElement).closest("button, a, input, textarea, select, label")) return;
+                  toggleEntry(entry.id);
+                }}
               >
                 <aside className="archive-entry__visual">
                   {cover ? (
@@ -2676,43 +2681,22 @@ function PersonalSpacePage({
                         onCommentVisibilityChange={(value) => setCommentVisibilities((current) => ({ ...current, [entry.id]: value }))}
                         onComment={(event) => handleEntryComment(event, entry.id)}
                       />
-                      <button
-                        className="archive-entry__toggle archive-entry__collapse--bottom"
-                        type="button"
-                        onClick={() => toggleEntry(entry.id)}
-                      >
-                        {tr(language, "collapseEntry")}
-                        <span aria-hidden="true">↑</span>
-                      </button>
                     </>
                   )}
-                  {!isExpanded && (
-                    <>
-                      <ArticleEngagement
-                        entry={entry}
-                        language={language}
-                        expanded={false}
-                        commentDraft=""
-                        commentVisibility="public"
-                        isLiking={likingEntryId === entry.id}
-                        isCommenting={false}
-                        error=""
-                        onLike={() => handleEntryLike(entry)}
-                        onCommentDraftChange={() => undefined}
-                        onCommentVisibilityChange={() => undefined}
-                        onComment={(event) => event.preventDefault()}
-                      />
-                      <button
-                        className="archive-entry__toggle"
-                        type="button"
-                        aria-expanded={false}
-                        onClick={() => toggleEntry(entry.id)}
-                      >
-                        {tr(language, "expandEntry")}
-                        <span aria-hidden="true">↓</span>
-                      </button>
-                    </>
-                  )}
+                  {!isExpanded && <ArticleEngagement
+                    entry={entry}
+                    language={language}
+                    expanded={false}
+                    commentDraft=""
+                    commentVisibility="public"
+                    isLiking={likingEntryId === entry.id}
+                    isCommenting={false}
+                    error=""
+                    onLike={() => handleEntryLike(entry)}
+                    onCommentDraftChange={() => undefined}
+                    onCommentVisibilityChange={() => undefined}
+                    onComment={(event) => event.preventDefault()}
+                  />}
                 </div>
               </article>
             );

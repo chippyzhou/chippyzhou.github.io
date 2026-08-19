@@ -433,7 +433,7 @@ describe("owner session restoration", () => {
     expect(container.querySelector(".archive-entry")?.classList.contains("is-expanded")).toBe(false);
     expect(container.querySelector("table")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    fireEvent.click(container.querySelector(".archive-entry")!);
 
     const expandedEntry = container.querySelector(".archive-entry");
     const body = container.querySelector(".archive-entry__body");
@@ -452,7 +452,7 @@ describe("owner session restoration", () => {
       : false).toBe(true);
 
     const closeButtons = screen.getAllByRole("button", { name: "Close article" });
-    expect(closeButtons).toHaveLength(2);
+    expect(closeButtons).toHaveLength(1);
     fireEvent.click(closeButtons[0]);
     expect(expandedEntry?.classList.contains("is-expanded")).toBe(false);
     expect(container.querySelector("table")).toBeNull();
@@ -500,7 +500,7 @@ describe("owner session restoration", () => {
       messages: [],
     });
 
-    render(<App />);
+    const { container } = render(<App />);
     const doubanLink = await screen.findByRole("link", { name: "View on Douban" });
     expect(doubanLink.getAttribute("href"))
       .toBe("https://movie.douban.com/subject/1295644/");
@@ -942,7 +942,7 @@ describe("owner session restoration", () => {
       created_at: "2026-08-18T08:00:00.000Z",
     });
 
-    render(<App />);
+    const { container } = render(<App />);
     await screen.findByRole("heading", { name: "A shared note" });
     fireEvent.click(screen.getByRole("button", { name: "Like · 2" }));
     await waitFor(() => expect(api.togglePrivateEntryLike).toHaveBeenCalledWith("visitor-token", "entry-one"));
@@ -950,7 +950,7 @@ describe("owner session restoration", () => {
     expect(likedButton.textContent).toContain("Liked");
     expect(likedButton.textContent).not.toContain("Unlike");
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    fireEvent.click(container.querySelector(".archive-entry")!);
     fireEvent.click(screen.getByRole("radio", { name: "Only me + Yuyun" }));
     fireEvent.change(screen.getByPlaceholderText("Leave a comment on this article..."), {
       target: { value: "I read this." },
