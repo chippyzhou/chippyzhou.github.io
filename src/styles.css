@@ -1956,7 +1956,9 @@ img { display: block; max-width: 100%; }
   cursor: pointer;
 }
 .private-music-player__buttons button { width: 38px; height: 38px; font-size: 24px; }
-.private-music-player__buttons .private-music-player__play { width: 46px; height: 46px; border-color: #9c8f9d; color: #efc97e; font-size: 15px; }
+.private-music-player__buttons .private-music-player__play { width: 46px; height: 46px; display: grid; place-items: center; border-color: #9c8f9d; color: #efc97e; }
+.private-music-player__play-icon { width: 0; height: 0; margin-left: 3px; border-top: 9px solid transparent; border-bottom: 9px solid transparent; border-left: 14px solid currentColor; }
+.private-music-player__play-icon.is-paused { width: 14px; height: 18px; margin-left: 0; border: 0; background: linear-gradient(90deg, currentColor 0 4px, transparent 4px 10px, currentColor 10px 14px); }
 .private-music-player__buttons button:hover,
 .private-music-player__tools > button:hover { color: #efc97e; }
 .private-music-player__timeline { min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 9px; align-items: center; }
@@ -2052,7 +2054,9 @@ img { display: block; max-width: 100%; }
   .private-music-player__timeline { display: none; }
   .private-music-player__buttons { gap: 0; }
   .private-music-player__buttons button { width: 31px; height: 31px; font-size: 19px; }
-  .private-music-player__buttons .private-music-player__play { width: 36px; height: 36px; font-size: 12px; }
+  .private-music-player__buttons .private-music-player__play { width: 36px; height: 36px; }
+  .private-music-player__play-icon { border-top-width: 7px; border-bottom-width: 7px; border-left-width: 11px; }
+  .private-music-player__play-icon.is-paused { width: 11px; height: 14px; background: linear-gradient(90deg, currentColor 0 3px, transparent 3px 8px, currentColor 8px 11px); }
   .private-music-player__tools { grid-column: auto; justify-content: flex-end; flex-wrap: nowrap; gap: 1px; }
   .private-music-player__tools > button { min-width: 31px; min-height: 31px; padding: 4px; font-size: 11px; }
   .private-music-player__tools > label,

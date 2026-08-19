@@ -403,7 +403,7 @@ export function PrivateMusicPlayer({
         <div className="private-music-player__buttons">
           <button type="button" onClick={() => playbackMode === "shuffle" && mode === "playlist" ? playShuffleStep(-1) : playPlaylistIndex(playlistIndex - 1)} aria-label={copy.previous} title={copy.previous}>‹</button>
           <button className="private-music-player__play" type="button" onClick={togglePlayback} aria-label={isPlaying ? copy.pause : copy.play} title={isPlaying ? copy.pause : copy.play}>
-            {isPlaying ? "Ⅱ" : "▶"}
+            <span className={`private-music-player__play-icon${isPlaying ? " is-paused" : ""}`} aria-hidden="true" />
           </button>
           <button type="button" onClick={() => playbackMode === "shuffle" && mode === "playlist" ? playShuffleStep(1) : playPlaylistIndex(playlistIndex + 1)} aria-label={copy.next} title={copy.next}>›</button>
         </div>
