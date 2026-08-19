@@ -1898,7 +1898,7 @@ function PrivateNowBoard({
               {currentTrack.cover_url ? <img src={currentTrack.cover_url} alt="" /> : <i aria-hidden="true">♪</i>}
               <strong>{currentTrack.title}</strong>
               <small>{currentTrack.artist}</small>
-              <b aria-hidden="true">▶</b>
+              <b aria-hidden="true"><span /></b>
             </button>
           ) : <p>{tr(language, "emptyPlaylist")}</p>}
         </article>
@@ -1950,7 +1950,7 @@ function PrivateRecordWall({
               {track.description && <blockquote>{track.description}</blockquote>}
               {track.external_url && (
                 <a href={track.external_url} target="_blank" rel="noreferrer">
-                  {tr(language, "neteaseLink")} <span aria-hidden="true">↗</span>
+                  {tr(language, "neteaseLink")} <span className="external-link-icon" aria-hidden="true" />
                 </a>
               )}
             </div>
@@ -3967,7 +3967,10 @@ export default function App() {
           >
             <span className="site-name__yuyun">Yuyun</span>
             <span className="site-name__chen">Chen</span>
-            <small>{tr(language, "researchLog")}</small>
+            <small>{theme === "minimal"
+              ? localized(language, "Research space", "研究空间")
+              : localized(language, "Personal space", "个人空间")}
+            </small>
           </a>
           <div className="nav-links">{navigationItems}</div>
           <div className="header-tools">

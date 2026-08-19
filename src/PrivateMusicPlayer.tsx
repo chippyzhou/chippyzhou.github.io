@@ -394,7 +394,7 @@ export function PrivateMusicPlayer({
             aria-label={copy.openService}
             title={copy.openService}
           >
-            ↗
+            <span className="external-link-icon" aria-hidden="true" />
           </a>
         )}
       </div>
