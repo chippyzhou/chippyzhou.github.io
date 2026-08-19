@@ -1012,29 +1012,6 @@ img { display: block; max-width: 100%; }
 .archive-entry__body h4 { font-size: 18px; line-height: 1.2; }
 .archive-entry__body h5 { font-size: 15px; line-height: 1.3; }
 .archive-entry__body h6 { font-size: 13px; line-height: 1.35; color: #d7af68; text-transform: uppercase; }
-.archive-entry--film > .archive-entry__content > h2 {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 700;
-}
-.archive-entry--film .archive-entry__excerpt {
-  font: 400 14px/1.5 Georgia, "Times New Roman", serif;
-}
-.archive-entry--film .archive-entry__preview-text {
-  font: 14px/1.6 Georgia, "Times New Roman", serif !important;
-  font-style: normal;
-}
-.archive-entry--film .archive-entry__body {
-  font-family: Georgia, "Times New Roman", serif;
-}
-.archive-entry--film.is-expanded .archive-entry__body h1,
-.archive-entry--film.is-expanded .archive-entry__body h2,
-.archive-entry--film.is-expanded .archive-entry__body h3,
-.archive-entry--film.is-expanded .archive-entry__body h4,
-.archive-entry--film.is-expanded .archive-entry__body h5,
-.archive-entry--film.is-expanded .archive-entry__body h6 {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 700;
-}
 .archive-entry__body > .archive-entry__markdown-section:first-child > :first-child { margin-top: 0; }
 .archive-entry__body strong { color: #d7af68; font: inherit; font-weight: 700; }
 .archive-entry__body em { color: #bdb5c0; }
@@ -2837,14 +2814,18 @@ img { display: block; max-width: 100%; }
   .record-wall__sleeve { width: calc(100% - 12px); }
   .record-wall__disc { right: -12px; }
   .record-wall__copy h3 { font-size: 16px; overflow-wrap: anywhere; }
-  .space-welcome { grid-template-columns: 1fr; gap: 34px; }
+  .space-welcome { grid-template-columns: minmax(0, 1fr) 118px; align-items: start; gap: 14px; padding-bottom: 32px; }
   .space-welcome h1 { font-size: 47px; }
+  .visitor-pass { width: 118px; padding: 10px; transform: rotate(1deg); }
+  .visitor-pass span { font-size: 8px; }
+  .visitor-pass strong { margin: 10px 0; font-size: 31px; }
+  .visitor-pass .space-signout { min-height: 28px; margin-top: 10px; padding: 5px; font-size: 8px; }
+  .visitor-pass .owner-console-link { margin-top: 10px; padding-top: 8px; font-size: 8px; }
   .space-editor { margin-top: 34px; padding: 18px; box-shadow: 4px 4px 0 rgba(210, 49, 74, .35); }
   .space-editor__header h2 { font-size: 29px; }
   .space-editor__grid { grid-template-columns: 1fr; }
   .space-editor__preview { grid-column: 1; }
   .space-editor__form-row { grid-template-columns: 1fr; }
-  .visitor-pass { width: 180px; }
   .archive-filters { align-items: stretch; flex-wrap: wrap; }
   .archive-filters > p { width: 100%; margin-bottom: 4px; }
   .archive-filters label { flex: 1 1 130px; }

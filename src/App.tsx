@@ -2472,7 +2472,7 @@ function PersonalSpacePage({
           <header className="space-welcome">
             <div>
               <p className="space-eyebrow">{language === "zh" ? `私人版本 / 访客 ${String(content.visitor.visitor_number).padStart(3, "0")}` : `Private edition / visitor ${String(content.visitor.visitor_number).padStart(3, "0")}`}</p>
-              <h1>{tr(language, "welcomeAfterHours")}<br /><em>{language === "zh" ? "陈彧赟。" : `${content.visitor.name}.`}</em></h1>
+              <h1>{tr(language, "welcomeAfterHours")}<br /><em>{content.visitor.is_owner && language === "zh" ? "陈彧赟。" : `${content.visitor.name}${language === "zh" ? "。" : "."}`}</em></h1>
             </div>
             <div className="visitor-pass">
               <span>{tr(language, "visitorPass")}</span>
