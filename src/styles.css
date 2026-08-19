@@ -1012,15 +1012,28 @@ img { display: block; max-width: 100%; }
 .archive-entry__body h4 { font-size: 18px; line-height: 1.2; }
 .archive-entry__body h5 { font-size: 15px; line-height: 1.3; }
 .archive-entry__body h6 { font-size: 13px; line-height: 1.35; color: #d7af68; text-transform: uppercase; }
-.archive-entry--film:not(.is-expanded) > .archive-entry__content > h2 { font-weight: 500; }
+.archive-entry--film > .archive-entry__content > h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+}
+.archive-entry--film .archive-entry__excerpt {
+  font: 400 14px/1.5 Georgia, "Times New Roman", serif;
+}
+.archive-entry--film .archive-entry__preview-text {
+  font: 14px/1.6 Georgia, "Times New Roman", serif !important;
+  font-style: normal;
+}
+.archive-entry--film .archive-entry__body {
+  font-family: Georgia, "Times New Roman", serif;
+}
 .archive-entry--film.is-expanded .archive-entry__body h1,
 .archive-entry--film.is-expanded .archive-entry__body h2,
 .archive-entry--film.is-expanded .archive-entry__body h3,
 .archive-entry--film.is-expanded .archive-entry__body h4,
 .archive-entry--film.is-expanded .archive-entry__body h5,
 .archive-entry--film.is-expanded .archive-entry__body h6 {
-  font-family: "Songti SC", STSong, SimSun, Georgia, serif;
-  font-weight: 400;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
 }
 .archive-entry__body > .archive-entry__markdown-section:first-child > :first-child { margin-top: 0; }
 .archive-entry__body strong { color: #d7af68; font: inherit; font-weight: 700; }
