@@ -27,4 +27,11 @@ describe("private article typography", () => {
     expect(markerRules).toContainEqual(expect.stringContaining("list-style: circle"));
     expect(markerRules).toContainEqual(expect.stringContaining("list-style: decimal"));
   });
+
+  it("keeps the editor entry list within the editor workspace height", () => {
+    const entryListRule = stylesheet.match(/\.space-editor__entries\s*\{([^}]*)\}/u)?.[1];
+
+    expect(entryListRule).toContain("height: min(720px, calc(100dvh - 160px))");
+    expect(entryListRule).toContain("overflow-y: auto");
+  });
 });

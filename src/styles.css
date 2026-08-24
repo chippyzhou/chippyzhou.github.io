@@ -1189,7 +1189,15 @@ img { display: block; max-width: 100%; }
 .space-editor__actions button:hover, .space-editor__entries button:hover { border-color: #d7af68; }
 .space-editor__grid { display: grid; grid-template-columns: 175px minmax(0, 1fr) minmax(250px, .72fr); gap: 22px; padding-top: 22px; }
 .space-editor__label { margin: 0 0 12px; color: #d7af68; font: 700 13px/1.35 "Source Sans 3 Variable", "PingFang SC", "Microsoft YaHei", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
-.space-editor__entries { min-width: 0; }
+.space-editor__entries {
+  min-width: 0;
+  height: min(720px, calc(100dvh - 160px));
+  min-height: 360px;
+  padding-right: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
 .space-editor__entries button { width: 100%; min-height: 0; margin-bottom: 8px; padding: 11px; display: block; text-align: left; text-transform: none; }
 .space-editor__entries button.is-selected { border-color: #d7af68; background: #302a35; }
 .space-editor__entries strong, .space-editor__entries small { display: block; overflow-wrap: anywhere; }
@@ -2865,6 +2873,7 @@ img { display: block; max-width: 100%; }
   .space-editor { margin-top: 34px; padding: 18px; box-shadow: 4px 4px 0 rgba(210, 49, 74, .35); }
   .space-editor__header h2 { font-size: 29px; }
   .space-editor__grid { grid-template-columns: 1fr; }
+  .space-editor__entries { height: auto; min-height: 0; padding-right: 0; overflow: visible; }
   .space-editor__preview { grid-column: 1; }
   .space-editor__form-row { grid-template-columns: 1fr; }
   .archive-filters { align-items: stretch; flex-wrap: wrap; }
