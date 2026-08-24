@@ -1361,7 +1361,7 @@ function TechnicalNotesPage({ language, theme }: { language: Language; theme: Si
     loadPublicTechnicalNotes()
       .then((entries) => {
         if (isCurrent) {
-          setPublishedNotes(entries);
+          setPublishedNotes(sortPrivateEntriesByDate(entries));
           setIsLoadingNotes(false);
         }
       })
@@ -1554,6 +1554,17 @@ function entryKindLabel(language: Language, kind: PrivateEntry["kind"]) {
 
 function privateEntryDisplayDate(entry: PrivateEntry) {
   return entry.display_date || entry.event_date || "";
+}
+
+function sortPrivateEntriesByDate(entries: PrivateEntry[]) {
+  return [...entries].sort((left, right) => {
+    const leftDate = privateEntryDisplayDate(left);
+    const rightDate = privateEntryDisplayDate(right);
+    if (!leftDate && !rightDate) return 0;
+    if (!leftDate) return 1;
+    if (!rightDate) return -1;
+    return rightDate.localeCompare(leftDate);
+  });
 }
 
 function normalizeDateFilter(value: string) {
@@ -2135,9 +2146,10 @@ function PersonalSpacePage({
   const normalizedStartDate = normalizeDateFilter(entryStartDate);
   const normalizedEndDate = normalizeDateFilter(entryEndDate);
   const publishedEntries = useMemo(
-    () => (content?.entries || []).filter((entry) => entry.is_published),
+    () => sortPrivateEntriesByDate((content?.entries || []).filter((entry) => entry.is_published)),
     [content?.entries],
   );
+  const sortedEntries = useMemo(() => sortPrivateEntriesByDate(content?.entries || []), [content?.entries]);
   const filteredEntries = useMemo(() => publishedEntries.filter((entry) => {
     const entryDate = privateEntryDisplayDate(entry);
     return (entryKindFilter === "all" || entry.kind === entryKindFilter)
@@ -2528,7 +2540,7 @@ function PersonalSpacePage({
             />
             <OwnerSpaceEditor
               sessionToken={sessionToken}
-              entries={content.entries}
+              entries={sortedEntries}
               playlist={content.playlist}
               language={language}
               onEntriesChange={(entries) => setContent((current) => current ? { ...current, entries } : current)}

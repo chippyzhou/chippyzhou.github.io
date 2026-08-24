@@ -822,6 +822,50 @@ describe("owner session restoration", () => {
     await waitFor(() => expect(audio?.getAttribute("src")).toBe("/audio/default.mp3"));
   });
 
+  it("orders private articles by newest recorded date first", async () => {
+    sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
+    window.location.hash = "#/writing";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: { name: "Visitor", visitor_number: 2, visit_count: 1, is_owner: false },
+      playlist: [],
+      messages: [],
+      entries: [
+        {
+          id: "older-entry",
+          kind: "writing",
+          title: "Older note",
+          excerpt: "Written earlier",
+          body: "Older body.",
+          image_url: null,
+          external_url: null,
+          event_date: "2026-08-01",
+          display_date: "2026-08-01",
+          music_track_id: null,
+          is_published: true,
+        },
+        {
+          id: "newer-entry",
+          kind: "writing",
+          title: "Newer note",
+          excerpt: "Written later",
+          body: "Newer body.",
+          image_url: null,
+          external_url: null,
+          event_date: "2026-08-20",
+          display_date: "2026-08-20",
+          music_track_id: null,
+          is_published: true,
+        },
+      ],
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("heading", { name: "Newer note" });
+
+    expect(Array.from(container.querySelectorAll(".archive-entry h2"), (heading) => heading.textContent))
+      .toEqual(["Newer note", "Older note"]);
+  });
+
   it("starts the full playlist from a clicked record and cycles playback modes", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
     sessionStorage.setItem("yuyun-private-space-session", "visitor-token");
