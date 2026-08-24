@@ -1030,6 +1030,11 @@ img { display: block; max-width: 100%; }
 .archive-entry__body strong { color: #d7af68; font: inherit; font-weight: 700; }
 .archive-entry__body em { color: #bdb5c0; }
 .archive-entry__body ul, .archive-entry__body ol { margin: 0 0 14px; padding-left: 22px; }
+.archive-entry__body ul { list-style: disc; }
+.archive-entry__body ul ul { list-style: circle; }
+.archive-entry__body ul ul ul { list-style: square; }
+.archive-entry__body ol { list-style: decimal; }
+.archive-entry__body li::marker { color: #d7af68; }
 .archive-entry__body li { margin: 4px 0; }
 .archive-entry__body blockquote { margin: 0 0 14px; padding-left: 16px; color: #bdb5c0; border-left: 2px solid #d7af68; }
 .archive-entry__body pre { margin: 0 0 14px; padding: 14px; overflow-x: auto; background: #121017; color: #e8c97b; font: 12px/1.6 "SFMono-Regular", Consolas, monospace; }

@@ -19,4 +19,12 @@ describe("private article typography", () => {
     expect(trackListRule).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
     expect(trackListRule).toContain("overflow-y: auto");
   });
+
+  it("restores visible list markers inside article Markdown", () => {
+    const markerRules = Array.from(stylesheet.matchAll(/\.archive-entry__body (?:ul(?: ul(?: ul)?)?|ol)\s*\{([^}]*)\}/gu), (match) => match[1]);
+
+    expect(markerRules).toContainEqual(expect.stringContaining("list-style: disc"));
+    expect(markerRules).toContainEqual(expect.stringContaining("list-style: circle"));
+    expect(markerRules).toContainEqual(expect.stringContaining("list-style: decimal"));
+  });
 });
