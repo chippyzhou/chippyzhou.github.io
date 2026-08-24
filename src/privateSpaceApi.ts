@@ -138,7 +138,35 @@ const requestTimeoutMs = 12_000;
 const saveRequestTimeoutMs = 20_000;
 const mediaEnvelopePrefix = "yuyun-media-v1:";
 const privateMediaReferencePrefix = "/__private_media__/";
+const heicImageTypePattern = /^image\/(?:heic|heif)$/iu;
+const heicImageExtensionPattern = /\.(?:heic|heif)$/iu;
 export const isPrivateSpaceConfigured = Boolean(cloudbaseMediaEndpoint && cloudbaseAccessKey);
+
+function isHeicImage(file: File) {
+  return heicImageTypePattern.test(file.type) || heicImageExtensionPattern.test(file.name);
+}
+
+function jpegFilename(filename: string) {
+  const base = filename.replace(heicImageExtensionPattern, "").trim() || "image";
+  return `${base}.jpg`;
+}
+
+export async function preparePrivateImageUpload(file: File) {
+  if (!isHeicImage(file)) return file;
+
+  try {
+    const { default: heic2any } = await import("heic2any");
+    const output = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    const jpeg = Array.isArray(output) ? output[0] : output;
+    if (!jpeg) throw new Error("No image was produced.");
+    return new File([jpeg], jpegFilename(file.name), {
+      type: "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  } catch {
+    throw new Error("This HEIC/HEIF image could not be converted. Please try exporting it as JPEG.");
+  }
+}
 
 export function encodePrivateMediaReference(value: string) {
   return value.startsWith("cloud://")

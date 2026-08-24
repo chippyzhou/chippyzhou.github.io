@@ -4,10 +4,15 @@ import {
   encodePrivateMediaReference,
   loadPublicTechnicalNotes,
   postPrivateEntryComment,
+  preparePrivateImageUpload,
   savePrivateEntry,
   togglePrivateEntryLike,
   unlockPrivateSpace,
 } from "./privateSpaceApi";
+
+const heicConverter = vi.hoisted(() => vi.fn());
+
+vi.mock("heic2any", () => ({ default: heicConverter }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -27,6 +32,18 @@ describe("private media references", () => {
 
     expect(encodePrivateMediaReference(url)).toBe(url);
     expect(decodePrivateMediaReference(url)).toBeNull();
+  });
+
+  it("converts HEIC uploads to JPEG before media storage", async () => {
+    heicConverter.mockResolvedValue(new Blob(["jpeg"], { type: "image/jpeg" }));
+    const heic = new File(["heic"], "summer-photo.HEIC", { type: "image/heic", lastModified: 42 });
+
+    const prepared = await preparePrivateImageUpload(heic);
+
+    expect(heicConverter).toHaveBeenCalledWith(expect.objectContaining({ blob: heic, toType: "image/jpeg" }));
+    expect(prepared.name).toBe("summer-photo.jpg");
+    expect(prepared.type).toBe("image/jpeg");
+    expect(prepared.lastModified).toBe(42);
   });
 });
 

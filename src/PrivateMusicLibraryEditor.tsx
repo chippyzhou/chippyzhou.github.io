@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   deletePrivateMusicTrack,
   isTransientPrivateSpaceError,
+  preparePrivateImageUpload,
   reorderPrivateMusicTracks,
   savePrivateMusicTrack,
   uploadPrivateMedia,
@@ -218,7 +219,8 @@ export function PrivateMusicLibraryEditor({
     setError("");
     setNotice(copy.uploading);
     try {
-      const uploaded = await uploadPrivateMedia(sessionToken, file, kind);
+      const uploadFile = kind === "image" ? await preparePrivateImageUpload(file) : file;
+      const uploaded = await uploadPrivateMedia(sessionToken, uploadFile, kind);
       setDraft((current) => kind === "audio"
         ? { ...current, audio_url: uploaded.url, audio_storage_url: uploaded.storage_url }
         : { ...current, cover_url: uploaded.url, cover_storage_url: uploaded.storage_url });
@@ -358,7 +360,7 @@ export function PrivateMusicLibraryEditor({
             </label>
             <label className="music-library-editor__upload">
               {copy.uploadCover}
-              <input type="file" accept="image/*" disabled={isUploading} onChange={(event) => void handleFileUpload(event, "image")} />
+              <input type="file" accept="image/*,.heic,.heif" disabled={isUploading} onChange={(event) => void handleFileUpload(event, "image")} />
             </label>
             <label>
               {copy.externalSource}

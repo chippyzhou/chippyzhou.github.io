@@ -16,6 +16,7 @@ import {
   postPrivateEntryComment,
   postGuestbookMessage,
   postGuestbookReply,
+  preparePrivateImageUpload,
   resetVisitorInviteCode,
   savePrivateEntry,
   setGuestbookMessageStatus,
@@ -215,7 +216,7 @@ const copy = {
     defaultPlaylist: "Use the default playlist",
     playEntrySoundtrack: "Play this note's soundtrack",
     image: "Images",
-    imageUploadHelp: "Select multiple images. Original files are stored without compression.",
+    imageUploadHelp: "Select multiple images. Original files are stored without compression; HEIC/HEIF files are converted to JPEG.",
     optimizingImage: "Uploading original images...",
     imageReady: "Images uploaded and ready.",
     removeImage: "Remove image",
@@ -498,7 +499,7 @@ const copy = {
     defaultPlaylist: "使用默认歌单",
     playEntrySoundtrack: "播放这篇文章的配乐",
     image: "图片",
-    imageUploadHelp: "可以一次选择多张图片，原图会直接保存，不再压缩。",
+    imageUploadHelp: "可以一次选择多张图片，原图会直接保存；HEIC/HEIF 会自动转换为 JPEG。",
     optimizingImage: "正在上传原图...",
     imageReady: "图片已上传，可以保存。",
     removeImage: "移除图片",
@@ -2983,7 +2984,8 @@ function OwnerSpaceEditor({
     try {
       const uploaded: EntryImage[] = [];
       for (const file of files) {
-        const result = await uploadPrivateMedia(sessionToken, file, "image");
+        const uploadFile = await preparePrivateImageUpload(file);
+        const result = await uploadPrivateMedia(sessionToken, uploadFile, "image");
         uploaded.push({
           id: crypto.randomUUID(),
           src: result.url,
@@ -3197,7 +3199,7 @@ function OwnerSpaceEditor({
                   onChange={(value) => updateDraft("event_date", value || null)}
                 />
               </label>
-              <label>{tr(language, "image")}<input type="file" accept="image/*" multiple onChange={handleImageUpload} /><small>{tr(language, "imageUploadHelp")}</small></label>
+              <label>{tr(language, "image")}<input type="file" accept="image/*,.heic,.heif" multiple onChange={handleImageUpload} /><small>{tr(language, "imageUploadHelp")}</small></label>
             </div>
             {previewCover && (
               <section className="space-editor__cover-crop">
