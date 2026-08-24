@@ -288,37 +288,39 @@ export function PrivateMusicLibraryEditor({
         </button>
       </header>
 
-      <div className="music-library-editor__grid">
+      <div className={`music-library-editor__grid${isOpen ? " is-editing" : ""}`}>
         <div className="music-library-editor__tracks">
           <p className="space-editor__label">{copy.playlist}</p>
-          {orderedTracks.length === 0 && <p className="music-library-editor__empty">{copy.empty}</p>}
-          {orderedTracks.map((track, index) => (
-            <article className={draft.id === track.id ? "is-selected" : ""} key={track.id}>
-              <button
-                className="music-library-editor__select"
-                type="button"
-                onClick={() => {
-                  setDraft(trackToDraft(track));
-                  setIsOpen(true);
-                  setError("");
-                  setNotice("");
-                }}
-              >
-                {track.cover_url
-                  ? <img src={track.cover_url} alt="" />
-                  : <span aria-hidden="true">♪</span>}
+          <div className="music-library-editor__track-list" data-testid="music-track-list">
+            {orderedTracks.length === 0 && <p className="music-library-editor__empty">{copy.empty}</p>}
+            {orderedTracks.map((track, index) => (
+              <article className={draft.id === track.id ? "is-selected" : ""} key={track.id}>
+                <button
+                  className="music-library-editor__select"
+                  type="button"
+                  onClick={() => {
+                    setDraft(trackToDraft(track));
+                    setIsOpen(true);
+                    setError("");
+                    setNotice("");
+                  }}
+                >
+                  {track.cover_url
+                    ? <img src={track.cover_url} alt="" />
+                    : <span aria-hidden="true">♪</span>}
+                  <div>
+                    <strong>{track.title}</strong>
+                    <small>{track.artist || "—"} · {track.is_active ? copy.activeStatus : copy.pausedStatus}</small>
+                  </div>
+                </button>
                 <div>
-                  <strong>{track.title}</strong>
-                  <small>{track.artist || "—"} · {track.is_active ? copy.activeStatus : copy.pausedStatus}</small>
+                  <button type="button" disabled={index === 0 || isBusy} aria-label={copy.moveEarlier} title={copy.moveEarlier} onClick={() => void moveTrack(track.id, -1)}>↑</button>
+                  <button type="button" disabled={index === orderedTracks.length - 1 || isBusy} aria-label={copy.moveLater} title={copy.moveLater} onClick={() => void moveTrack(track.id, 1)}>↓</button>
+                  <button className="music-library-editor__delete-track" type="button" disabled={isBusy} aria-label={`${copy.delete}: ${track.title}`} title={`${copy.delete}: ${track.title}`} onClick={() => void handleDelete(track.id)}>×</button>
                 </div>
-              </button>
-              <div>
-                <button type="button" disabled={index === 0 || isBusy} aria-label={copy.moveEarlier} title={copy.moveEarlier} onClick={() => void moveTrack(track.id, -1)}>↑</button>
-                <button type="button" disabled={index === orderedTracks.length - 1 || isBusy} aria-label={copy.moveLater} title={copy.moveLater} onClick={() => void moveTrack(track.id, 1)}>↓</button>
-                <button className="music-library-editor__delete-track" type="button" disabled={isBusy} aria-label={`${copy.delete}: ${track.title}`} title={`${copy.delete}: ${track.title}`} onClick={() => void handleDelete(track.id)}>×</button>
-              </div>
-            </article>
-          ))}
+              </article>
+            ))}
+          </div>
         </div>
 
         {isOpen && (

@@ -10,4 +10,13 @@ describe("private article typography", () => {
 
     expect(paragraphRule).toContain("font-family: inherit");
   });
+
+  it("keeps writing covers prominent and constrains the music playlist grid", () => {
+    const writingRule = stylesheet.match(/\.archive-entry--writing:not\(\.is-expanded\)\s*\{([^}]*)\}/u)?.[1];
+    const trackListRule = stylesheet.match(/\.music-library-editor__track-list\s*\{([^}]*)\}/u)?.[1];
+
+    expect(writingRule).toContain("grid-template-rows: 190px minmax(0, 1fr)");
+    expect(trackListRule).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(trackListRule).toContain("overflow-y: auto");
+  });
 });

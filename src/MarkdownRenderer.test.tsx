@@ -1,6 +1,12 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { extractMarkdownOutline, MarkdownRenderer, normalizeLatexDelimiters, transformObsidianMarkdown } from "./MarkdownRenderer";
+import {
+  extractMarkdownOutline,
+  MarkdownRenderer,
+  normalizeLatexDelimiters,
+  normalizeProseIndentation,
+  transformObsidianMarkdown,
+} from "./MarkdownRenderer";
 
 describe("Obsidian Markdown", () => {
   it("transforms Obsidian links, embeds, callouts, highlights, and comments", () => {
@@ -43,6 +49,22 @@ describe("Obsidian Markdown", () => {
     expect(container.querySelector("mark")?.textContent).toBe("Key result");
     expect(container.querySelector(".obsidian-wikilink")?.textContent).toBe("Experiment log");
     expect(container.querySelector(".katex")).toBeTruthy();
+  });
+
+  it("keeps ordinary first-line indents out of code blocks while preserving nested lists", () => {
+    const source = [
+      "    这是一段需要首行缩进的正文。",
+      "",
+      "- 第一层项目",
+      "  - 第二层项目",
+      "    - 第三层项目",
+    ].join("\n");
+    const { container } = render(<MarkdownRenderer emptyLabel="Empty" source={source} />);
+
+    expect(normalizeProseIndentation(source)).toContain("　　这是一段需要首行缩进的正文。");
+    expect(container.querySelector("pre")).toBeNull();
+    expect(container.querySelectorAll("ul")).toHaveLength(3);
+    expect(container.querySelector("li")?.textContent).toContain("第一层项目");
   });
 
   it("syntax-highlights fenced code by language", () => {

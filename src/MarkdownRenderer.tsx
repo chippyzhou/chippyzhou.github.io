@@ -75,8 +75,34 @@ export function normalizeLatexDelimiters(source: string) {
   }).join("\n");
 }
 
+/**
+ * Markdown treats four leading spaces as an indented code block. In prose this
+ * is most often a first-line indent, so preserve list indentation but turn
+ * ordinary leading spaces into a visible Chinese paragraph indent instead.
+ */
+export function normalizeProseIndentation(source: string) {
+  let fenceMarker = "";
+
+  return source.split(/\r?\n/u).map((line) => {
+    const fence = line.match(/^\s*(```+|~~~+)/u);
+    if (fence) {
+      const marker = fence[1][0];
+      fenceMarker = fenceMarker === marker ? "" : fenceMarker || marker;
+      return line;
+    }
+    if (fenceMarker) return line;
+
+    const indentation = line.match(/^( {2,})(\S.*)$/u);
+    if (!indentation) return line;
+
+    const content = indentation[2];
+    const isListItem = /^(?:[-+*]|\d+[.)])\s+/u.test(content);
+    return isListItem ? line : `\u3000\u3000${content}`;
+  }).join("\n");
+}
+
 export function transformObsidianMarkdown(source: string) {
-  return normalizeLatexDelimiters(source)
+  return normalizeProseIndentation(normalizeLatexDelimiters(source))
     .replace(/%%[\s\S]*?%%/g, "")
     .replace(
       /!\[\[(https?:\/\/[^\]|]+)(?:\|([^\]]+))?\]\]/g,

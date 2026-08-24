@@ -14,6 +14,33 @@ vi.mock("./privateSpaceApi", () => ({
 }));
 
 describe("PrivateMusicLibraryEditor", () => {
+  it("groups the playlist in a dedicated scrollable list container", () => {
+    const { container } = render(
+      <PrivateMusicLibraryEditor
+        sessionToken="owner-token"
+        language="en"
+        onTracksChange={vi.fn()}
+        tracks={[{
+          id: "track-one",
+          title: "Spring",
+          artist: "MyGO!!!!!",
+          album: undefined,
+          description: undefined,
+          audio_url: "https://cdn.example.com/spring.mp3",
+          audio_storage_url: undefined,
+          cover_url: null,
+          cover_storage_url: undefined,
+          external_url: null,
+          is_active: true,
+          sort_order: 0,
+        }]}
+      />,
+    );
+
+    expect(container.querySelector(".music-library-editor__grid")?.classList.contains("is-editing")).toBe(false);
+    expect(screen.getByTestId("music-track-list").querySelector("article")?.textContent).toContain("Spring");
+  });
+
   it("saves direct audio separately from an optional music-service link", async () => {
     api.savePrivateMusicTrack.mockResolvedValue({
       id: "track-one",
