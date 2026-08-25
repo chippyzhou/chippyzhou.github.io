@@ -34,4 +34,11 @@ describe("private article typography", () => {
     expect(entryListRule).toContain("height: min(720px, calc(100dvh - 160px))");
     expect(entryListRule).toContain("overflow-y: auto");
   });
+
+  it("uses the shared editorial serif for the personal-space wordmark", () => {
+    const wordmarkRule = stylesheet.match(/\.site--band \.site-name__yuyun,\s*\.site--band \.site-name__chen\s*\{([^}]*)\}/u)?.[1];
+
+    expect(wordmarkRule).toContain('"Newsreader Variable"');
+    expect(wordmarkRule).not.toContain("Comic Sans");
+  });
 });

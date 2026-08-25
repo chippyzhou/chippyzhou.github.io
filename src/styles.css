@@ -57,6 +57,12 @@ img { display: block; max-width: 100%; }
 }
 .site--band .site-header--dark .site-name__yuyun { color: #8fa9ff; }
 .site--band .site-header--dark .site-name__chen { color: #f17b8c; }
+.site--band .site-name { column-gap: 4px; transform: none; }
+.site--band .site-name__yuyun,
+.site--band .site-name__chen {
+  font: 560 25px/.92 "Newsreader Variable", "Songti SC", STSong, Georgia, serif;
+  letter-spacing: 0;
+}
 
 .admin-code-notice {
   margin: 0 0 14px;
