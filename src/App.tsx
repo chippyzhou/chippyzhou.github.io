@@ -55,10 +55,10 @@ const copy = {
     languageToggle: "中文",
     languageLabel: "Switch to Chinese",
     home: "Home",
-    projects: "Projects",
+    projects: "Research",
     publications: "Publications",
     notes: "Tech Notes",
-    awards: "Awards",
+    awards: "Honors",
     gallery: "Gallery",
     now: "Now",
     essays: "Essays",
@@ -72,43 +72,38 @@ const copy = {
     switchToBandStyle: "Switch to the girl-band edition",
     switchToMinimalStyle: "Switch to the minimal academic edition",
     researchLog: "陈彧赟 / research log",
-    role: "Software engineering · Applied AI · Research notes",
-    intro: "I work at the intersection of software engineering, data-driven systems, and applied research. This is my living log of models, competitions, experiments, and the notes behind each finished result.",
-    openFieldNotes: "Open field notes",
-    academicWork: "Academic work",
-    readSetlist: "Read the setlist",
-    selectedProjects: "Selected projects",
-    competitionAwards: "Competition awards",
-    publicationsPreprints: "Publications / preprints",
-    researchDirections: "Research directions",
-    resumeSnapshot: "Profile / 2026",
-    resumeProfile: "Resume profile",
+    role: "Undergraduate Student, School of Software Engineering, South China University of Technology",
+    intro: "My current research focuses on multimodal model evaluation, reasoning analysis, and efficient attention mechanisms. My work includes a first-person visual safety benchmark, hierarchical reasoning evaluation, and sparse attention for Diffusion Transformers. I am interested in further exploring continual learning, knowledge updating, reasoning enhancement, and self-improving agents.",
+    openFieldNotes: "Research interests",
+    academicWork: "View publications",
+    readSetlist: "Technical notes",
+    resumeSnapshot: "Academic profile",
+    resumeProfile: "Academic profile",
+    affiliation: "Affiliation",
+    researchInterests: "Research interests",
     basedIn: "Based in",
-    currentFocus: "Current focus",
-    openTo: "Open to",
-    internshipRoles: "AI product management · Algorithm engineering internships",
     inspirationBoard: "Girl band inspiration board",
     bandResearchClub: "band-side research club / vol. 02",
     liveLog: "LIVE LOG",
     characterStickers: "5 character stickers",
     characterReferences: "Character references: AniList / BanG Dream! Ave Mujica",
     aboutMargin: "About / margin note",
-    aboutHeading: "Build it. Test it. Write down what changed.",
-    aboutNote: "research should leave traces",
-    aboutParagraphOne: "I am preparing for roles and academic opportunities where engineering practice and research judgment both matter. My work emphasizes clear problem framing, reproducible implementation, and readable communication.",
-    aboutParagraphTwo: "My academic interests are grounded in implementation: systems that can be tested, explained, and transferred into real use.",
-    projectsKicker: "Projects / production notes",
-    projectsTitle: "Selected technical work",
-    projectsDescription: "Each project is logged like a track in production: context, tools, implementation notes, and the public link.",
+    aboutHeading: "Research, made legible.",
+    aboutNote: "current work · future directions",
+    aboutParagraphOne: "My current work includes a first-person visual safety benchmark, hierarchical reasoning evaluation, and sparse attention for Diffusion Transformers.",
+    aboutParagraphTwo: "I am interested in further exploring continual learning, knowledge updating, reasoning enhancement, and self-improving agents.",
+    projectsKicker: "Research / overview",
+    projectsTitle: "Research overview",
+    projectsDescription: "Research work and related materials are being organized here as the record develops.",
     publicationsKicker: "Publications / research tracks",
     publicationsTitle: "Academic output",
     publicationsDescription: "Papers, preprints, posters, and technical reports arranged as an evolving research discography.",
     notesKicker: "Technical notes / workbench",
     notesTitle: "Notes from the build",
     notesDescription: "Methods, implementation decisions, model experiments, and the useful fragments that live between a project and a paper.",
-    awardsKicker: "Awards / live set",
-    awardsTitle: "Competition setlist",
-    awardsDescription: "The model, the result, and the part of the problem that made each competition worth remembering.",
+    awardsKicker: "Honors / distinctions",
+    awardsTitle: "Honors and awards",
+    awardsDescription: "Selected modeling competitions and distinctions.",
     galleryKicker: "Gallery / contact sheet",
     galleryTitle: "Visual record",
     galleryDescription: "Project work, presentations, competitions, and the in-between moments that do not fit into a formal abstract.",
@@ -330,7 +325,7 @@ const copy = {
     never: "Never",
     contactKicker: "Backstage pass / contact",
     connect: "Let's connect.",
-    lookingFor: "Based in Guangzhou, China, currently looking for internships in AI product management or algorithm engineering.",
+    lookingFor: "Based in Guangzhou, China. For academic correspondence, please reach out by email.",
     copyEmail: "Copy Outlook email",
     emailCopied: "Email address copied to clipboard",
   },
@@ -338,10 +333,10 @@ const copy = {
     languageToggle: "EN",
     languageLabel: "切换为英文",
     home: "首页",
-    projects: "项目",
+    projects: "研究",
     publications: "学术",
     notes: "笔记",
-    awards: "竞赛",
+    awards: "荣誉",
     gallery: "图片墙",
     now: "此刻",
     essays: "随笔",
@@ -355,43 +350,38 @@ const copy = {
     switchToBandStyle: "切换到少女乐队版",
     switchToMinimalStyle: "切换到简约学术版",
     researchLog: "陈彧赟 / 研究记录",
-    role: "软件工程 · 应用 AI · 研究笔记",
-    intro: "我关注软件工程、数据驱动系统与应用研究的交汇处。这里记录模型、竞赛、实验，以及每个结果背后的思考过程。",
-    openFieldNotes: "查看项目记录",
-    academicWork: "查看学术成果",
-    readSetlist: "查看竞赛成果",
-    selectedProjects: "精选项目",
-    competitionAwards: "竞赛奖项",
-    publicationsPreprints: "论文 / 预印本",
-    researchDirections: "研究方向",
-    resumeSnapshot: "个人概览 / 2026",
-    resumeProfile: "简历概览",
+    role: "华南理工大学软件学院软件工程本科生",
+    intro: "我目前的研究主要围绕多模态大模型评测、模型推理分析与高效注意力机制展开。已有工作包括第一人称视觉安全理解 Benchmark、分层推理评测，以及扩散 Transformer 稀疏注意力研究。未来希望进一步探索持续学习、知识更新、推理增强与自迭代智能体。",
+    openFieldNotes: "研究兴趣",
+    academicWork: "查看论文",
+    readSetlist: "技术笔记",
+    resumeSnapshot: "学术概览",
+    resumeProfile: "学术概览",
+    affiliation: "所属",
+    researchInterests: "研究兴趣",
     basedIn: "所在地",
-    currentFocus: "当前方向",
-    openTo: "求职意向",
-    internshipRoles: "AI 产品经理 · 算法工程实习",
     inspirationBoard: "少女乐队灵感板",
     bandResearchClub: "乐队侧研究社 / 第 02 期",
     liveLog: "现场记录",
     characterStickers: "5 张角色贴纸",
     characterReferences: "角色资料：AniList / BanG Dream! Ave Mujica",
     aboutMargin: "关于 / 页边注",
-    aboutHeading: "把它做出来。测试它。记下变化。",
-    aboutNote: "研究应该留下痕迹",
-    aboutParagraphOne: "我正在寻找能够同时重视工程实践与研究判断的实习和学术机会。我的工作强调清晰的问题定义、可复现的实现，以及易于理解的表达。",
-    aboutParagraphTwo: "我的学术兴趣始终落在实现上：让系统可以被测试、被解释，并真正迁移到实际使用中。",
-    projectsKicker: "项目 / 制作记录",
-    projectsTitle: "精选技术项目",
-    projectsDescription: "每个项目都像一首制作中的曲目：记录背景、工具、实现细节和公开地址。",
+    aboutHeading: "让研究清晰可见。",
+    aboutNote: "当前工作 · 未来方向",
+    aboutParagraphOne: "我已有的工作包括第一人称视觉安全理解 Benchmark、分层推理评测，以及扩散 Transformer 稀疏注意力研究。",
+    aboutParagraphTwo: "未来希望进一步探索持续学习、知识更新、推理增强与自迭代智能体。",
+    projectsKicker: "研究 / 概览",
+    projectsTitle: "研究概览",
+    projectsDescription: "研究工作与相关材料正在持续整理，并将在这里逐步呈现。",
     publicationsKicker: "学术成果 / 研究轨道",
     publicationsTitle: "学术产出",
     publicationsDescription: "论文、预印本、海报与技术报告，组成一份持续更新的研究唱片目录。",
     notesKicker: "技术笔记 / 工作台",
     notesTitle: "构建过程中的记录",
     notesDescription: "方法、实现决策、模型实验，以及项目和论文之间那些值得留下的片段。",
-    awardsKicker: "竞赛成果 / 现场演出",
-    awardsTitle: "竞赛曲目单",
-    awardsDescription: "模型、结果，以及让每场竞赛值得记住的那个问题切面。",
+    awardsKicker: "荣誉 / 竞赛",
+    awardsTitle: "荣誉与竞赛",
+    awardsDescription: "建模竞赛与相关荣誉记录。",
     galleryKicker: "图片墙 / 接触表",
     galleryTitle: "视觉记录",
     galleryDescription: "项目、展示、竞赛，以及那些无法放进正式摘要的中间时刻。",
@@ -613,7 +603,7 @@ const copy = {
     never: "从未",
     contactKicker: "后台通行证 / 联系方式",
     connect: "保持联系。",
-    lookingFor: "目前在中国广州，正在寻找 AI 产品经理或算法方向的实习机会。",
+    lookingFor: "目前在中国广州。如需学术交流，欢迎通过邮箱联系。",
     copyEmail: "复制 Outlook 邮箱",
     emailCopied: "邮箱地址已复制到剪贴板",
   },
@@ -623,42 +613,42 @@ type CopyKey = keyof typeof copy.en;
 
 const minimalCopy: Record<Language, Partial<Record<CopyKey, string>>> = {
   en: {
-    openFieldNotes: "View projects",
+    openFieldNotes: "Research interests",
     academicWork: "View publications",
-    readSetlist: "View competition results",
+    readSetlist: "Technical notes",
     aboutMargin: "Profile / approach",
-    aboutHeading: "Engineering grounded in research.",
-    aboutNote: "clear questions · reproducible work · readable results",
-    projectsKicker: "Projects / selected work",
-    projectsDescription: "Selected engineering and research projects with context, methods, implementation details, and public links.",
+    aboutHeading: "Research, made legible.",
+    aboutNote: "current work · future directions",
+    projectsKicker: "Research / overview",
+    projectsDescription: "Research work and related materials are being organized here as the record develops.",
     publicationsKicker: "Publications / research",
     publicationsDescription: "Papers, preprints, posters, and technical reports presented as a concise academic record.",
     notesKicker: "Technical notes / methods",
     notesTitle: "Technical notes",
     notesDescription: "Methods, implementation decisions, model experiments, and reproducible observations.",
-    awardsKicker: "Competitions / distinctions",
-    awardsTitle: "Competition results",
-    awardsDescription: "Selected modeling competitions with awards, methods, and quantitative outcomes.",
+    awardsKicker: "Honors / distinctions",
+    awardsTitle: "Honors and awards",
+    awardsDescription: "Selected modeling competitions and distinctions.",
     contactKicker: "Contact / opportunities",
     connect: "Get in touch.",
   },
   zh: {
-    openFieldNotes: "查看项目",
-    academicWork: "查看学术成果",
-    readSetlist: "查看竞赛成果",
+    openFieldNotes: "研究兴趣",
+    academicWork: "查看论文",
+    readSetlist: "技术笔记",
     aboutMargin: "个人概览 / 方法",
-    aboutHeading: "以研究判断为基础的工程实践。",
-    aboutNote: "清晰问题 · 可复现实现 · 可读结果",
-    projectsKicker: "项目 / 精选工作",
-    projectsDescription: "精选工程与研究项目，集中呈现背景、方法、实现细节与公开链接。",
+    aboutHeading: "让研究清晰可见。",
+    aboutNote: "当前工作 · 未来方向",
+    projectsKicker: "研究 / 概览",
+    projectsDescription: "研究工作与相关材料正在持续整理，并将在这里逐步呈现。",
     publicationsKicker: "学术成果 / 研究",
     publicationsDescription: "以简洁的学术履历形式呈现论文、预印本、海报与技术报告。",
     notesKicker: "技术笔记 / 方法",
     notesTitle: "技术笔记",
     notesDescription: "记录方法、实现决策、模型实验与可复现的观察结果。",
-    awardsKicker: "竞赛 / 荣誉",
-    awardsTitle: "竞赛成果",
-    awardsDescription: "集中呈现建模竞赛奖项、核心方法与量化结果。",
+    awardsKicker: "荣誉 / 竞赛",
+    awardsTitle: "荣誉与竞赛",
+    awardsDescription: "建模竞赛与相关荣誉记录。",
     contactKicker: "联系 / 机会",
     connect: "保持联系。",
   },
@@ -706,22 +696,19 @@ const navLabelKeys: Record<Exclude<PageKey, "admin">, CopyKey> = {
 
 const profile = {
   name: "Yuyun Chen（陈彧赟）",
-  role: "Software engineering · Applied AI · Research notes",
   location: "Guangzhou, China",
   email: "chensilu_0717@outlook.com",
   github: "https://github.com/chippyzhou",
-  intro:
-    "I work at the intersection of software engineering, data-driven systems, and applied research. This is my living log of models, competitions, experiments, and the notes behind each finished result.",
-  focus: ["Software Engineering", "AI Applications", "Research Systems"],
-  focusZh: ["软件工程", "AI 应用", "研究系统"],
+  affiliation: "Undergraduate Student, School of Software Engineering, South China University of Technology",
+  affiliationZh: "华南理工大学软件学院软件工程本科生",
+  researchInterests: [
+    "Large Language Model Evaluation",
+    "Continual Learning and Knowledge Updating",
+    "Reasoning",
+    "Self-Improving Agents",
+  ],
+  researchInterestsZh: ["大语言模型评测", "持续学习与知识更新", "推理", "自我改进智能体"],
 };
-
-const metrics = [
-  { value: "6+", label: "Selected projects" },
-  { value: "03", label: "Competition awards" },
-  { value: "02", label: "Publications / preprints" },
-  { value: "02", label: "Research directions" },
-];
 
 const projects = [
   {
@@ -1115,29 +1102,24 @@ function HomePage({
           </h1>
           <p className="hero-intro">{tr(language, "intro")}</p>
           <div className="hero-actions">
-            <a href="#/projects" onClick={() => setPage("projects")} className="button button--project">
+            <a href="#research-interests" className="button button--project">
               {themedTr(language, theme, "openFieldNotes")}
             </a>
             <a href="#/publications" onClick={() => setPage("publications")} className="button button--academic">
               {themedTr(language, theme, "academicWork")}
             </a>
-            <a href="#/awards" onClick={() => setPage("awards")} className="button button--awards">
+            <a href="#/notes" onClick={() => setPage("notes")} className="button button--awards">
               {themedTr(language, theme, "readSetlist")}
             </a>
           </div>
-          <dl className="metrics">
-            {metrics.map((item) => (
-              <div key={item.label}>
-                <dt>{item.value}</dt>
-                <dd>{localized(language, item.label, {
-                  "Selected projects": tr(language, "selectedProjects"),
-                  "Competition awards": tr(language, "competitionAwards"),
-                  "Publications / preprints": tr(language, "publicationsPreprints"),
-                  "Research directions": tr(language, "researchDirections"),
-                }[item.label] || item.label)}</dd>
-              </div>
-            ))}
-          </dl>
+          <section id="research-interests" className="research-interests" aria-labelledby="research-interests-heading">
+            <p id="research-interests-heading">{tr(language, "researchInterests")}</p>
+            <ul>
+              {(language === "zh" ? profile.researchInterestsZh : profile.researchInterests).map((interest) => (
+                <li key={interest}>{interest}</li>
+              ))}
+            </ul>
+          </section>
         </div>
 
         {isMinimal ? (
@@ -1148,16 +1130,16 @@ function HomePage({
             </div>
             <dl>
               <div>
+                <dt>{tr(language, "affiliation")}</dt>
+                <dd>{localized(language, profile.affiliation, profile.affiliationZh)}</dd>
+              </div>
+              <div>
+                <dt>{tr(language, "researchInterests")}</dt>
+                <dd>{(language === "zh" ? profile.researchInterestsZh : profile.researchInterests).join(" · ")}</dd>
+              </div>
+              <div>
                 <dt>{tr(language, "basedIn")}</dt>
                 <dd>{localized(language, profile.location, "广州，中国")}</dd>
-              </div>
-              <div>
-                <dt>{tr(language, "currentFocus")}</dt>
-                <dd>{(language === "zh" ? profile.focusZh : profile.focus).join(" · ")}</dd>
-              </div>
-              <div>
-                <dt>{tr(language, "openTo")}</dt>
-                <dd>{tr(language, "internshipRoles")}</dd>
               </div>
             </dl>
             <div className="resume-summary__links">
@@ -1223,7 +1205,7 @@ function HomePage({
                 src={assetPath("band-wall/mygo-banner.jpg")}
                 alt={localized(language, "It's MyGO!!!!! group portrait", "It's MyGO!!!!! 乐队合照")}
               />
-              <figcaption>{(language === "zh" ? profile.focusZh : profile.focus).join(" / ")}</figcaption>
+              <figcaption>{(language === "zh" ? profile.researchInterestsZh : profile.researchInterests).join(" / ")}</figcaption>
             </figure>
           )}
         </div>

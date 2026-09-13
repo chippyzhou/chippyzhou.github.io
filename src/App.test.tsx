@@ -123,8 +123,13 @@ describe("owner session restoration", () => {
     render(<App />);
 
     const actions = Array.from(document.querySelectorAll(".hero-actions a"), (link) => link.textContent);
-    expect(actions).toEqual(["View projects", "View publications", "View competition results"]);
-    expect(screen.getByRole("complementary", { name: "Resume profile" })).toBeTruthy();
+    expect(actions).toEqual(["Research interests", "View publications", "Technical notes"]);
+    expect(screen.getByRole("complementary", { name: "Academic profile" })).toBeTruthy();
+    expect(screen.getAllByText("Undergraduate Student, School of Software Engineering, South China University of Technology")).toHaveLength(2);
+    expect(screen.getByText("Large Language Model Evaluation")).toBeTruthy();
+    expect(screen.getByText("Continual Learning and Knowledge Updating")).toBeTruthy();
+    expect(screen.getAllByText(/I am interested in further exploring continual learning/i)).toHaveLength(2);
+    expect(document.body.textContent).not.toContain("GPA");
     expect(document.querySelector('.site img[src*="band-wall"]')).toBeNull();
     expect(document.querySelector(".research-polaroid")).toBeNull();
   });
@@ -133,7 +138,7 @@ describe("owner session restoration", () => {
     render(<App />);
 
     const minimalNavigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(minimalNavigation).toEqual(["Home", "Projects", "Publications", "Awards", "Tech Notes"]);
+    expect(minimalNavigation).toEqual(["Home", "Research", "Publications", "Honors", "Tech Notes"]);
 
     fireEvent.click(screen.getByRole("button", { name: "Switch to the girl-band edition" }));
 
@@ -182,7 +187,7 @@ describe("owner session restoration", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "陈彧赟" })).toBeTruthy();
     const navigation = Array.from(document.querySelectorAll(".site-header .nav-links a"), (link) => link.textContent?.trim());
-    expect(navigation).toEqual(["首页", "项目", "学术", "竞赛", "笔记"]);
+    expect(navigation).toEqual(["首页", "研究", "学术", "荣誉", "笔记"]);
   });
 
   it("keeps page chapter numbers aligned with the top navigation order", () => {

@@ -2279,6 +2279,31 @@ img { display: block; max-width: 100%; }
   font: 600 14px/1.5 var(--resume-sans);
 }
 [data-theme="minimal"] .button:hover { transform: none; box-shadow: none; color: #171717; filter: none; }
+[data-theme="minimal"] .research-interests {
+  margin-top: 54px;
+  border-top: 1px solid #171717;
+}
+[data-theme="minimal"] .research-interests > p {
+  margin: 17px 0 0;
+  color: #696969;
+  font: 600 10px/1.4 var(--resume-sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+[data-theme="minimal"] .research-interests ul {
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 28px;
+  list-style: none;
+}
+[data-theme="minimal"] .research-interests li {
+  min-width: 0;
+  color: #252525;
+  font: 410 16px/1.45 var(--resume-serif);
+  overflow-wrap: anywhere;
+}
 [data-theme="minimal"] .metrics { margin-top: 54px; border-top: 1px solid #171717; }
 [data-theme="minimal"] .metrics div { padding-top: 17px; }
 [data-theme="minimal"] .metrics dt { color: #171717; font: 420 31px/1 var(--resume-serif); }
@@ -2320,6 +2345,7 @@ img { display: block; max-width: 100%; }
   margin: 0;
   color: #252525;
   font: 410 17px/1.45 var(--resume-serif);
+  overflow-wrap: anywhere;
 }
 [data-theme="minimal"] .resume-summary__links {
   padding: 20px 0;
@@ -2528,6 +2554,9 @@ img { display: block; max-width: 100%; }
   [data-theme="minimal"] .home-hero { padding-top: 72px; padding-bottom: 64px; gap: 48px; }
   [data-theme="minimal"] .home-copy h1 { font-size: 66px; }
   [data-theme="minimal"] .hero-intro { font-size: 17px; }
+  [data-theme="minimal"] .research-interests { margin-top: 42px; }
+  [data-theme="minimal"] .research-interests ul { grid-template-columns: 1fr; gap: 8px; }
+  [data-theme="minimal"] .research-interests li { font-size: 15px; }
   [data-theme="minimal"] .resume-summary dl > div { grid-template-columns: 92px minmax(0, 1fr); }
   [data-theme="minimal"] .about-band { padding-top: 64px; padding-bottom: 64px; }
   [data-theme="minimal"] .page-shell { padding: 0 16px 80px; }
