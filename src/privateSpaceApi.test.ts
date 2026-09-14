@@ -3,6 +3,7 @@ import {
   decodePrivateMediaReference,
   encodePrivateMediaReference,
   loadPublicTechnicalNotes,
+  loadPrivateSpace,
   postPrivateEntryComment,
   preparePrivateImageUpload,
   savePrivateEntry,
@@ -48,6 +49,46 @@ describe("private media references", () => {
 });
 
 describe("private space RPC transport", () => {
+  it("resolves a large private media set in browser-sized batches", async () => {
+    const tracks = Array.from({ length: 21 }, (_, index) => ({
+      id: `track-${index}`,
+      title: `Track ${index}`,
+      artist: "Artist",
+      audio_url: `/__private_media__/cloud%3A%2F%2Fportfolio%2Fprivate%2Faudio%2Ftrack-${index}.mp3`,
+      cover_url: null,
+      external_url: null,
+      is_active: true,
+      sort_order: index,
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          ok: true,
+          data: {
+            visitor: { name: "Visitor", visitor_number: 1, visit_count: 1, is_owner: false },
+            entries: [],
+            playlist: tracks,
+            messages: [],
+          },
+        }),
+        ok: true,
+        status: 200,
+      })
+      .mockResolvedValue({
+        json: async () => ({ ok: true, files: {} }),
+        ok: true,
+        status: 200,
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const content = await loadPrivateSpace("visitor-token");
+
+    expect(content.playlist).toHaveLength(21);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).fileIds).toHaveLength(20);
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body).fileIds).toHaveLength(1);
+  });
+
   it("routes invitation unlocks through the CloudBase API function", async () => {
     const identity = {
       name: "Test visitor",

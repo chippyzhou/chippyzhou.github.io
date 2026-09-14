@@ -8,6 +8,7 @@ const postgresUrl = `https://${envId}.api.tcloudbasegateway.com/v1/rdb/rest`;
 const productionOrigin = "https://chippyzhou.github.io";
 const maxImageBytes = 50 * 1024 * 1024;
 const maxAudioBytes = 500 * 1024 * 1024;
+const resolveBatchSize = 20;
 const allowedRpcFunctions = new Set([
   "unlock_private_space",
   "get_private_space",
@@ -307,19 +308,20 @@ async function resolveFiles(event) {
     : [];
   if (!fileIds.length) return { ok: true, files: {} };
 
-  let result;
-  try {
-    result = await app.getTempFileURL({
-      fileList: fileIds.map((fileID) => ({ fileID, maxAge: 60 * 60 * 2 })),
-    });
-  } catch (error) {
-    // A stale or unavailable media object should not prevent private text from loading.
-    console.error("private media resolve failed", error);
-    return { ok: true, files: {} };
-  }
   const files = {};
-  for (const item of result?.fileList || []) {
-    if (item.code === "SUCCESS" && item.tempFileURL) files[item.fileID] = item.tempFileURL;
+  for (let index = 0; index < fileIds.length; index += resolveBatchSize) {
+    const batch = fileIds.slice(index, index + resolveBatchSize);
+    try {
+      const result = await app.getTempFileURL({
+        fileList: batch.map((fileID) => ({ fileID, maxAge: 60 * 60 * 2 })),
+      });
+      for (const item of result?.fileList || []) {
+        if (item.code === "SUCCESS" && item.tempFileURL) files[item.fileID] = item.tempFileURL;
+      }
+    } catch (error) {
+      // A stale or unavailable batch should not prevent private text from loading.
+      console.error("private media resolve batch failed", error);
+    }
   }
   return { ok: true, files };
 }

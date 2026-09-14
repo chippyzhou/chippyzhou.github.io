@@ -179,6 +179,34 @@ describe("private media RPC proxy", () => {
     expect(result).toEqual({ ok: true, files: {} });
   });
 
+  it("resolves private media in small batches so a large playlist cannot fail the page", async () => {
+    const fileIds = Array.from({ length: 21 }, (_, index) => `cloud://portfolio/private/audio/track-${index}.mp3`);
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ visitor: { name: "Visitor" } }),
+      ok: true,
+      status: 200,
+    })) as unknown as typeof fetch;
+    cloudbaseApp.getTempFileURL
+      .mockResolvedValueOnce({
+        fileList: fileIds.slice(0, 20).map((fileID) => ({ code: "SUCCESS", fileID, tempFileURL: `https://cdn.example/${fileID}` })),
+      })
+      .mockRejectedValueOnce(new Error("too many files in one request"));
+    const main = loadFunction(fetchMock);
+
+    const result = await main({
+      action: "resolve",
+      accessKey: "public-client-key",
+      sessionToken: "visitor-session",
+      fileIds,
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(Object.keys(result.files || {})).toHaveLength(20);
+    expect(cloudbaseApp.getTempFileURL).toHaveBeenCalledTimes(2);
+    expect(cloudbaseApp.getTempFileURL.mock.calls[0][0].fileList).toHaveLength(20);
+    expect(cloudbaseApp.getTempFileURL.mock.calls[1][0].fileList).toHaveLength(1);
+  });
+
   it("reports a storage quota failure instead of hiding it behind a generic error", async () => {
     const fetchMock = vi.fn(async () => ({
       json: async () => ({ owner_name: "Yuyun" }),

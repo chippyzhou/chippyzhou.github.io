@@ -136,6 +136,7 @@ const cloudbaseMediaEndpoint = import.meta.env.VITE_CLOUDBASE_MEDIA_ENDPOINT
   || "https://yuyun-portfolio-d2fw66i84b7160d0-1321999291.ap-shanghai.app.tcloudbase.com/private-media-upload";
 const requestTimeoutMs = 12_000;
 const saveRequestTimeoutMs = 20_000;
+const privateMediaResolveBatchSize = 20;
 const mediaEnvelopePrefix = "yuyun-media-v1:";
 const privateMediaReferencePrefix = "/__private_media__/";
 const heicImageTypePattern = /^image\/(?:heic|heif)$/iu;
@@ -260,12 +261,21 @@ async function resolvePrivateMedia(sessionToken: string, fileIds: string[]) {
     .map((value) => decodePrivateMediaReference(value))
     .filter((value): value is string => Boolean(value)))];
   if (!uniqueIds.length) return {};
-  const response = await callPrivateMedia({
-    action: "resolve",
-    sessionToken,
-    fileIds: uniqueIds,
-  });
-  return response.files || {};
+  const files: Record<string, string> = {};
+  for (let index = 0; index < uniqueIds.length; index += privateMediaResolveBatchSize) {
+    const batch = uniqueIds.slice(index, index + privateMediaResolveBatchSize);
+    try {
+      const response = await callPrivateMedia({
+        action: "resolve",
+        sessionToken,
+        fileIds: batch,
+      });
+      Object.assign(files, response.files || {});
+    } catch {
+      // Text content should remain readable when a media batch is unavailable.
+    }
+  }
+  return files;
 }
 
 function entryMediaIds(value: string | null) {
