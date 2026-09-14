@@ -707,6 +707,7 @@ img { display: block; max-width: 100%; }
   -webkit-tap-highlight-color: rgba(215, 175, 104, .24);
   transform: translateZ(0);
 }
+.space-unlock__secret, .admin-login__secret { -webkit-text-security: disc; }
 .space-unlock input:focus { border-color: #d7af68; box-shadow: 0 0 0 2px rgba(215,175,104,.15); }
 .space-unlock button { padding: 0 18px; border-color: #d2314a; color: #d2314a; cursor: pointer; }
 .space-unlock button:disabled, .space-unlock input:disabled { cursor: not-allowed; opacity: .55; }

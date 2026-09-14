@@ -2444,7 +2444,8 @@ function PersonalSpacePage({
               <input
                 id="invite-code"
                 name="private-space-invitation"
-                type="password"
+                type="text"
+                className="space-unlock__secret"
                 value={inviteCode}
                 onChange={(event) => setInviteCode(event.target.value)}
                 onInput={(event) => setInviteCode(event.currentTarget.value)}
@@ -3633,7 +3634,8 @@ function AdminPage({ language }: { language: Language }) {
           <form onSubmit={handleOwnerLogin} aria-busy={isSubmitting}>
             <input
               name="owner-space-invitation"
-              type="password"
+              type="text"
+              className="admin-login__secret"
               value={ownerCode}
               onChange={(event) => setOwnerCode(event.target.value)}
               placeholder={tr(language, "ownerCodePlaceholder")}
