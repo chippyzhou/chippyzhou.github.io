@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FunctionResult = {
   ok: boolean;
@@ -18,6 +18,15 @@ const source = readFileSync(
   "utf8",
 );
 
+const cloudbaseApp = {
+  getTempFileURL: vi.fn(),
+  getUploadMetadata: vi.fn(),
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 function loadFunction(fetchImplementation: typeof fetch): CloudFunction {
   const functionExports: { main?: CloudFunction } = {};
   const sandbox = {
@@ -31,10 +40,7 @@ function loadFunction(fetchImplementation: typeof fetch): CloudFunction {
       if (moduleName === "node:path") return path;
       if (moduleName === "@cloudbase/node-sdk") {
         return {
-          init: () => ({
-            getTempFileURL: vi.fn(),
-            getUploadMetadata: vi.fn(),
-          }),
+          init: () => cloudbaseApp,
         };
       }
       throw new Error(`Unexpected module: ${moduleName}`);
@@ -152,6 +158,51 @@ describe("private media RPC proxy", () => {
       files: {},
     });
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/rpc\/get_public_technical_notes$/);
+  });
+
+  it("keeps private content available when an old media object cannot be resolved", async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ visitor: { name: "Visitor" } }),
+      ok: true,
+      status: 200,
+    })) as unknown as typeof fetch;
+    cloudbaseApp.getTempFileURL.mockRejectedValueOnce(new Error("file not found"));
+    const main = loadFunction(fetchMock);
+
+    const result = await main({
+      action: "resolve",
+      accessKey: "public-client-key",
+      sessionToken: "visitor-session",
+      fileIds: ["cloud://portfolio/private/image/missing.jpg"],
+    });
+
+    expect(result).toEqual({ ok: true, files: {} });
+  });
+
+  it("reports a storage quota failure instead of hiding it behind a generic error", async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ owner_name: "Yuyun" }),
+      ok: true,
+      status: 200,
+    })) as unknown as typeof fetch;
+    cloudbaseApp.getUploadMetadata.mockRejectedValueOnce(new Error("storage quota exceeded"));
+    const main = loadFunction(fetchMock);
+
+    const result = await main({
+      action: "upload",
+      accessKey: "public-client-key",
+      sessionToken: "owner-session",
+      mediaKind: "image",
+      filename: "cover.jpg",
+      contentType: "image/jpeg",
+      byteSize: 10,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 507,
+      error: "Private media storage quota reached. Please check CloudBase storage usage.",
+    });
   });
 
   it("rejects operations outside the explicit allowlist", async () => {

@@ -57,6 +57,20 @@ function fail(message, status = 400) {
   return { ok: false, error: message, status };
 }
 
+function mediaFailure(error) {
+  const details = [error?.code, error?.name, error?.message]
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+  if (/quota|capacity|storage|no more space|limit exceeded|exceed.*size/.test(details)) {
+    return fail("Private media storage quota reached. Please check CloudBase storage usage.", 507);
+  }
+  if (/forbidden|permission|unauthori[sz]ed|access denied/.test(details)) {
+    return fail("Private media storage permission is unavailable.", 403);
+  }
+  return fail("The media service could not complete the request.", 500);
+}
+
 function requestHeader(event, name) {
   const headers = event && typeof event.headers === "object" ? event.headers : {};
   const expected = name.toLowerCase();
@@ -293,9 +307,16 @@ async function resolveFiles(event) {
     : [];
   if (!fileIds.length) return { ok: true, files: {} };
 
-  const result = await app.getTempFileURL({
-    fileList: fileIds.map((fileID) => ({ fileID, maxAge: 60 * 60 * 2 })),
-  });
+  let result;
+  try {
+    result = await app.getTempFileURL({
+      fileList: fileIds.map((fileID) => ({ fileID, maxAge: 60 * 60 * 2 })),
+    });
+  } catch (error) {
+    // A stale or unavailable media object should not prevent private text from loading.
+    console.error("private media resolve failed", error);
+    return { ok: true, files: {} };
+  }
   const files = {};
   for (const item of result?.fileList || []) {
     if (item.code === "SUCCESS" && item.tempFileURL) files[item.fileID] = item.tempFileURL;
@@ -323,7 +344,7 @@ exports.main = async (rawEvent = {}) => {
     return httpRequest ? httpResponse(rawEvent, result) : result;
   } catch (error) {
     console.error("private-media-upload failed", error);
-    const result = fail("The media service could not complete the request.", 500);
+    const result = mediaFailure(error);
     return httpRequest ? httpResponse(rawEvent, result) : result;
   }
 };

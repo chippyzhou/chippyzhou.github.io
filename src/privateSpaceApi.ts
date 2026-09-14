@@ -286,7 +286,7 @@ function hydrateEntryMedia(value: string | null, files: Record<string, string>) 
   if (!value) return value;
   if (value.startsWith("cloud://")) {
     const resolved = files[value];
-    if (!resolved) return value;
+    if (!resolved) return null;
     return `${mediaEnvelopePrefix}${JSON.stringify([{
       id: "cloud-cover",
       src: resolved,
@@ -303,14 +303,14 @@ function hydrateEntryMedia(value: string | null, files: Record<string, string>) 
   try {
     const images = JSON.parse(value.slice(mediaEnvelopePrefix.length));
     if (!Array.isArray(images)) return value;
-    return `${mediaEnvelopePrefix}${JSON.stringify(images.map((image) => {
+    const hydratedImages = images.map((image) => {
       const storageSrc = typeof image?.storageSrc === "string" && image.storageSrc.startsWith("cloud://")
         ? image.storageSrc
         : typeof image?.src === "string" && image.src.startsWith("cloud://") ? image.src : null;
-      return storageSrc && files[storageSrc]
-        ? { ...image, storageSrc, src: files[storageSrc] }
-        : image;
-    }))}`;
+      if (storageSrc && !files[storageSrc]) return null;
+      return storageSrc ? { ...image, storageSrc, src: files[storageSrc] } : image;
+    }).filter(Boolean);
+    return hydratedImages.length ? `${mediaEnvelopePrefix}${JSON.stringify(hydratedImages)}` : null;
   } catch {
     return value;
   }
@@ -325,9 +325,9 @@ function hydratePlaylist(playlist: PrivateMusicTrack[], files: Record<string, st
     return {
       ...track,
       audio_storage_url: audioStorageUrl || track.audio_storage_url,
-      audio_url: audioStorageUrl ? files[audioStorageUrl] || track.audio_url : track.audio_url,
+      audio_url: audioStorageUrl ? files[audioStorageUrl] || "" : track.audio_url,
       cover_storage_url: coverStorageUrl || track.cover_storage_url,
-      cover_url: coverStorageUrl ? files[coverStorageUrl] || track.cover_url : track.cover_url,
+      cover_url: coverStorageUrl ? files[coverStorageUrl] || null : track.cover_url,
     };
   });
 }
