@@ -84,6 +84,8 @@ describe("owner session restoration", () => {
     const invitation = screen.getByLabelText("Your personal invitation") as HTMLInputElement;
     expect(invitation.type).toBe("password");
     expect(invitation.readOnly).toBe(false);
+    expect(invitation.name).toBe("private-space-invitation");
+    expect(invitation.autocomplete).toBe("off");
     expect(invitation.getAttribute("autocapitalize")).toBe("none");
     expect(invitation.getAttribute("autocorrect")).toBe("off");
     expect(invitation.getAttribute("spellcheck")).toBe("false");

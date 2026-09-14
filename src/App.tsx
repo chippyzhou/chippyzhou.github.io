@@ -2443,16 +2443,20 @@ function PersonalSpacePage({
             <div className="space-unlock__row">
               <input
                 id="invite-code"
+                name="private-space-invitation"
                 type="password"
                 value={inviteCode}
                 onChange={(event) => setInviteCode(event.target.value)}
                 onInput={(event) => setInviteCode(event.currentTarget.value)}
                 onCompositionEnd={(event) => setInviteCode(event.currentTarget.value)}
                 placeholder={tr(language, "invitationPlaceholder")}
-                autoComplete="current-password"
+                autoComplete="off"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
                 inputMode="text"
                 enterKeyHint="go"
                 onPointerDown={(event) => event.currentTarget.focus({ preventScroll: true })}
@@ -3628,10 +3632,18 @@ function AdminPage({ language }: { language: Language }) {
           <p>{tr(language, "ownerConsoleIntro")}</p>
           <form onSubmit={handleOwnerLogin} aria-busy={isSubmitting}>
             <input
+              name="owner-space-invitation"
               type="password"
               value={ownerCode}
               onChange={(event) => setOwnerCode(event.target.value)}
               placeholder={tr(language, "ownerCodePlaceholder")}
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
               autoFocus
             />
             <button type="submit" disabled={isSubmitting || !ownerCode.trim()}>{isSubmitting ? tr(language, "checking") : tr(language, "openConsole")}</button>
