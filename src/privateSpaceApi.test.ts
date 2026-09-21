@@ -154,7 +154,60 @@ describe("private space RPC transport", () => {
     expect(request).toMatchObject({
       action: "rpc",
       rpcName: "owner_upsert_private_entry_v4",
-      args: { entry_kind: "tech", entry_public: true },
+      args: {
+        entry_kind: "tech",
+        entry_public: true,
+        entry_audience: "all",
+        entry_visitor_ids: [],
+      },
+    });
+  });
+
+  it("sends a selected visitor audience through the existing entry writer route", async () => {
+    const saved = {
+      id: "selected-entry",
+      kind: "writing",
+      title: "For two readers",
+      excerpt: "",
+      body: "Private body",
+      image_url: null,
+      external_url: null,
+      event_date: null,
+      music_track_id: null,
+      is_published: true,
+      is_public: false,
+      audience: "selected",
+      audience_visitor_ids: ["visitor-one", "visitor-two"],
+      like_count: 0,
+      liked_by_visitor: false,
+      comments: [],
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ json: async () => ({ ok: true, data: saved }), ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await savePrivateEntry("owner-token", {
+      id: null,
+      kind: "writing",
+      title: "For two readers",
+      excerpt: "",
+      body: "Private body",
+      image_url: null,
+      external_url: null,
+      replace_image: false,
+      event_date: null,
+      music_track_id: null,
+      is_published: true,
+      is_public: false,
+      audience: "selected",
+      audience_visitor_ids: ["visitor-one", "visitor-two"],
+    });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      rpcName: "owner_upsert_private_entry_v4",
+      args: {
+        entry_audience: "selected",
+        entry_visitor_ids: ["visitor-one", "visitor-two"],
+      },
     });
   });
 
@@ -193,6 +246,34 @@ describe("private space RPC transport", () => {
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).rpcName).toBe("owner_upsert_private_entry_v4");
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).rpcName).toBe("owner_upsert_private_entry_v3");
+  });
+
+  it("never drops a selected audience into the legacy entry writer", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ ok: false, error: "Unsupported database operation.", status: 403 }),
+      ok: false,
+      status: 403,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(savePrivateEntry("owner-token", {
+      id: "writing-one",
+      kind: "writing",
+      title: "Selected note",
+      excerpt: "",
+      body: "Body",
+      image_url: null,
+      external_url: null,
+      replace_image: false,
+      event_date: null,
+      music_track_id: null,
+      is_published: true,
+      is_public: false,
+      audience: "selected",
+      audience_visitor_ids: ["visitor-one"],
+    })).rejects.toThrow("Unsupported database operation");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("routes article likes and idempotent comments through their dedicated operations", async () => {

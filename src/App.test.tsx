@@ -1062,6 +1062,51 @@ describe("owner session restoration", () => {
     ));
   });
 
+  it("publishes an entry only to the visitors selected by the owner", async () => {
+    localStorage.setItem("yuyun-owner-console-session", "owner-token");
+    window.location.hash = "#/editor";
+    api.loadPrivateSpace.mockResolvedValue({
+      visitor: { name: "Yuyun", visitor_number: 1, visit_count: 1, is_owner: true },
+      entries: [],
+      playlist: [],
+      messages: [],
+      available_visitors: [
+        { id: "visitor-one", label: "Alice", is_active: true, expires_at: null },
+        { id: "visitor-two", label: "Bob", is_active: false, expires_at: null },
+      ],
+    });
+    api.savePrivateEntry.mockImplementation((_token, entry) => Promise.resolve({
+      ...entry,
+      id: "selected-entry",
+      image_url: null,
+      external_url: null,
+      display_date: null,
+      like_count: 0,
+      liked_by_visitor: false,
+      comments: [],
+    }));
+
+    render(<App />);
+    fireEvent.change(await screen.findByPlaceholderText("A title for this fragment"), {
+      target: { value: "For Alice" },
+    });
+    fireEvent.click(screen.getByLabelText("Publish this entry to invited visitors"));
+    fireEvent.click(screen.getByLabelText("Selected visitors only"));
+    fireEvent.click(screen.getByLabelText("Alice"));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+
+    await waitFor(() => expect(api.savePrivateEntry).toHaveBeenCalledWith(
+      "owner-token",
+      expect.objectContaining({
+        title: "For Alice",
+        is_published: true,
+        audience: "selected",
+        audience_visitor_ids: ["visitor-one"],
+      }),
+    ));
+    expect(await screen.findByText("Published to the selected visitors.")).toBeTruthy();
+  });
+
   it("renders published Tech Notes on VOL.01 with the article card and outline", async () => {
     window.location.hash = "#/notes";
     api.loadPublicTechnicalNotes.mockResolvedValue([{

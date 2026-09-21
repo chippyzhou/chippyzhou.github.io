@@ -1234,6 +1234,22 @@ img { display: block; max-width: 100%; }
 .space-editor__type--wide { grid-column: 1 / -1; }
 .space-editor__publish { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 8px !important; color: #d7af68 !important; }
 .space-editor__publish input { width: 16px; height: 16px; accent-color: #d2314a; }
+.space-editor__audience { min-width: 0; margin: 0; padding: 12px; border: 1px solid #655d69; }
+.space-editor__audience > legend { padding: 0 6px; color: #d7af68; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.space-editor__audience-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid #655d69; }
+.space-editor__audience-modes label { min-height: 38px; padding: 8px 10px; display: flex; grid-template-columns: none; align-items: center; justify-content: center; gap: 7px; color: #aaa4ad; text-align: center; cursor: pointer; }
+.space-editor__audience-modes label + label { border-left: 1px solid #655d69; }
+.space-editor__audience-modes label:has(input:checked) { background: #d7af68; color: #17151d; }
+.space-editor__audience-modes input { width: 14px; height: 14px; margin: 0; accent-color: #d2314a; }
+.space-editor__visitor-picker { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.space-editor__visitor-picker > strong, .space-editor__visitor-picker > p { grid-column: 1 / -1; }
+.space-editor__visitor-picker > strong { color: #aaa4ad; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+.space-editor__visitor-picker > p { margin: 0; color: #8f8993; font: 12px/1.5 Georgia, serif; }
+.space-editor__visitor-picker label { min-width: 0; padding: 9px 10px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 7px; border: 1px solid #524b58; color: #f5f0e8; cursor: pointer; }
+.space-editor__visitor-picker label:has(input:checked) { border-color: #d7af68; background: #302a35; }
+.space-editor__visitor-picker input { width: 15px; height: 15px; margin: 0; accent-color: #d2314a; }
+.space-editor__visitor-picker span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.space-editor__visitor-picker small { color: #ec8292; font-size: 8px; letter-spacing: 0; text-transform: none; }
 .space-editor__cover-crop {
   padding: 12px;
   display: grid;
@@ -2912,6 +2928,7 @@ img { display: block; max-width: 100%; }
   .space-editor__entries { height: auto; min-height: 0; padding-right: 0; overflow: visible; }
   .space-editor__preview { grid-column: 1; }
   .space-editor__form-row { grid-template-columns: 1fr; }
+  .space-editor__visitor-picker { grid-template-columns: 1fr; }
   .archive-filters { align-items: stretch; flex-wrap: wrap; }
   .archive-filters > p { width: 100%; margin-bottom: 4px; }
   .archive-filters label { flex: 1 1 130px; }

@@ -32,6 +32,7 @@ import {
   type PrivateEntryComment,
   type PrivateMusicTrack,
   type PrivateSpaceContent,
+  type PrivateSpaceVisitor,
 } from "./privateSpaceApi";
 import {
   markdownPreview,
@@ -240,6 +241,13 @@ const copy = {
     expandEntry: "Expand",
     collapseEntry: "Close article",
     publishEntry: "Publish this entry to invited visitors",
+    entryAudience: "Who can read this entry?",
+    allVisitors: "All invited visitors",
+    selectedVisitors: "Selected visitors only",
+    chooseVisitors: "Choose visitors",
+    inactiveVisitor: "Paused",
+    noSelectableVisitors: "Create a visitor invitation before using selected visibility.",
+    audienceRequired: "Select at least one visitor for this entry.",
     publishToVolOne: "Publish this Tech Note to VOL.01",
     publicTechNotes: "Published notes",
     likeEntry: "Like",
@@ -261,6 +269,7 @@ const copy = {
     untitledFragment: "Untitled fragment",
     ownerRequiredTitle: "A title is required.",
     publishedVisitors: "Published to your visitors.",
+    publishedSelectedVisitors: "Published to the selected visitors.",
     savedDraft: "Saved as a private draft.",
     entryDeleted: "Entry deleted.",
     deleteEntryConfirm: "Delete this private entry?",
@@ -518,6 +527,13 @@ const copy = {
     expandEntry: "展开",
     collapseEntry: "收起文章",
     publishEntry: "向受邀访客发布这篇记录",
+    entryAudience: "谁可以阅读这篇记录？",
+    allVisitors: "全部受邀访客",
+    selectedVisitors: "仅指定访客",
+    chooseVisitors: "选择可见访客",
+    inactiveVisitor: "已暂停",
+    noSelectableVisitors: "请先创建访客邀请，再使用指定访客可见。",
+    audienceRequired: "请至少选择一位可见访客。",
     publishToVolOne: "将这篇技术笔记发布到 VOL.01",
     publicTechNotes: "已发布笔记",
     likeEntry: "点赞",
@@ -539,6 +555,7 @@ const copy = {
     untitledFragment: "未命名片段",
     ownerRequiredTitle: "请输入标题。",
     publishedVisitors: "已向访客发布。",
+    publishedSelectedVisitors: "已向指定访客发布。",
     savedDraft: "已保存为私人草稿。",
     entryDeleted: "记录已删除。",
     deleteEntryConfirm: "删除这篇私人记录？",
@@ -2161,10 +2178,13 @@ function PersonalSpacePage({
         setContent({
           ...payload,
           playlist: payload.playlist || [],
+          available_visitors: payload.available_visitors || [],
           entries: payload.entries.map((entry) => ({
             ...entry,
             music_track_id: entry.music_track_id || null,
             is_public: Boolean(entry.is_public),
+            audience: entry.audience === "selected" ? "selected" as const : "all" as const,
+            audience_visitor_ids: Array.isArray(entry.audience_visitor_ids) ? entry.audience_visitor_ids : [],
             like_count: Number(entry.like_count || 0),
             liked_by_visitor: Boolean(entry.liked_by_visitor),
             comments: (entry.comments || []).map((comment) => ({
@@ -2530,6 +2550,7 @@ function PersonalSpacePage({
               sessionToken={sessionToken}
               entries={sortedEntries}
               playlist={content.playlist}
+              visitors={content.available_visitors || []}
               language={language}
               onEntriesChange={(entries) => setContent((current) => current ? { ...current, entries } : current)}
             />
@@ -2816,6 +2837,8 @@ type EntryDraft = {
   music_track_id: string | null;
   is_published: boolean;
   is_public: boolean;
+  audience: "all" | "selected";
+  audience_visitor_ids: string[];
 };
 
 function blankEntryDraft(language: Language): EntryDraft {
@@ -2832,6 +2855,8 @@ function blankEntryDraft(language: Language): EntryDraft {
     music_track_id: null,
     is_published: false,
     is_public: false,
+    audience: "all",
+    audience_visitor_ids: [],
   };
 }
 
@@ -2849,6 +2874,8 @@ function entryToDraft(entry: PrivateEntry): EntryDraft {
     music_track_id: entry.music_track_id || null,
     is_published: entry.is_published,
     is_public: Boolean(entry.is_public),
+    audience: entry.audience === "selected" ? "selected" : "all",
+    audience_visitor_ids: Array.isArray(entry.audience_visitor_ids) ? entry.audience_visitor_ids : [],
   };
 }
 
@@ -2860,12 +2887,14 @@ function OwnerSpaceEditor({
   sessionToken,
   entries,
   playlist,
+  visitors,
   language,
   onEntriesChange,
 }: {
   sessionToken: string;
   entries: PrivateEntry[];
   playlist: PrivateMusicTrack[];
+  visitors: PrivateSpaceVisitor[];
   language: Language;
   onEntriesChange: (entries: PrivateEntry[]) => void;
 }) {
@@ -2899,10 +2928,24 @@ function OwnerSpaceEditor({
     setEditorNotice("");
   };
 
+  const toggleAudienceVisitor = (visitorId: string, checked: boolean) => {
+    setDraft((current) => ({
+      ...current,
+      audience_visitor_ids: checked
+        ? [...new Set([...current.audience_visitor_ids, visitorId])]
+        : current.audience_visitor_ids.filter((id) => id !== visitorId),
+    }));
+    setEditorNotice("");
+  };
+
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!draft.title.trim() && draft.kind !== "photography") {
       setEditorError(tr(language, "ownerRequiredTitle"));
+      return;
+    }
+    if (draft.is_published && draft.audience === "selected" && draft.audience_visitor_ids.length === 0) {
+      setEditorError(tr(language, "audienceRequired"));
       return;
     }
     setIsBusy(true);
@@ -2924,6 +2967,8 @@ function OwnerSpaceEditor({
       music_track_id: draft.music_track_id,
       is_published: draft.is_published,
       is_public: draft.kind === "tech" && draft.is_public,
+      audience: draft.audience,
+      audience_visitor_ids: draft.audience_visitor_ids,
     };
     try {
       let savedEntry: PrivateEntry;
@@ -2938,7 +2983,9 @@ function OwnerSpaceEditor({
         : [...entries, savedEntry];
       onEntriesChange(nextEntries);
       setDraft(entryToDraft(savedEntry));
-      setEditorNotice(savedEntry.is_published ? tr(language, "publishedVisitors") : tr(language, "savedDraft"));
+      setEditorNotice(savedEntry.is_published
+        ? tr(language, savedEntry.audience === "selected" ? "publishedSelectedVisitors" : "publishedVisitors")
+        : tr(language, "savedDraft"));
     } catch (requestError) {
       setEditorError(requestError instanceof Error ? requestError.message : localized(language, "The entry could not be saved.", "记录保存失败。"));
     } finally {
@@ -3302,6 +3349,48 @@ function OwnerSpaceEditor({
               </div>
             )}
             <label className="space-editor__publish"><input type="checkbox" checked={draft.is_published} onChange={(event) => updateDraft("is_published", event.target.checked)} /> {tr(language, "publishEntry")}</label>
+            {draft.is_published && (
+              <fieldset className="space-editor__audience">
+                <legend>{tr(language, "entryAudience")}</legend>
+                <div className="space-editor__audience-modes">
+                  <label>
+                    <input
+                      type="radio"
+                      name="entry-audience"
+                      checked={draft.audience === "all"}
+                      onChange={() => updateDraft("audience", "all")}
+                    />
+                    {tr(language, "allVisitors")}
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="entry-audience"
+                      checked={draft.audience === "selected"}
+                      onChange={() => updateDraft("audience", "selected")}
+                    />
+                    {tr(language, "selectedVisitors")}
+                  </label>
+                </div>
+                {draft.audience === "selected" && (
+                  <div className="space-editor__visitor-picker">
+                    <strong>{tr(language, "chooseVisitors")}</strong>
+                    {visitors.length === 0 && <p>{tr(language, "noSelectableVisitors")}</p>}
+                    {visitors.map((visitor) => (
+                      <label key={visitor.id}>
+                        <input
+                          type="checkbox"
+                          checked={draft.audience_visitor_ids.includes(visitor.id)}
+                          onChange={(event) => toggleAudienceVisitor(visitor.id, event.target.checked)}
+                        />
+                        <span>{visitor.label}</span>
+                        {!visitor.is_active && <small>{tr(language, "inactiveVisitor")}</small>}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </fieldset>
+            )}
             {draft.kind === "tech" && (
               <label className="space-editor__publish space-editor__publish--public"><input type="checkbox" checked={draft.is_public} onChange={(event) => updateDraft("is_public", event.target.checked)} /> {tr(language, "publishToVolOne")}</label>
             )}

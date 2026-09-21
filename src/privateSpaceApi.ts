@@ -11,9 +11,18 @@ export type PrivateEntry = {
   music_track_id: string | null;
   is_published: boolean;
   is_public: boolean;
+  audience?: "all" | "selected";
+  audience_visitor_ids?: string[];
   like_count: number;
   liked_by_visitor: boolean;
   comments: PrivateEntryComment[];
+};
+
+export type PrivateSpaceVisitor = {
+  id: string;
+  label: string;
+  is_active: boolean;
+  expires_at: string | null;
 };
 
 export type PrivateEntryComment = {
@@ -77,6 +86,7 @@ export type PrivateSpaceContent = {
   entries: PrivateEntry[];
   playlist: PrivateMusicTrack[];
   messages: GuestbookMessage[];
+  available_visitors: PrivateSpaceVisitor[];
 };
 
 export type AdminInvite = {
@@ -414,10 +424,13 @@ export async function loadPrivateSpace(sessionToken: string) {
   const files = await resolvePrivateMedia(sessionToken, fileIds);
   return {
     ...content,
+    available_visitors: Array.isArray(content.available_visitors) ? content.available_visitors : [],
     entries: content.entries.map((entry) => ({
       ...entry,
       image_url: hydrateEntryMedia(entry.image_url, files),
       is_public: Boolean(entry.is_public),
+      audience: entry.audience === "selected" ? "selected" : "all",
+      audience_visitor_ids: Array.isArray(entry.audience_visitor_ids) ? entry.audience_visitor_ids : [],
       like_count: Number(entry.like_count || 0),
       liked_by_visitor: Boolean(entry.liked_by_visitor),
       comments: entry.comments || [],
@@ -433,6 +446,8 @@ export async function loadPublicTechnicalNotes() {
     ...entry,
     image_url: hydrateEntryMedia(entry.image_url, response.files || {}),
     is_public: true,
+    audience: "all" as const,
+    audience_visitor_ids: [],
     like_count: 0,
     liked_by_visitor: false,
     comments: [],
@@ -562,6 +577,8 @@ export function savePrivateEntry(
     music_track_id?: string | null;
     is_published: boolean;
     is_public: boolean;
+    audience?: "all" | "selected";
+    audience_visitor_ids?: string[];
   },
 ) {
   const body = {
@@ -582,10 +599,13 @@ export function savePrivateEntry(
     ...body,
     entry_music_track_id: entry.music_track_id || null,
     entry_public: entry.is_public,
+    entry_audience: entry.audience === "selected" ? "selected" : "all",
+    entry_visitor_ids: entry.audience === "selected" ? (entry.audience_visitor_ids || []) : [],
   }, saveRequestTimeoutMs).catch((error) => {
     const v4Unavailable = error instanceof PrivateSpaceRequestError
       && (error.status === 404 || (error.status === 403 && /unsupported database operation/i.test(error.message)));
-    if (entry.kind === "tech" || !v4Unavailable) throw error;
+    const requiresSelectiveAudience = entry.audience === "selected";
+    if (entry.kind === "tech" || requiresSelectiveAudience || !v4Unavailable) throw error;
     return rpc<PrivateEntry>("owner_upsert_private_entry_v3", {
       ...body,
       entry_music_track_id: entry.music_track_id || null,
