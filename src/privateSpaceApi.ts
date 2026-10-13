@@ -390,10 +390,11 @@ export async function uploadPrivateMedia(
     if (!response.ok) {
       throw new PrivateSpaceRequestError(`The file could not be uploaded (${response.status}).`, response.status);
     }
-    const resolved = await resolvePrivateMedia(sessionToken, [upload.fileId]);
+    const resolvedUrl = upload.downloadUrl
+      || (await resolvePrivateMedia(sessionToken, [upload.fileId]))[upload.fileId];
     return {
       storage_url: upload.fileId,
-      url: resolved[upload.fileId] || upload.downloadUrl || upload.fileId,
+      url: resolvedUrl || upload.fileId,
       media_kind: kind,
     };
   } catch (error) {

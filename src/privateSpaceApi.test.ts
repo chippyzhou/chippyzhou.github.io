@@ -9,6 +9,7 @@ import {
   savePrivateEntry,
   togglePrivateEntryLike,
   unlockPrivateSpace,
+  uploadPrivateMedia,
 } from "./privateSpaceApi";
 
 const heicConverter = vi.hoisted(() => vi.fn());
@@ -45,6 +46,42 @@ describe("private media references", () => {
     expect(prepared.name).toBe("summer-photo.jpg");
     expect(prepared.type).toBe("image/jpeg");
     expect(prepared.lastModified).toBe(42);
+  });
+
+  it("uses the upload metadata download URL without a second resolve request", async () => {
+    const downloadUrl = "https://download.example/private/image/cover.png";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          ok: true,
+          upload: {
+            url: "https://upload.example/private/image/cover.png",
+            token: "upload-token",
+            authorization: "upload-authorization",
+            fileId: "cloud://portfolio/private/image/cover.png",
+            cosFileId: "cos-file-id",
+            downloadUrl,
+            cloudPath: "private/image/cover.png",
+          },
+        }),
+        ok: true,
+        status: 200,
+      })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await uploadPrivateMedia(
+      "owner-token",
+      new File(["png"], "cover.png", { type: "image/png" }),
+      "image",
+    );
+
+    expect(result).toEqual({
+      storage_url: "cloud://portfolio/private/image/cover.png",
+      url: downloadUrl,
+      media_kind: "image",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
