@@ -132,8 +132,7 @@ async function validateSession(sessionToken, ownerOnly, accessKey) {
   const publicKey = String(accessKey || "");
   if (!token || !publicKey || publicKey.length > 4096) return null;
 
-  const functionName = ownerOnly ? "owner_get_dashboard" : "get_private_space";
-  const response = await fetch(`${postgresUrl}/rpc/${functionName}`, {
+  const response = await fetch(`${postgresUrl}/rpc/validate_private_media_session`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${publicKey}`,
@@ -141,16 +140,13 @@ async function validateSession(sessionToken, ownerOnly, accessKey) {
       "Content-Profile": "public",
       "Accept-Profile": "public",
     },
-    body: JSON.stringify({ session_token: token }),
+    body: JSON.stringify({ session_token: token, owner_only: Boolean(ownerOnly) }),
   });
   if (!response.ok) return null;
   const data = await response.json();
-  if (!data || typeof data !== "object") return null;
-
-  if (ownerOnly) {
-    return data.owner_name ? { is_owner: true } : null;
-  }
-  return data.visitor || null;
+  if (!data || typeof data !== "object" || data.is_valid !== true) return null;
+  if (ownerOnly && data.is_owner !== true) return null;
+  return { is_owner: data.is_owner === true };
 }
 
 async function proxyRpc(event) {

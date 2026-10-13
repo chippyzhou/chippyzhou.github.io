@@ -162,7 +162,7 @@ describe("private media RPC proxy", () => {
 
   it("keeps private content available when an old media object cannot be resolved", async () => {
     const fetchMock = vi.fn(async () => ({
-      json: async () => ({ visitor: { name: "Visitor" } }),
+      json: async () => ({ is_valid: true, is_owner: false }),
       ok: true,
       status: 200,
     })) as unknown as typeof fetch;
@@ -179,10 +179,47 @@ describe("private media RPC proxy", () => {
     expect(result).toEqual({ ok: true, files: {} });
   });
 
+  it("validates media access through the lightweight session RPC", async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ is_valid: true, is_owner: true }),
+      ok: true,
+      status: 200,
+    })) as unknown as typeof fetch;
+    cloudbaseApp.getUploadMetadata.mockResolvedValueOnce({
+      data: {
+        url: "https://upload.example/cover.jpg",
+        token: "upload-token",
+        authorization: "upload-authorization",
+        fileId: "cloud://portfolio/private/image/cover.jpg",
+        cosFileId: "cos-file-id",
+        download_url: "https://download.example/cover.jpg",
+      },
+    });
+    const main = loadFunction(fetchMock);
+
+    const result = await main({
+      action: "upload",
+      accessKey: "public-client-key",
+      sessionToken: "owner-session",
+      mediaKind: "image",
+      filename: "cover.jpg",
+      contentType: "image/jpeg",
+      byteSize: 10,
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rpc\/validate_private_media_session$/);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+      session_token: "owner-session",
+      owner_only: true,
+    });
+  });
+
   it("resolves private media in small batches so a large playlist cannot fail the page", async () => {
     const fileIds = Array.from({ length: 21 }, (_, index) => `cloud://portfolio/private/audio/track-${index}.mp3`);
     const fetchMock = vi.fn(async () => ({
-      json: async () => ({ visitor: { name: "Visitor" } }),
+      json: async () => ({ is_valid: true, is_owner: false }),
       ok: true,
       status: 200,
     })) as unknown as typeof fetch;
@@ -209,7 +246,7 @@ describe("private media RPC proxy", () => {
 
   it("reports a storage quota failure instead of hiding it behind a generic error", async () => {
     const fetchMock = vi.fn(async () => ({
-      json: async () => ({ owner_name: "Yuyun" }),
+      json: async () => ({ is_valid: true, is_owner: true }),
       ok: true,
       status: 200,
     })) as unknown as typeof fetch;
