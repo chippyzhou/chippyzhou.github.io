@@ -10,6 +10,7 @@ import {
   togglePrivateEntryLike,
   unlockPrivateSpace,
   uploadPrivateMedia,
+  warmPrivateMediaUpload,
 } from "./privateSpaceApi";
 
 const heicConverter = vi.hoisted(() => vi.fn());
@@ -82,6 +83,24 @@ describe("private media references", () => {
       media_kind: "image",
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("warms the protected media service before the first upload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ ok: true, files: {} }),
+      ok: true,
+      status: 200,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await warmPrivateMediaUpload("owner-token");
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      action: "resolve",
+      sessionToken: "owner-token",
+      fileIds: [],
+    });
   });
 });
 

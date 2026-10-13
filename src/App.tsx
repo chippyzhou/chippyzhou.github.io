@@ -24,6 +24,7 @@ import {
   togglePrivateEntryLike,
   unlockPrivateSpace,
   uploadPrivateMedia,
+  warmPrivateMediaUpload,
   type AdminInvite,
   type AdminDashboard,
   type GuestbookMessage,
@@ -2913,6 +2914,12 @@ function OwnerSpaceEditor({
     focusX: number;
     focusY: number;
   } | null>(null);
+
+  useEffect(() => {
+    void warmPrivateMediaUpload(sessionToken).catch(() => {
+      // The upload request itself will surface a useful error if the service is unavailable.
+    });
+  }, [sessionToken]);
 
   const updateDraft = <Key extends keyof EntryDraft>(key: Key, value: EntryDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }));

@@ -22,6 +22,7 @@ const api = vi.hoisted(() => ({
   setVisitorInviteStatus: vi.fn(),
   togglePrivateEntryLike: vi.fn(),
   unlockPrivateSpace: vi.fn(),
+  warmPrivateMediaUpload: vi.fn(),
 }));
 
 vi.mock("./privateSpaceApi", () => ({
@@ -42,6 +43,7 @@ describe("owner session restoration", () => {
     window.scrollTo = vi.fn();
     vi.resetAllMocks();
     api.loadPublicTechnicalNotes.mockResolvedValue([]);
+    api.warmPrivateMediaUpload.mockResolvedValue(undefined);
     Object.defineProperties(window.HTMLMediaElement.prototype, {
       load: { configurable: true, value: vi.fn() },
       pause: { configurable: true, value: vi.fn() },

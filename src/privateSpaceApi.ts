@@ -405,6 +405,14 @@ export async function uploadPrivateMedia(
   }
 }
 
+export async function warmPrivateMediaUpload(sessionToken: string) {
+  await callPrivateMedia({
+    action: "resolve",
+    sessionToken,
+    fileIds: [],
+  });
+}
+
 export async function unlockPrivateSpace(code: string) {
   const response = await rpc<VisitorIdentity | { error: string; status?: number }>(
     "unlock_private_space",
