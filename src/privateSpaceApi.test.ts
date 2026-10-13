@@ -85,6 +85,42 @@ describe("private media references", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("retries transient metadata and storage connection failures once", async () => {
+    const downloadUrl = "https://download.example/private/image/retry.png";
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({
+        json: async () => ({
+          ok: true,
+          upload: {
+            url: "https://upload.example/private/image/retry.png",
+            token: "upload-token",
+            authorization: "upload-authorization",
+            fileId: "cloud://portfolio/private/image/retry.png",
+            cosFileId: "cos-file-id",
+            downloadUrl,
+            cloudPath: "private/image/retry.png",
+          },
+        }),
+        ok: true,
+        status: 200,
+      })
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(uploadPrivateMedia(
+      "owner-token",
+      new File(["png"], "retry.png", { type: "image/png" }),
+      "image",
+    )).resolves.toEqual({
+      storage_url: "cloud://portfolio/private/image/retry.png",
+      url: downloadUrl,
+      media_kind: "image",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
   it("warms the protected media service before the first upload", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       json: async () => ({ ok: true, files: {} }),

@@ -2233,6 +2233,18 @@ function PersonalSpacePage({
     }
   }, [content, view]);
 
+  useEffect(() => {
+    if (!sessionToken || !content?.visitor.is_owner) return;
+    const warmUploadService = () => {
+      void warmPrivateMediaUpload(sessionToken).catch(() => {
+        // Uploads retry and surface a useful error if the service remains unavailable.
+      });
+    };
+    warmUploadService();
+    const interval = window.setInterval(warmUploadService, 4 * 60_000);
+    return () => window.clearInterval(interval);
+  }, [content?.visitor.is_owner, sessionToken]);
+
   const handleUnlock = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!inviteCode.trim()) return;
@@ -2914,12 +2926,6 @@ function OwnerSpaceEditor({
     focusX: number;
     focusY: number;
   } | null>(null);
-
-  useEffect(() => {
-    void warmPrivateMediaUpload(sessionToken).catch(() => {
-      // The upload request itself will surface a useful error if the service is unavailable.
-    });
-  }, [sessionToken]);
 
   const updateDraft = <Key extends keyof EntryDraft>(key: Key, value: EntryDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }));

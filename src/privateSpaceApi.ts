@@ -147,11 +147,14 @@ const cloudbaseMediaEndpoint = import.meta.env.VITE_CLOUDBASE_MEDIA_ENDPOINT
 const requestTimeoutMs = 12_000;
 const saveRequestTimeoutMs = 20_000;
 const privateMediaResolveBatchSize = 20;
+const privateMediaWarmDurationMs = 4 * 60_000;
 const mediaEnvelopePrefix = "yuyun-media-v1:";
 const privateMediaReferencePrefix = "/__private_media__/";
 const heicImageTypePattern = /^image\/(?:heic|heif)$/iu;
 const heicImageExtensionPattern = /\.(?:heic|heif)$/iu;
 export const isPrivateSpaceConfigured = Boolean(cloudbaseMediaEndpoint && cloudbaseAccessKey);
+let privateMediaWarmPromise: Promise<void> | null = null;
+let privateMediaWarmUntil = 0;
 
 function isHeicImage(file: File) {
   return heicImageTypePattern.test(file.type) || heicImageExtensionPattern.test(file.name);
@@ -362,20 +365,34 @@ export async function uploadPrivateMedia(
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), kind === "audio" ? 20 * 60_000 : 5 * 60_000);
   try {
-    const metadata = await callPrivateMedia({
+    if (privateMediaWarmPromise) {
+      try {
+        await privateMediaWarmPromise;
+      } catch {
+        // The metadata request below retries independently with a longer timeout.
+      }
+    }
+    const metadataRequest = {
       action: "upload",
       sessionToken,
       mediaKind: kind,
       filename,
       contentType: file.type || "application/octet-stream",
       byteSize: file.size,
-    });
+    };
+    let metadata: CloudbaseMediaResponse;
+    try {
+      metadata = await callPrivateMedia(metadataRequest, 30_000);
+    } catch (error) {
+      if (!isTransientPrivateSpaceError(error)) throw error;
+      metadata = await callPrivateMedia(metadataRequest, 30_000);
+    }
     if (!metadata.upload) throw new PrivateSpaceRequestError("Upload metadata is missing.", 502);
     const upload = metadata.upload;
     // An empty Blob type avoids an unsigned Content-Type header without copying
     // large audio files into memory before the upload starts.
     const uploadBody = file.slice(0, file.size, "");
-    const response = await fetch(upload.url, {
+    const uploadRequest = () => fetch(upload.url, {
       method: "PUT",
       headers: {
         Signature: upload.authorization,
@@ -387,6 +404,14 @@ export async function uploadPrivateMedia(
       body: uploadBody,
       signal: controller.signal,
     });
+    let response: Response;
+    try {
+      response = await uploadRequest();
+      if (!response.ok && response.status >= 500) response = await uploadRequest();
+    } catch (error) {
+      if (!(error instanceof TypeError) || controller.signal.aborted) throw error;
+      response = await uploadRequest();
+    }
     if (!response.ok) {
       throw new PrivateSpaceRequestError(`The file could not be uploaded (${response.status}).`, response.status);
     }
@@ -406,11 +431,21 @@ export async function uploadPrivateMedia(
 }
 
 export async function warmPrivateMediaUpload(sessionToken: string) {
-  await callPrivateMedia({
-    action: "resolve",
-    sessionToken,
-    fileIds: [],
-  });
+  if (Date.now() < privateMediaWarmUntil) return;
+  if (!privateMediaWarmPromise) {
+    privateMediaWarmPromise = callPrivateMedia({
+      action: "resolve",
+      sessionToken,
+      fileIds: [],
+    }, 30_000)
+      .then(() => {
+        privateMediaWarmUntil = Date.now() + privateMediaWarmDurationMs;
+      })
+      .finally(() => {
+        privateMediaWarmPromise = null;
+      });
+  }
+  await privateMediaWarmPromise;
 }
 
 export async function unlockPrivateSpace(code: string) {
