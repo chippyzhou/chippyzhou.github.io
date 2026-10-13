@@ -3017,20 +3017,24 @@ function OwnerSpaceEditor({
     setIsOptimizingImage(true);
     try {
       const uploaded: EntryImage[] = [];
-      for (const file of files) {
-        const uploadFile = await preparePrivateImageUpload(file);
-        const result = await uploadPrivateMedia(sessionToken, uploadFile, "image");
-        uploaded.push({
-          id: crypto.randomUUID(),
-          src: result.url,
-          storageSrc: result.storage_url,
-          size: "medium",
-          align: "center",
-          caption: "",
-          focusX: 50,
-          focusY: 50,
-          isCover: false,
-        });
+      const concurrentUploads = 3;
+      for (let index = 0; index < files.length; index += concurrentUploads) {
+        const batch = await Promise.all(files.slice(index, index + concurrentUploads).map(async (file) => {
+          const uploadFile = await preparePrivateImageUpload(file);
+          const result = await uploadPrivateMedia(sessionToken, uploadFile, "image");
+          return {
+            id: crypto.randomUUID(),
+            src: result.url,
+            storageSrc: result.storage_url,
+            size: "medium" as const,
+            align: "center" as const,
+            caption: "",
+            focusX: 50,
+            focusY: 50,
+            isCover: false,
+          };
+        }));
+        uploaded.push(...batch);
       }
       const combined = [...draft.images, ...uploaded];
       const hasCover = combined.some((image) => image.isCover);
